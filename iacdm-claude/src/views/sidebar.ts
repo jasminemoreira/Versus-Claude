@@ -43,7 +43,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
   }
 
   private loadState(): void {
-    const statePath = path.join(this.workspacePath, ".iacdm", "state.json");
+    const statePath = path.join(this.workspacePath, ".versus", "state.json");
     try {
       if (fs.existsSync(statePath)) {
         const raw = fs.readFileSync(statePath, "utf-8");
@@ -59,7 +59,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
   private setupWatcher(): void {
     const pattern = new vscode.RelativePattern(
       this.workspacePath,
-      ".iacdm/state.json"
+      ".versus/state.json"
     );
     this.watcher = vscode.workspace.createFileSystemWatcher(pattern);
     this.watcher.onDidChange(() => this.refresh());
@@ -70,7 +70,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
   /** Polling: verifica a cada 3s se state.json mudou (criação, remoção ou conteúdo) */
   private setupPolling(): void {
     this.pollTimer = setInterval(() => {
-      const statePath = path.join(this.workspacePath, ".iacdm", "state.json");
+      const statePath = path.join(this.workspacePath, ".versus", "state.json");
       try {
         const stat = fs.statSync(statePath);
         const mtime = stat.mtimeMs;

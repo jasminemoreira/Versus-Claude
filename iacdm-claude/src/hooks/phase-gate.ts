@@ -2,7 +2,7 @@
 
 // Camada 2: Bloqueio de ferramentas — PreToolUse (Edit|Write)
 // Bloqueia edição de código em Phases 0-4.
-// Exceções: specs/, .iacdm/, .claude/, package.json, tsconfig.json, README
+// Exceções: specs/, .versus/, .claude/, package.json, tsconfig.json, README
 
 import { StateEngine } from "../state/engine";
 
@@ -19,7 +19,7 @@ function isAllowedPath(filePath: string): boolean {
   const normalized = filePath.replace(/\\/g, "/").toLowerCase();
   const allowed = [
     "/specs/",
-    "/.iacdm/",
+    "/.versus/",
     "/.claude/",
     "/package.json",
     "/tsconfig",
@@ -77,7 +77,7 @@ function main() {
         allow();
       } else {
         deny(
-          `[IACDM] Bloqueado: Phase ${state.currentPhase} não permite edição de código. ` +
+          `[Versus] Bloqueado: Phase ${state.currentPhase} não permite edição de código. ` +
           `Arquivo: ${filePath}. ` +
           `Complete Phases 0→4 antes de implementar. ` +
           `Use get_exit_criteria() para ver o que falta.`

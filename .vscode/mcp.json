@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "iacdm-orchestrator": {
+      "command": "node",
+      "args": [
+        "/home/jasmine/INDT/IACDM_Claude/.claude/orchestrator/server.js"
+      ]
+    }
+  }
+}

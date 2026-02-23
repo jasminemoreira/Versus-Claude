@@ -13,7 +13,7 @@ import { StateEngine } from "../state/engine";
 import { ALL_TOOLS, handleToolCall } from "./tools/index";
 
 function getWorkspacePath(): string {
-  // Prioridade: --workspace arg > CLAUDE_PROJECT_DIR env > IACDM_WORKSPACE env > cwd
+  // Prioridade: --workspace arg > CLAUDE_PROJECT_DIR env > VERSUS_WORKSPACE env > cwd
   const args = process.argv.slice(2);
   const wsIndex = args.indexOf("--workspace");
   if (wsIndex !== -1 && args[wsIndex + 1]) {
@@ -22,8 +22,8 @@ function getWorkspacePath(): string {
   if (process.env.CLAUDE_PROJECT_DIR) {
     return process.env.CLAUDE_PROJECT_DIR;
   }
-  if (process.env.IACDM_WORKSPACE) {
-    return process.env.IACDM_WORKSPACE;
+  if (process.env.VERSUS_WORKSPACE) {
+    return process.env.VERSUS_WORKSPACE;
   }
   return process.cwd();
 }
@@ -35,7 +35,7 @@ async function main() {
 
   const server = new Server(
     {
-      name: "iacdm-claude",
+      name: "versus-claude",
       version: "0.2.0",
     },
     {
@@ -74,6 +74,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  process.stderr.write(`IACDM MCP Server fatal: ${String(err)}\n`);
+  process.stderr.write(`Versus MCP Server fatal: ${String(err)}\n`);
   process.exit(1);
 });

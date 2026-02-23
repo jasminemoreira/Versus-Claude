@@ -32,7 +32,7 @@ export class StateEngine {
 
   constructor(workspacePath: string) {
     this.workspacePath = workspacePath;
-    this.statePath = path.join(workspacePath, ".iacdm", "state.json");
+    this.statePath = path.join(workspacePath, ".versus", "state.json");
     this.specsPath = path.join(workspacePath, "specs");
   }
 

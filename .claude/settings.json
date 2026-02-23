@@ -1,0 +1,90 @@
+{
+  "defaultMode": "acceptEdits",
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "Edit",
+      "Write",
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash",
+      "mcp__iacdm-orchestrator__get_phase_state",
+      "mcp__iacdm-orchestrator__get_decisions",
+      "mcp__iacdm-orchestrator__get_exit_criteria",
+      "mcp__iacdm-orchestrator__advance_phase",
+      "mcp__iacdm-orchestrator__start_iteration",
+      "mcp__iacdm-orchestrator__record_decision",
+      "mcp__iacdm-orchestrator__update_score",
+      "mcp__iacdm-orchestrator__mark_exit_criterion",
+      "mcp__iacdm-orchestrator__check_safeguard",
+      "mcp__iacdm-orchestrator__check_all_safeguards",
+      "mcp__iacdm-orchestrator__check_specs_status",
+      "mcp__iacdm-orchestrator__init_project",
+      "mcp__iacdm-orchestrator__get_phase_guidance"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/home/jasmine/INDT/IACDM_Orch/.claude/orchestrator/inject-context.js\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/home/jasmine/INDT/IACDM_Orch/.claude/orchestrator/phase-gate.js\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"/home/jasmine/INDT/IACDM_Orch/.claude/orchestrator/loop-detector.js\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "ANTES da compactacao: chame get_phase_state() e salve o resultado em MEMORY.md (no seu diretorio de auto memory). Inclua: fase atual, iteracao, decisoes-chave, proximos passos."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "OBRIGATORIO: chame get_phase_state() do MCP server iacdm-orchestrator para saber a fase atual da metodologia Convergencia Iterativa. Em seguida chame get_phase_guidance() para obter as instrucoes detalhadas da fase atual. Se retornar erro de projeto nao inicializado, pergunte ao usuario se deseja iniciar um novo projeto com init_project(). Toda decisao importante deve ser registrada com record_decision(). Antes de avancar de fase, use get_exit_criteria() e advance_phase()."
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "CONTEXTO RESTAURADO. OBRIGATORIO: chame get_phase_state() e get_phase_guidance() para recuperar estado e instrucoes da metodologia. Consulte get_decisions() para decisoes anteriores. Leia MEMORY.md (auto memory) para contexto adicional. Continue de onde parou."
+          }
+        ]
+      }
+    ]
+  }
+}

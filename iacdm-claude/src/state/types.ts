@@ -1,4 +1,4 @@
-// Tipos centrais do IACDM Claude
+// Tipos centrais do Versus
 
 export interface PhaseState {
   projectName: string;

@@ -32,7 +32,7 @@ function main() {
 
   // Resumo compacto (não gastar tokens demais)
   const lines: string[] = [
-    `[IACDM] Phase ${phase} — ${phaseName} | Iteração ${state.currentIteration}`,
+    `[Versus] Phase ${phase} — ${phaseName} | Iteração ${state.currentIteration}`,
   ];
 
   if (state.phase0Score !== null) {

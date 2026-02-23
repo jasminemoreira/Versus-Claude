@@ -73,7 +73,7 @@ function main() {
 
       if (result.blocked) {
         deny(
-          `[IACDM] Salvaguarda S6 ativada: comando de teste executado ${result.count}x. ` +
+          `[Versus] Salvaguarda S6 ativada: comando de teste executado ${result.count}x. ` +
           `Loop detectado. PARE e:\n` +
           `1. Verifique se o bug tem solução conhecida (Tier 2 — busque implementação de referência)\n` +
           `2. Consulte specs/technical/ e specs/examples/\n` +

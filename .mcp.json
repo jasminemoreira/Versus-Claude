@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "iacdm-orchestrator": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/home/jasmine/INDT/IACDM_Orch/.claude/orchestrator/server.js"
+      ],
+      "env": {}
+    },
+    "iacdm-claude": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/home/jasmine/INDT/IACDM_Claude/.claude/orchestrator/server.js"
+      ],
+      "env": {}
+    }
+  }
+}

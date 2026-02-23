@@ -8,7 +8,7 @@ import { StateEngine } from "../state/engine";
 import { ScoreBreakdown } from "../state/types";
 
 function createTempWorkspace(): string {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "iacdm-test-"));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "versus-test-"));
   // Criar specs/ para testes de checkSpecsStatus
   const specsDirs = ["references", "domain", "technical", "examples", "design", "models", "datasets", "validation", "competitors"];
   for (const dir of specsDirs) {
@@ -81,7 +81,7 @@ test("initProject cria state.json", () => {
   assert.strictEqual(state.safeguards.length, 8);
 
   // Verifica persistência
-  const statePath = path.join(workspace, ".iacdm", "state.json");
+  const statePath = path.join(workspace, ".versus", "state.json");
   assert.ok(fs.existsSync(statePath));
 });
 

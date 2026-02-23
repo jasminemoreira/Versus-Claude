@@ -1,6 +1,6 @@
 {
-  "name": "iacdm-claude",
-  "displayName": "IACDM Claude",
+  "name": "versus-claude",
+  "displayName": "Versus for Claude",
   "description": "Orquestrador da metodologia Convergência Iterativa v3.6 para Claude Code",
   "version": "0.2.0",
   "publisher": "indt",
@@ -19,28 +19,28 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "iacdm-claude",
-          "title": "IACDM Claude",
+          "id": "versus-claude",
+          "title": "Versus for Claude",
           "icon": "$(layers)"
         }
       ]
     },
     "views": {
-      "iacdm-claude": [
+      "versus-claude": [
         {
-          "id": "iacdm-claude.phaseView",
+          "id": "versus-claude.phaseView",
           "name": "Estado da Metodologia"
         }
       ]
     },
     "commands": [
       {
-        "command": "iacdm-claude.initProject",
-        "title": "IACDM Claude: Inicializar Projeto"
+        "command": "versus-claude.initProject",
+        "title": "Versus: Inicializar Projeto"
       },
       {
-        "command": "iacdm-claude.refreshView",
-        "title": "IACDM Claude: Atualizar Sidebar"
+        "command": "versus-claude.refreshView",
+        "title": "Versus: Atualizar Sidebar"
       }
     ]
   },

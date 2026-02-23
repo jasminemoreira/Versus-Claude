@@ -18,20 +18,20 @@ const SPECS_SUBDIRS = [
 ];
 
 const MCP_TOOL_PERMISSIONS = [
-  "mcp__iacdm-claude__get_phase_state",
-  "mcp__iacdm-claude__get_decisions",
-  "mcp__iacdm-claude__get_exit_criteria",
-  "mcp__iacdm-claude__advance_phase",
-  "mcp__iacdm-claude__start_iteration",
-  "mcp__iacdm-claude__record_decision",
-  "mcp__iacdm-claude__update_score",
-  "mcp__iacdm-claude__mark_exit_criterion",
-  "mcp__iacdm-claude__check_safeguard",
-  "mcp__iacdm-claude__check_all_safeguards",
-  "mcp__iacdm-claude__check_specs_status",
-  "mcp__iacdm-claude__init_project",
-  "mcp__iacdm-claude__get_phase_guidance",
-  "mcp__iacdm-claude__update_project_spec",
+  "mcp__versus-claude__get_phase_state",
+  "mcp__versus-claude__get_decisions",
+  "mcp__versus-claude__get_exit_criteria",
+  "mcp__versus-claude__advance_phase",
+  "mcp__versus-claude__start_iteration",
+  "mcp__versus-claude__record_decision",
+  "mcp__versus-claude__update_score",
+  "mcp__versus-claude__mark_exit_criterion",
+  "mcp__versus-claude__check_safeguard",
+  "mcp__versus-claude__check_all_safeguards",
+  "mcp__versus-claude__check_specs_status",
+  "mcp__versus-claude__init_project",
+  "mcp__versus-claude__get_phase_guidance",
+  "mcp__versus-claude__update_project_spec",
 ];
 
 const BUNDLE_FILES = ["inject-context.js", "phase-gate.js", "loop-detector.js", "server.js"];
@@ -49,12 +49,12 @@ function getBundleDir(): string {
 }
 
 /**
- * Copia os 4 bundles para .iacdm/ no projeto.
+ * Copia os 4 bundles para .versus/ no projeto.
  * Retorna true se algum arquivo foi criado/atualizado.
  */
 function deployBundles(workspace: string): boolean {
   const bundleDir = getBundleDir();
-  const targetDir = path.join(workspace, ".iacdm");
+  const targetDir = path.join(workspace, ".versus");
 
   if (!fs.existsSync(targetDir)) {
     fs.mkdirSync(targetDir, { recursive: true });
@@ -83,10 +83,10 @@ function deployBundles(workspace: string): boolean {
 }
 
 /**
- * Gera hooks config usando caminhos LOCAIS do projeto (.iacdm/).
+ * Gera hooks config usando caminhos LOCAIS do projeto (.versus/).
  */
 function buildOrchestratorHooks(workspace: string): Record<string, any> {
-  const orchDir = path.join(workspace, ".iacdm");
+  const orchDir = path.join(workspace, ".versus");
 
   return {
     UserPromptSubmit: [
@@ -137,7 +137,7 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
           {
             type: "prompt",
             prompt:
-              "OBRIGATORIO: chame get_phase_state() do MCP server iacdm-claude para saber a fase atual da metodologia Convergencia Iterativa. Em seguida chame get_phase_guidance() para obter as instrucoes detalhadas da fase atual. Se retornar erro de projeto nao inicializado, pergunte ao usuario se deseja iniciar um novo projeto com init_project(). Toda decisao importante deve ser registrada com record_decision(). Antes de avancar de fase, use get_exit_criteria() e advance_phase().",
+              "OBRIGATORIO: chame get_phase_state() do MCP server versus-claude para saber a fase atual da metodologia Convergencia Iterativa. Em seguida chame get_phase_guidance() para obter as instrucoes detalhadas da fase atual. Se retornar erro de projeto nao inicializado, pergunte ao usuario se deseja iniciar um novo projeto com init_project(). Toda decisao importante deve ser registrada com record_decision(). Antes de avancar de fase, use get_exit_criteria() e advance_phase().",
           },
         ],
       },
@@ -157,11 +157,11 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
 
 /**
  * Cria ou atualiza .mcp.json no workspace para registrar o MCP server LOCAL.
- * O server.js está em .iacdm/server.js do próprio projeto.
+ * O server.js está em .versus/server.js do próprio projeto.
  */
 function ensureMcpJson(workspace: string): boolean {
   const mcpPath = path.join(workspace, ".mcp.json");
-  const serverPath = path.join(workspace, ".iacdm", "server.js");
+  const serverPath = path.join(workspace, ".versus", "server.js");
 
   const expectedConfig = {
     type: "stdio",
@@ -181,12 +181,12 @@ function ensureMcpJson(workspace: string): boolean {
   }
 
   // Verificar se já está correto
-  const existing = mcpJson.mcpServers["iacdm-claude"];
+  const existing = mcpJson.mcpServers["versus-claude"];
   if (existing && JSON.stringify(existing.args) === JSON.stringify(expectedConfig.args)) {
     return false;
   }
 
-  mcpJson.mcpServers["iacdm-claude"] = expectedConfig;
+  mcpJson.mcpServers["versus-claude"] = expectedConfig;
   fs.writeFileSync(mcpPath, JSON.stringify(mcpJson, null, 2) + "\n", "utf-8");
   return true;
 }
@@ -275,7 +275,7 @@ export const initProjectTool: Tool = {
   name: "init_project",
   description:
     "Inicializa um novo projeto com a metodologia Convergência Iterativa. " +
-    "Cria state.json em .iacdm/ e começa na Phase 0. " +
+    "Cria state.json em .versus/ e começa na Phase 0. " +
     "Se já existe um projeto, retorna erro — use get_phase_state para verificar.",
   inputSchema: {
     type: "object" as const,
@@ -309,7 +309,7 @@ export function handleInitProject(
 
   const workspace = engine.getWorkspace();
 
-  // Copiar bundles para .iacdm/ do projeto
+  // Copiar bundles para .versus/ do projeto
   const bundlesDeployed = deployBundles(workspace);
 
   // Criar specs/ e subpastas se não existem
@@ -342,7 +342,7 @@ export function handleInitProject(
     message:
       `PROJETO NOVO '${args.name}' inicializado em ${workspace}. ` +
       `Este é um projeto INDEPENDENTE e AUTÔNOMO — NÃO busque specs, decisões ou código de outros projetos. ` +
-      `Estrutura criada: state.json, server.js + 3 hooks (em .iacdm/), specs/ (9 subpastas), .mcp.json, settings.json. ` +
+      `Estrutura criada: state.json, server.js + 3 hooks (em .versus/), specs/ (9 subpastas), .mcp.json, settings.json. ` +
       `Tudo local — nenhuma dependência externa. ` +
       `AÇÃO OBRIGATÓRIA: Leia ${settingsPath} com a ferramenta Read para carregar permissões e hooks. ` +
       `Em seguida chame get_phase_guidance() para instruções da Phase 0.`,
