@@ -1,0 +1,67 @@
+{
+  "name": "iacdm-claude",
+  "displayName": "IACDM Claude",
+  "description": "Orquestrador da metodologia Convergência Iterativa v3.6 para Claude Code",
+  "version": "0.2.0",
+  "publisher": "indt",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "iacdm-claude",
+          "title": "IACDM Claude",
+          "icon": "$(layers)"
+        }
+      ]
+    },
+    "views": {
+      "iacdm-claude": [
+        {
+          "id": "iacdm-claude.phaseView",
+          "name": "Estado da Metodologia"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "iacdm-claude.initProject",
+        "title": "IACDM Claude: Inicializar Projeto"
+      },
+      {
+        "command": "iacdm-claude.refreshView",
+        "title": "IACDM Claude: Atualizar Sidebar"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "compile:mcp": "tsc -p ./tsconfig.mcp.json",
+    "watch": "tsc -watch -p ./",
+    "bundle": "node scripts/bundle.mjs",
+    "build": "npm run compile && npm run compile:mcp && npm run bundle",
+    "lint": "eslint src",
+    "test": "node ./out/test/runTests.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.27.3",
+    "eslint": "^9.0.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  }
+}

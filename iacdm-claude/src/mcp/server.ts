@@ -1,0 +1,79 @@
+#!/usr/bin/env node
+
+// MCP Server — processo independente (stdio)
+// Iniciado pela extensão VSCode ou manualmente via `node server.js --workspace <path>`
+
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import { StateEngine } from "../state/engine";
+import { ALL_TOOLS, handleToolCall } from "./tools/index";
+
+function getWorkspacePath(): string {
+  // Prioridade: --workspace arg > CLAUDE_PROJECT_DIR env > IACDM_WORKSPACE env > cwd
+  const args = process.argv.slice(2);
+  const wsIndex = args.indexOf("--workspace");
+  if (wsIndex !== -1 && args[wsIndex + 1]) {
+    return args[wsIndex + 1];
+  }
+  if (process.env.CLAUDE_PROJECT_DIR) {
+    return process.env.CLAUDE_PROJECT_DIR;
+  }
+  if (process.env.IACDM_WORKSPACE) {
+    return process.env.IACDM_WORKSPACE;
+  }
+  return process.cwd();
+}
+
+async function main() {
+  const workspacePath = getWorkspacePath();
+  const engine = new StateEngine(workspacePath);
+  engine.load();
+
+  const server = new Server(
+    {
+      name: "iacdm-claude",
+      version: "0.2.0",
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    }
+  );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return { tools: ALL_TOOLS };
+  });
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+    try {
+      const result = handleToolCall(name, (args ?? {}) as Record<string, unknown>, engine);
+      return {
+        content: [{ type: "text" as const, text: result }],
+      };
+    } catch (err) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({ error: `Erro interno: ${String(err)}` }),
+          },
+        ],
+        isError: true,
+      };
+    }
+  });
+
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+
+main().catch((err) => {
+  process.stderr.write(`IACDM MCP Server fatal: ${String(err)}\n`);
+  process.exit(1);
+});
