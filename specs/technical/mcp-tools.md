@@ -1,4 +1,4 @@
-# MCP Tools — IACDM Orchestrator
+# MCP Tools — Versus for Claude
 
 ## Catálogo de Ferramentas (~12 tools)
 

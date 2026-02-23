@@ -1,4 +1,4 @@
-# Arquitetura — IACDM Orchestrator
+# Arquitetura — Versus for Claude
 
 ## Padrão: Modular Monolith | Princípios: KISS + YAGNI
 
@@ -49,7 +49,7 @@
   // Projeto
   initProject(name: string, description: string): void
   ```
-- **Persistência:** `.iacdm/state.json` no workspace
+- **Persistência:** `.versus/state.json` no workspace
 - **Estado:** Singleton por workspace
 
 ### 4. Methodology Rules (`src/rules/methodology.ts`, `src/rules/phases.ts`, `src/rules/safeguards.ts`)
@@ -146,7 +146,7 @@ state.json → (file watcher) → Extension Core → TreeView.refresh()
 ## Estrutura de Arquivos
 
 ```
-iacdm-orchestrator/
+versus-claude/
 ├── src/
 │   ├── extension.ts              # Extension Core
 │   ├── mcp/

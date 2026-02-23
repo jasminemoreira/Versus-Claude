@@ -1,4 +1,4 @@
-# IACDM Claude
+# Versus for Claude
 
 **Orquestrador da metodologia Convergencia Iterativa v3.7 para Claude Code.**
 
@@ -14,7 +14,7 @@ LLMs em modo agente (Claude Code, Copilot, etc.) sofrem de tres problemas sistem
 2. **Ansiedade de codigo** -- o modelo pula direto para implementacao sem entender o problema, definir arquitetura ou validar decisoes
 3. **Deriva de escopo** -- sem restricoes externas, o modelo adiciona features nao solicitadas, reimplementa bibliotecas existentes e diverge do objetivo
 
-O IACDM resolve isso com **estado externo persistente** + **gates de transicao** + **salvaguardas ativas**.
+O Versus resolve isso com **estado externo persistente** + **gates de transicao** + **salvaguardas ativas**.
 
 ---
 
@@ -26,7 +26,7 @@ O IACDM resolve isso com **estado externo persistente** + **gates de transicao**
                     │                                         │
                     │   ┌─────────┐        ┌──────────────┐  │
                     │   │ Sidebar │◄───────│  state.json   │  │
-                    │   │ (view)  │  watch  │  (.iacdm/)   │  │
+                    │   │ (view)  │  watch  │  (.versus/)  │  │
                     │   └─────────┘        └──────┬───────┘  │
                     │                             │          │
                     │                        read/write      │
@@ -43,7 +43,7 @@ O IACDM resolve isso com **estado externo persistente** + **gates de transicao**
                     └─────────────────────────────────────────┘
 ```
 
-A extensao expoe **13 MCP tools** que o Claude Code usa automaticamente. Tres hooks reforçam o comportamento:
+A extensao expoe **13 MCP tools** que o Claude Code usa automaticamente. Tres hooks reforcam o comportamento:
 
 | Hook | Evento | Funcao |
 |------|--------|--------|
@@ -96,7 +96,7 @@ O modelo faz perguntas iterativas para entender o problema. Um score de converge
 
 ### Phases 2-3 -- Loop Adversarial
 
-A arquitetura e atacada com 7 lentes especializadas (performance, seguranca, manutenibilidade, edge cases, dependencias, simplicidade, alternativas) e simplificada iterativamente. O loop repete ate que as criticas sejam endereçadas.
+A arquitetura e atacada com 7 lentes especializadas (performance, seguranca, manutenibilidade, edge cases, dependencias, simplicidade, alternativas) e simplificada iterativamente. O loop repete ate que as criticas sejam enderecadas.
 
 ### Salvaguardas S0-S7
 
@@ -126,7 +126,7 @@ Regras de protecao verificaveis em qualquer momento:
 ### Via .vsix
 
 ```bash
-code --install-extension iacdm-claude-0.2.0.vsix
+code --install-extension versus-claude-0.2.0.vsix
 ```
 
 Ou: `Ctrl+Shift+P` > "Extensions: Install from VSIX..."
@@ -134,12 +134,12 @@ Ou: `Ctrl+Shift+P` > "Extensions: Install from VSIX..."
 ### Via source
 
 ```bash
-git clone git@github.com:jasminemoreira/IACDM_Claude.git
-cd IACDM_Claude/iacdm-claude
+git clone git@github.com:jasminemoreira/Versus-Claude.git
+cd Versus-Claude/versus-claude
 npm install
 npm run build
 npx @vscode/vsce package --allow-missing-repository
-code --install-extension iacdm-claude-*.vsix
+code --install-extension versus-claude-*.vsix
 ```
 
 ---
@@ -148,12 +148,12 @@ code --install-extension iacdm-claude-*.vsix
 
 ### 1. Inicializar um projeto
 
-`Ctrl+Shift+P` > **"IACDM: Inicializar Projeto"** > nome e descricao.
+`Ctrl+Shift+P` > **"Versus: Inicializar Projeto"** > nome e descricao.
 
 Isso cria no workspace:
 
 ```
-.iacdm/
+.versus/
 ├── state.json            # estado da metodologia
 ├── server.js             # MCP server
 ├── inject-context.js     # hook: contexto
@@ -181,7 +181,7 @@ Abra o Claude Code normalmente. O hook SessionStart faz o Claude chamar `get_pha
 
 ### 3. Acompanhar pela sidebar
 
-O painel "IACDM" na activity bar mostra em tempo real: fase atual, iteracao, score, ultimas decisoes e status das salvaguardas.
+O painel "Versus" na activity bar mostra em tempo real: fase atual, iteracao, score, ultimas decisoes e status das salvaguardas.
 
 ---
 
@@ -222,15 +222,15 @@ O painel "IACDM" na activity bar mostra em tempo real: fase atual, iteracao, sco
 
 ---
 
-## Compatibilidade com IACDM Copilot
+## Compatibilidade com Versus for Copilot
 
-O estado da metodologia fica em `.iacdm/` -- um diretorio neutro compartilhado entre extensoes. Isso significa que voce pode:
+O estado da metodologia fica em `.versus/` -- um diretorio neutro compartilhado entre extensoes. Isso significa que voce pode:
 
 - Iniciar um projeto com Claude Code e continuar com Copilot (ou vice-versa)
 - Usar ambos no mesmo workspace sem conflito
 - O `state.json` e identico e intercambiavel
 
-Veja o projeto irmao: [IACDM Copilot](https://github.com/jasminemoreira/IACDM_Copilot) (mesmo conceito para GitHub Copilot Agent Mode).
+Veja o projeto irmao: [Versus for Copilot](https://github.com/jasminemoreira/Versus) (mesmo conceito para GitHub Copilot Agent Mode).
 
 ---
 
@@ -243,8 +243,8 @@ A extensao **nao cria nenhum arquivo automaticamente**. Tudo so acontece quando 
 ## Estrutura do Repositorio
 
 ```
-IACDM_Claude/
-├── iacdm-claude/           # extensao VS Code
+Versus-Claude/
+├── versus-claude/           # extensao VS Code
 │   ├── src/
 │   │   ├── extension.ts        # lifecycle (lazy init)
 │   │   ├── mcp/

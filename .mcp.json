@@ -1,18 +1,18 @@
 {
   "mcpServers": {
-    "iacdm-orchestrator": {
+    "versus-copilot": {
       "type": "stdio",
       "command": "node",
       "args": [
-        "/home/jasmine/INDT/IACDM_Orch/.claude/orchestrator/server.js"
+        "/home/jasmine/INDT/IACDM_Copilot/.versus/server.js"
       ],
       "env": {}
     },
-    "iacdm-claude": {
+    "versus-claude": {
       "type": "stdio",
       "command": "node",
       "args": [
-        "/home/jasmine/INDT/IACDM_Claude/.claude/orchestrator/server.js"
+        "/home/jasmine/INDT/IACDM_Claude/.versus/server.js"
       ],
       "env": {}
     }

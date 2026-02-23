@@ -1,21 +1,21 @@
-# AGENTS.md — Instruções obrigatórias para Agent Mode
+# AGENTS.md — Instrucoes obrigatorias para Agent Mode
 
-## PRIMEIRA AÇÃO (antes de qualquer outra coisa):
+## PRIMEIRA ACAO (antes de qualquer outra coisa):
 
-Chame a tool `get_phase_state` do MCP server `iacdm-orchestrator`.
-Isso retorna a fase atual da metodologia IACDM Convergência Iterativa.
+Chame a tool `get_phase_state` do MCP server `versus-claude`.
+Isso retorna a fase atual da metodologia Convergencia Iterativa.
 
-- Se retornar erro "projeto não inicializado": pergunte ao usuário se deseja iniciar com `init_project`
-- Se retornar uma fase: chame `get_phase_guidance` e siga as instruções da fase
+- Se retornar erro "projeto nao inicializado": pergunte ao usuario se deseja iniciar com `init_project`
+- Se retornar uma fase: chame `get_phase_guidance` e siga as instrucoes da fase
 
-NÃO faça nada antes de chamar `get_phase_state`. NÃO pergunte ao usuário o que quer fazer.
-NÃO improvise. O fluxo da metodologia é determinado pelo estado retornado.
+NAO faca nada antes de chamar `get_phase_state`. NAO pergunte ao usuario o que quer fazer.
+NAO improvise. O fluxo da metodologia e determinado pelo estado retornado.
 
 ## Regras do fluxo:
 
-1. Cada interação começa com `get_phase_state` → `get_phase_guidance`
-2. Decisões do usuário via `ask_user` (menu com opções predefinidas contextualizadas)
-3. Registre decisões com `record_decision`
-4. Antes de avançar fase: `get_exit_criteria` → `advance_phase`
+1. Cada interacao comeca com `get_phase_state` → `get_phase_guidance`
+2. Decisoes do usuario via `ask_user` (menu com opcoes predefinidas contextualizadas)
+3. Registre decisoes com `record_decision`
+4. Antes de avancar fase: `get_exit_criteria` → `advance_phase`
 5. NUNCA pule fases (0→7 sequencial)
-6. NUNCA implemente código antes de Phase 5
+6. NUNCA implemente codigo antes de Phase 5

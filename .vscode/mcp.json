@@ -1,9 +1,9 @@
 {
   "servers": {
-    "iacdm-orchestrator": {
+    "versus-claude": {
       "command": "node",
       "args": [
-        "/home/jasmine/INDT/IACDM_Claude/.claude/orchestrator/server.js"
+        "/home/jasmine/INDT/IACDM_Claude/.versus/server.js"
       ]
     }
   }

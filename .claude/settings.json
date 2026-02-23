@@ -10,19 +10,19 @@
       "Glob",
       "Grep",
       "Bash",
-      "mcp__iacdm-orchestrator__get_phase_state",
-      "mcp__iacdm-orchestrator__get_decisions",
-      "mcp__iacdm-orchestrator__get_exit_criteria",
-      "mcp__iacdm-orchestrator__advance_phase",
-      "mcp__iacdm-orchestrator__start_iteration",
-      "mcp__iacdm-orchestrator__record_decision",
-      "mcp__iacdm-orchestrator__update_score",
-      "mcp__iacdm-orchestrator__mark_exit_criterion",
-      "mcp__iacdm-orchestrator__check_safeguard",
-      "mcp__iacdm-orchestrator__check_all_safeguards",
-      "mcp__iacdm-orchestrator__check_specs_status",
-      "mcp__iacdm-orchestrator__init_project",
-      "mcp__iacdm-orchestrator__get_phase_guidance"
+      "mcp__versus-claude__get_phase_state",
+      "mcp__versus-claude__get_decisions",
+      "mcp__versus-claude__get_exit_criteria",
+      "mcp__versus-claude__advance_phase",
+      "mcp__versus-claude__start_iteration",
+      "mcp__versus-claude__record_decision",
+      "mcp__versus-claude__update_score",
+      "mcp__versus-claude__mark_exit_criterion",
+      "mcp__versus-claude__check_safeguard",
+      "mcp__versus-claude__check_all_safeguards",
+      "mcp__versus-claude__check_specs_status",
+      "mcp__versus-claude__init_project",
+      "mcp__versus-claude__get_phase_guidance"
     ]
   },
   "hooks": {
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/home/jasmine/INDT/IACDM_Orch/.claude/orchestrator/inject-context.js\""
+            "command": "node \"/home/jasmine/INDT/IACDM_Claude/.versus/inject-context.js\""
           }
         ]
       }
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/home/jasmine/INDT/IACDM_Orch/.claude/orchestrator/phase-gate.js\""
+            "command": "node \"/home/jasmine/INDT/IACDM_Claude/.versus/phase-gate.js\""
           }
         ]
       },
@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/home/jasmine/INDT/IACDM_Orch/.claude/orchestrator/loop-detector.js\""
+            "command": "node \"/home/jasmine/INDT/IACDM_Claude/.versus/loop-detector.js\""
           }
         ]
       }
@@ -72,7 +72,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "OBRIGATORIO: chame get_phase_state() do MCP server iacdm-orchestrator para saber a fase atual da metodologia Convergencia Iterativa. Em seguida chame get_phase_guidance() para obter as instrucoes detalhadas da fase atual. Se retornar erro de projeto nao inicializado, pergunte ao usuario se deseja iniciar um novo projeto com init_project(). Toda decisao importante deve ser registrada com record_decision(). Antes de avancar de fase, use get_exit_criteria() e advance_phase()."
+            "prompt": "OBRIGATORIO: chame get_phase_state() do MCP server versus-claude para saber a fase atual da metodologia Convergencia Iterativa. Em seguida chame get_phase_guidance() para obter as instrucoes detalhadas da fase atual. Se retornar erro de projeto nao inicializado, pergunte ao usuario se deseja iniciar um novo projeto com init_project(). Toda decisao importante deve ser registrada com record_decision(). Antes de avancar de fase, use get_exit_criteria() e advance_phase()."
           }
         ]
       },

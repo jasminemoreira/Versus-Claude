@@ -1,10 +1,10 @@
-# Glossário — IACDM Orchestrator
+# Glossário — Versus for Claude
 
 | Termo | Definição |
 |-------|-----------|
 | Orquestrador | Extensão VSCode (MCP server + sidebar) que gerencia estado da metodologia Convergência Iterativa |
 | IACDM | Iterative Adversarial Convergence Development Methodology — nome técnico da Convergência Iterativa |
-| State | Objeto JSON persistido em `.iacdm/state.json`: fase atual, iteração, score, decisões, salvaguardas |
+| State | Objeto JSON persistido em `.versus/state.json`: fase atual, iteração, score, decisões, salvaguardas |
 | MCP (Model Context Protocol) | Protocolo que permite expor ferramentas extras ao Claude Code via servidor |
 | MCP Tool | Ferramenta individual exposta pelo MCP server (ex: `get_phase_state`, `advance_phase`) |
 | Gate | Validação de exit criteria que bloqueia transição entre fases |

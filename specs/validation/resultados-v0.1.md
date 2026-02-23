@@ -1,4 +1,4 @@
-# Resultados — IACDM Orchestrator v0.1.0
+# Resultados — Versus for Claude v0.1.0
 
 ## Build
 - TypeScript compila sem erros (extensão + MCP server)

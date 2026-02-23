@@ -1,4 +1,4 @@
-# Requisitos — IACDM Orchestrator
+# Requisitos — Versus for Claude
 
 ## Problema
 O Claude perde o estado da metodologia Convergência Iterativa v3.6 durante conversas longas (>50 mensagens) e entre sessões. Sintomas:
@@ -23,7 +23,7 @@ Extensão VSCode com:
 - **Metodologia fixa** — hardcoded para Convergência Iterativa v3.6
 - **Sidebar read-only** — somente visualização, ações via Claude Code + MCP
 - **Idioma PT** — interface em português
-- **Storage**: `.iacdm/state.json`
+- **Storage**: `.versus/state.json`
 - **Specs verificado** — MCP verifica specs/ mas não bloqueia (alerta + permite com confirmação)
 - **Hooks removidos** — MCP substitui hooks existentes
 - **~12 MCP tools granulares** — propósito claro por ferramenta

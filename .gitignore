@@ -13,7 +13,7 @@ Thumbs.db
 
 # IDE (project-specific, not extension source)
 .claude/orchestrator/
-.iacdm/
+.versus/
 
 # Environment
 .env
