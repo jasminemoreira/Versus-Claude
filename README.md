@@ -230,7 +230,7 @@ O estado da metodologia fica em `.versus/` -- um diretorio neutro compartilhado 
 - Usar ambos no mesmo workspace sem conflito
 - O `state.json` e identico e intercambiavel
 
-Veja o projeto irmao: [Versus for Copilot](https://github.com/jasminemoreira/Versus) (mesmo conceito para GitHub Copilot Agent Mode).
+Veja o projeto irmao: [Versus for Copilot](https://github.com/jasminemoreira/Versus-Copilot) (mesmo conceito para GitHub Copilot Agent Mode).
 
 ---
 
