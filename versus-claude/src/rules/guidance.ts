@@ -189,7 +189,7 @@ Future work will follow independent sessions:
 
 // [G2] Critique-response asymmetry + [G3] Concentration analysis + [G8] AV types + [G10] Gate criteria
 const PHASE_2_GUIDANCE = `## Phase 2 — Adversarial Critique
-### Verification: Human-AV + AG (7 specialized lenses as operationally distinct AVs)
+### Verification: Human-AV + AG (7 universal + up to 8 conditional lenses as operationally distinct AVs)
 
 ### Critique-response asymmetry principle:
 **Phase 2 = MULTIPLE agents to ATTACK** (lens diversity is value).
@@ -210,6 +210,20 @@ Different lenses see different flaws. Isolated responses may be individually cor
 
 Selection principle: if removing this lens, is there a failure class that NO other lens detects? If yes → legitimate. If not → redundancy.
 
+### Conditional Lenses (activate based on project context from ProjectSpec):
+| Lens | Central Question | Exclusive Failure Class | Activate when... |
+|------|-----------------|------------------------|------------------|
+| Resilience | What happens when an external dependency fails, responds slowly, or returns unexpected data? | Cascading failures, retry storms, partial outages | External dependencies (APIs, DBs, queues, third-party services) |
+| UI/UX | Can the user complete their task without frustration, confusion, or error? | Confusing flows, dead-end states, missing feedback, accessibility failures | User-facing interface |
+| Migration / Coexistence | What breaks during the transition from old to new? Is there a rollback path? | Data loss in migration, functional regression vs. legacy, impossible rollback | Replacing or modifying existing production system |
+| Sustainability / Proportionality | Is resource consumption proportionate to value delivered? Cost at 10× scale? | GPU where CPU suffices, heavy model for simple task, infinite data retention | Significant computational costs (AI/ML, data processing, cloud-native) |
+| Ethical / Human Impact | Who is potentially harmed? Are there audit, correction, and transparency mechanisms? | Algorithmic bias, digital exclusion, automated decisions without human recourse | Automated decisions about people (scoring, classification, moderation) |
+| Process / Workflow | Are processes, state transitions, actor responsibilities, and exception paths complete? | Orphaned states, ambiguous handoffs, missing actors, happy-path bias | Multi-actor flows, state machines, or business processes |
+| Governance / Accountability | Is every action attributable? Does every data entity have a defined owner? | No data ownership, no accountability, shadow data flows | Multiple teams, data domains, or compliance (SOC2, LGPD, HIPAA) |
+| Observability / Operability | Can degradation be detected and incidents diagnosed in production without code changes? | Opaque systems where nobody can figure out why it failed | Production systems with operational requirements |
+
+Conditional lens activation: review ProjectSpec (stack, constraints, out-of-scope) and activate applicable lenses. Record activated set with record_decision(category='architecture').
+
 ### Protocol per lens:
 1. Apply central question to EACH module
 2. Classify findings: 🔴 Critical (blocks) | 🟡 Important (degrades) | 🟢 Suggestion
@@ -218,7 +232,7 @@ Selection principle: if removing this lens, is there a failure class that NO oth
 **CAUTION AP1 (Validation theater):** Never ask "is it good?". Ask for refutation.
 
 ### Coverage Matrix (mandatory):
-Table of modules × lenses with severities.
+Table of modules × lenses (universal + activated conditional) with severities.
 
 ### Concentration analysis (MANDATORY after the matrix):
 - **Concentration by module:** Module with findings across ALL lenses → probably poorly conceived → requires REDESIGN, not patch.
@@ -393,7 +407,7 @@ export function getFullGuidance(phase: number): string {
 
   // Global rules always applicable
   parts.push("## ACTIVE GLOBAL RULES");
-  parts.push(GLOBAL_RULES.R2); // R2 sempre ativo
+  parts.push(GLOBAL_RULES.R2); // R2 always active
 
   if (phase < 5) {
     parts.push(GLOBAL_RULES.R1);
@@ -445,7 +459,7 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("R2+R4: specs/technical,models,examples. AP3: plan decoupled sessions for P5-P6.");
       break;
     case 2:
-      lines.push("INSTRUCTIONS P2: 7 universal lenses on EACH module → 🔴🟡🟢. Matrix + concentration analysis (module×lenses). ASYMMETRY: multiple agents attack, unified responds in P3.");
+      lines.push("INSTRUCTIONS P2: 7 universal + conditional lenses on EACH module → 🔴🟡🟢. Activate conditional lenses from ProjectSpec. Matrix + concentration analysis (module×lenses). ASYMMETRY: multiple agents attack, unified responds in P3.");
       lines.push("BOUNDARY: do NOT cut/add requirements. AP1: ask for refutation, not validation.");
       break;
     case 3:
