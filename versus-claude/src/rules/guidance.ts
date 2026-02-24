@@ -11,11 +11,11 @@ export interface PhaseGuidance {
 // Global rules injected according to phase
 const GLOBAL_RULES = {
   R1: "R1: Evaluate triggers before coding. If triggered → Phase 0. Never skip to implementation.",
-  R2: "R2: Every user decision via AskUserQuestion. Up to 4 questions/call. multiSelect for non-exclusive. Recommended first with '(Recommended)'. Never list options A/B/C in text.",
+  R2: "R2: Every user decision via AskUserQuestion. ALWAYS provide suggested options (single or multi-select) — never send questions without options. Up to 4 questions/call. multiSelect for non-exclusive. Recommended first with '(Recommended)'. Never list options A/B/C in text.",
   R3: "R3: Maximum 1 file per response. Indicate 'File X/N'. Exception: files <30 LOC groupable if total <50% of limit.",
   R4_TIMING: {
-    0: "R4: Popular specs/ — refs, domain, competitors.",
-    1: "R4: Popular specs/ — technical, models, examples.",
+    0: "R4: Populate specs/ — refs, domain, competitors.",
+    1: "R4: Populate specs/ — technical, models, examples.",
     5: "R4: Consult specs/technical, examples, references, datasets BEFORE each module.",
     6: "R4: Use specs/datasets (ground truth), specs/validation (criteria), specs/technical (ranges).",
     7: "R4: Update specs/validation (results), specs/technical (final decisions), specs/references.",
@@ -64,20 +64,23 @@ const PHASE_0_GUIDANCE = `## Phase 0 — Problem Discovery Loop
 
 ### Step 0: Read ALL content from specs/ before asking questions. Build on what already exists.
 
-### COLLECTION — Mandatory questions (via AskUserQuestion / R2):
+### HIERARCHICAL SEMANTIC ANALYSIS (HSA) — 5-level exploration:
+Explore the problem systematically from the broadest context (Domain) to the concrete deliverable (Product). Each level builds on the previous. Use AskUserQuestion (R2) at every level.
 
-| Category | Key Questions |
+---
+
+### Level 1 — DOMAIN (Context & Vocabulary)
+Establish the semantic universe of the problem before diving into specifics.
+
+| Sub-area | Key Questions |
 |----------|--------------|
-| A. Problem & Motivation | Why is it needed? What happens without it? Who are the users? |
-| B. Use Cases | 3-5 main scenarios (who/what/why). Edge cases? |
-| C. Vocabulary | Key terms and definitions. Synonyms to avoid? |
-| D. Constraints | Technical limitations, resource constraints. Assumed premises? |
-| E. Out of Scope (YAGNI) | What NOT to do, with cost/benefit justification |
-| F. Documentation | Specs, RFCs, legacy code, issues. Content in specs/? |
-| G. Vague Terms | Clarify: "fancy"→concrete, "scalable"→nº users, "fast"→ms |
-| H. Tech Feasibility | If initial tech doesn't cover 100%, explore alternatives |
+| Vocabulary | Key terms and definitions. Synonyms to avoid? |
+| Vague Terms | Clarify: "fancy"→concrete, "scalable"→N users, "fast"→ms |
+| Theoretical Field | What discipline(s) does this belong to? What foundational knowledge applies? |
+| Methodologies | Are there established methodologies or standards in this domain? |
+| Tools & Ecosystem | What tools, platforms, and libraries define this domain's landscape? |
 
-### F.2 — Technical AND scientific research (MANDATORY for specialized domains):
+**Technical AND scientific research (MANDATORY for specialized domains):**
 If the project involves DSP, ML, bioinformatics, engineering, sciences etc.: research BEFORE architecture:
 - **Scientific:** Peer-reviewed reference papers, theoretical foundations of the domain, applicable mathematical/physical models, constants and parameters validated by literature
 - **Technical:** Candidate algorithms with trade-offs, reference implementations, published benchmarks, mature tools and libraries
@@ -86,12 +89,48 @@ If the project involves DSP, ML, bioinformatics, engineering, sciences etc.: res
 - Each numerical parameter MUST have a cited source (paper, standard, specification)
 - Rule: "Do not implement an algorithm without a verifiable bibliographic reference"
 
-### F.3 — Web research:
-If specs/ has critical gaps, ask the user for permission (via AskUserQuestion) to research.
-Options: research and deposit / research and present / don't research.
-Cite source/URL in all deposited material.
+---
 
-### H — Tech Feasibility (MANDATORY VERIFICATION):
+### Level 2 — PROBLEM (5W1H)
+Define the problem precisely using the 5W1H framework.
+
+| Sub-area | Key Questions |
+|----------|--------------|
+| Why (Motivation) | Why is it needed? What happens without it? What pain does it solve? |
+| Who (Actors) | Who are the users? Who are the stakeholders? Who is affected? |
+| What (Scope) | What exactly needs to be done? What is the core capability? |
+| When (Timing) | When is it needed? Are there temporal constraints, deadlines, sequences? |
+| Where (Context) | Where does it run? What environment, platform, infrastructure? |
+| How (Approach) | How should it work at a high level? Any mandatory approach or constraint? |
+
+---
+
+### Level 3 — ELEMENTS (Parts & Constraints)
+Identify the concrete components, entities, and constraints of the system.
+
+| Sub-area | Key Questions |
+|----------|--------------|
+| Components | What are the main parts/modules of the system? |
+| Entities | What data entities, models, or domain objects exist? |
+| Resources | What external resources are needed (APIs, DBs, services, files)? |
+| Actors | What human or system actors interact with each component? |
+| Constraints | Technical limitations, resource constraints. Assumed premises? |
+
+---
+
+### Level 4 — PROCESSES (Flows & Feasibility)
+Map the dynamic behavior: how components interact, transform, and communicate.
+
+| Sub-area | Key Questions |
+|----------|--------------|
+| Use Cases | 3-5 main scenarios (actor/objective/flow). Edge cases? |
+| Relationships | How do components relate? What are the dependencies? |
+| Transformations | What data transformations occur? What are the inputs/outputs? |
+| Flows | What are the main execution flows? What triggers them? |
+| Events | What events does the system react to? What does it emit? |
+| Tech Feasibility | Does the target platform support the fundamental mechanisms? |
+
+**Tech Feasibility (MANDATORY VERIFICATION):**
 **LESSON LEARNED:** Tech feasibility of the target platform must be VERIFIED, not assumed.
 Before advancing, answer EXPLICITLY:
 - Does the target platform support the fundamental mechanisms needed? (APIs, protocols, extensibility)
@@ -101,15 +140,53 @@ Before advancing, answer EXPLICITLY:
 If any essential capability is absent → BLOCKER. Do not advance without resolution.
 Do not cut scope to fit the technology. Compare alternatives with table (requirements × techs, LOC, libs, platform). Ask the user via AskUserQuestion.
 
+---
+
+### Level 5 — PRODUCT (Deliverables & Criteria)
+Define what "done" looks like — the expected output and how to measure success.
+
+| Sub-area | Key Questions |
+|----------|--------------|
+| Desired Result | What is the final deliverable? What does the user get? |
+| Deliverables | Concrete artifacts: files, APIs, interfaces, documentation? |
+| Success Criteria | How do we measure success? (measurable and verifiable) |
+| Acceptance Criteria | What must be true for the user to accept the result? |
+| Out of Scope (YAGNI) | What NOT to do, with cost/benefit justification |
+
+---
+
+### CROSS-CUTTING — Documentation & Research (all levels):
+| Sub-area | Action |
+|----------|--------|
+| Documentation | Specs, RFCs, legacy code, issues. Content in specs/? |
+| Web Research | If specs/ has critical gaps, ask user permission to research. Options: research and deposit / research and present / don't research. Cite source/URL in all deposited material. |
+
+---
+
 ### SYNTHESIS (Teach-Back) — Mandatory template:
 \`\`\`markdown
 # My Understanding (Iteration N)
-## Summary in 3 Sentences (problem, not solution)
-## Main Use Cases (actor/objective/flow/concrete example)
-## Vocabulary (term | understanding | example)
-## Out of Scope (item | reason)
-## Success Criteria (measurable and verifiable)
-## Assumptions & Constraints
+
+## Level 1 — Domain
+### Vocabulary (term | understanding | example)
+### Domain Context (field, methodologies, relevant standards)
+
+## Level 2 — Problem
+### Summary in 3 Sentences (problem, not solution)
+### 5W1H (Why | Who | What | When | Where | How)
+
+## Level 3 — Elements
+### Components & Entities identified
+### Constraints & Assumptions
+
+## Level 4 — Processes
+### Main Use Cases (actor/objective/flow/concrete example)
+### Key Flows & Relationships
+
+## Level 5 — Product
+### Deliverables & Success Criteria (measurable and verifiable)
+### Out of Scope (item | reason)
+
 ## Remaining Ambiguities
 ## Questions for Next Iteration
 \`\`\`
@@ -451,7 +528,7 @@ export function getCompactGuidance(phase: number): string[] {
 
   switch (phase) {
     case 0:
-      lines.push("INSTRUCTIONS P0: Categories A-H (AskUserQuestion). Mandatory teach-back. F.2: technical AND SCIENTIFIC research if specialized domain. Tier 1/2/3 feasibility. Score ≥90.");
+      lines.push("INSTRUCTIONS P0: HSA 5-level exploration (1.Domain 2.Problem-5W1H 3.Elements 4.Processes 5.Product). AskUserQuestion per level. Mandatory teach-back. Technical+scientific research if specialized domain. Tier 1/2/3 feasibility. Score ≥90.");
       lines.push("R2: Every decision via AskUserQuestion. AP1: never ask for validation, ask for REFUTATION.");
       break;
     case 1:

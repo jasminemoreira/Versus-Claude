@@ -1,18 +1,10 @@
 {
   "mcpServers": {
-    "versus-copilot": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "/home/jasmine/INDT/IACDM_Copilot/.versus/server.js"
-      ],
-      "env": {}
-    },
     "versus-claude": {
       "type": "stdio",
       "command": "node",
       "args": [
-        "/home/jasmine/INDT/IACDM_Claude/.versus/server.js"
+        "/home/jasmine/INDT/Versus_Claude/.versus/server.js"
       ],
       "env": {}
     }

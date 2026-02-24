@@ -1,8 +1,8 @@
 # Versus for Claude
 
-**Iterative Convergence methodology v3.6 orchestrator for Claude Code.**
+**IACDM (Iterative Adversarial Convergence Development Methodology) orchestrator for Claude Code.**
 
-Transforms LLMs from reactive assistants into disciplined agents that follow a structured 8-phase process — from problem discovery to delivery with tests and post-review.
+An original methodology created by [Jasmine Moreira](https://github.com/jasminemoreira) that transforms LLMs from reactive assistants into disciplined agents following a structured 8-phase process — from problem discovery to delivery with tests and post-review.
 
 ## Features
 
@@ -19,7 +19,7 @@ Transforms LLMs from reactive assistants into disciplined agents that follow a s
 ## How It Works
 
 ```
-Phase 0: Problem Discovery    → Understand before solving (score >= 90 to advance)
+Phase 0: Problem Discovery    → HSA 5-level exploration (score >= 90 to advance)
 Phase 1: Architecture         → Define modules, interfaces, patterns
 Phase 2: Adversarial Critique → Attack the architecture with specialized lenses
 Phase 3: Simplification       → Address criticals, simplify (loops with Phase 2)
@@ -66,8 +66,8 @@ Or ask Claude Code directly:
 
 ## Companion Extension
 
-Use **[Versus for Copilot](https://marketplace.visualstudio.com/items?itemName=indt.versus-copilot)** for GitHub Copilot Agent Mode integration. Both extensions share the same `.versus/state.json` format.
+Use **[Versus for Copilot](https://marketplace.visualstudio.com/items?itemName=jasminemoreira.versus-copilot)** for GitHub Copilot Agent Mode integration. Both extensions share the same `.versus/state.json` format.
 
 ## License
 
-[MIT](LICENSE) - Developed at [INDT](https://www.indt.org.br/) (Institute for Technological Development).
+[MIT](LICENSE) - Created by [Jasmine Moreira](https://github.com/jasminemoreira).

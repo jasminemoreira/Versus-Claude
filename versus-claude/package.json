@@ -1,9 +1,10 @@
 {
   "name": "versus-claude",
   "displayName": "Versus for Claude",
-  "description": "Iterative Convergence methodology v3.6 orchestrator for Claude Code",
+  "description": "IACDM (Iterative Adversarial Convergence Development Methodology) orchestrator for Claude Code",
   "version": "0.2.0",
-  "publisher": "indt",
+  "publisher": "jasminemoreira",
+  "author": "Jasmine Moreira",
   "license": "MIT",
   "repository": {
     "type": "git",

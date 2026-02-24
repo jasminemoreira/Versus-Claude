@@ -15,7 +15,7 @@ VS Code extension with:
 3. **Persisted state** — survives compaction, sessions, crashes
 
 ## Users
-- Internal (INDT) initially, public (open-source) later
+- Public (open-source)
 
 ## Confirmed Decisions
 - **1 project per workspace** — each VS Code workspace = 1 methodology instance

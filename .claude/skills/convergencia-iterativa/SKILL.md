@@ -1,6 +1,6 @@
-# Iterative Convergence v3.7
+# IACDM — Iterative Adversarial Convergence Development Methodology v3.7
 
-Rigorous development methodology in 8 phases (0-7) with meta-iteration and scope preservation. Do not advance phases without meeting all exit criteria.
+Created by Jasmine Moreira. Rigorous development methodology in 8 phases (0-7) with meta-iteration and scope preservation. Do not advance phases without meeting all exit criteria.
 
 ---
 
@@ -8,7 +8,7 @@ Rigorous development methodology in 8 phases (0-7) with meta-iteration and scope
 
 **R1 — Consult before coding.** If user requested code/feature: evaluate triggers → if triggered, start Phase 0. Never skip to implementation.
 
-**R2 — Clickable menus.** Every user decision uses `AskUserQuestion`. Group up to 4 questions per call. `multiSelect: true` for non-exclusive choices. Recommended option first with "(Recommended)". "Other" is automatic. Never list options A/B/C in text.
+**R2 — Clickable menus.** Every user decision uses `AskUserQuestion`. ALWAYS provide suggested options (single or multi-select) — never send questions without options. Group up to 4 questions per call. `multiSelect: true` for non-exclusive choices. Recommended option first with "(Recommended)". "Other" is automatic. Never list options A/B/C in text.
 
 **R3 — One artifact per response.** Maximum 1 large file per response. Indicate progress "File X/N". Exception: files <30 LOC can be grouped if total <50% of limit.
 
@@ -59,7 +59,7 @@ Before proposing implementation, evaluate in sequence:
 ## PHASE OVERVIEW
 
 ```
-Phase 0 — Problem Discovery (iterative loop, score ≥90/100)
+Phase 0 — Problem Discovery (HSA 5-level exploration, score ≥90/100)
   ↓
 Phase 1 — Architecture (modules + interfaces)
   ↓
@@ -98,24 +98,25 @@ Multiple 2-3 iterations are expected: small 1-2, medium 2-3, large 3-5. Prefer i
 **Entry:** Methodology activated.
 **Verification:** Human-AV (operator validates synthesis and teach-back).
 
-### Loop: COLLECT → SYNTHESIZE → VALIDATE → EVALUATE
+### Loop: EXPLORE (HSA) → SYNTHESIZE → VALIDATE → EVALUATE
 
 **Step 0:** Read ALL content from `specs/` before asking questions. Build on what already exists.
 
-### COLLECT — Mandatory questions (via R2):
+### HIERARCHICAL SEMANTIC ANALYSIS (HSA) — 5-level exploration:
+Explore the problem systematically from the broadest context (Domain) to the concrete deliverable (Product). Each level builds on the previous. Use AskUserQuestion (R2) at every level.
 
-| Category | Key Questions |
+#### Level 1 — DOMAIN (Context & Vocabulary)
+Establish the semantic universe of the problem before diving into specifics.
+
+| Sub-area | Key Questions |
 |----------|--------------|
-| A. Problem & Motivation | Why is this needed? What happens without it? Who are the users? |
-| B. Use Cases | 3-5 main scenarios (who/what/why). Edge cases? |
-| C. Vocabulary | Key terms and definitions. Synonyms to avoid? |
-| D. Constraints | Technical limitations, resource constraints. Assumed premises? |
-| E. Out of Scope (YAGNI) | What NOT to do, with cost/benefit justification |
-| F. Documentation | Specs, RFCs, legacy code, issues. Content in `specs/`? |
-| G. Vague Terms | Clarify: "fancy"→concrete, "scalable"→# users, "fast"→ms |
-| H. Tech Feasibility | Target platform VERIFIED (not assumed). In porting: capability parity confirmed |
+| Vocabulary | Key terms and definitions. Synonyms to avoid? |
+| Vague Terms | Clarify: "fancy"→concrete, "scalable"→N users, "fast"→ms |
+| Theoretical Field | What discipline(s) does this belong to? What foundational knowledge applies? |
+| Methodologies | Are there established methodologies or standards in this domain? |
+| Tools & Ecosystem | What tools, platforms, and libraries define this domain's landscape? |
 
-**F.2 — Technical AND scientific research (mandatory for specialized domains):** If project involves DSP, ML, bioinformatics, engineering, sciences etc., research BEFORE architecture:
+**Technical AND scientific research (mandatory for specialized domains):** If project involves DSP, ML, bioinformatics, engineering, sciences etc., research BEFORE architecture:
 - **Scientific:** Peer-reviewed reference papers, theoretical domain foundations, applicable mathematical/physical models, literature-validated constants and parameters
 - **Technical:** Candidate algorithms with trade-offs, reference implementations, published benchmarks, mature tools and libs
 - **Competitive:** Competing solutions, state of the art, known gaps
@@ -123,24 +124,87 @@ Multiple 2-3 iterations are expected: small 1-2, medium 2-3, large 3-5. Prefer i
 - Each numerical parameter MUST have a cited source (paper, standard, specification)
 - Rule: "Don't implement algorithm without verifiable bibliographic reference"
 
-**F.3 — Web research:** If specs/ has critical gaps, ask user permission (via R2) to research and deposit. Options: research and deposit / research and present / don't research. Cite source/URL in all deposited material.
+#### Level 2 — PROBLEM (5W1H)
+Define the problem precisely using the 5W1H framework.
 
-**H — Tech Feasibility (MANDATORY VERIFICATION):**
+| Sub-area | Key Questions |
+|----------|--------------|
+| Why (Motivation) | Why is it needed? What happens without it? What pain does it solve? |
+| Who (Actors) | Who are the users? Who are the stakeholders? Who is affected? |
+| What (Scope) | What exactly needs to be done? What is the core capability? |
+| When (Timing) | When is it needed? Are there temporal constraints, deadlines, sequences? |
+| Where (Context) | Where does it run? What environment, platform, infrastructure? |
+| How (Approach) | How should it work at a high level? Any mandatory approach or constraint? |
+
+#### Level 3 — ELEMENTS (Parts & Constraints)
+Identify the concrete components, entities, and constraints of the system.
+
+| Sub-area | Key Questions |
+|----------|--------------|
+| Components | What are the main parts/modules of the system? |
+| Entities | What data entities, models, or domain objects exist? |
+| Resources | What external resources are needed (APIs, DBs, services, files)? |
+| Actors | What human or system actors interact with each component? |
+| Constraints | Technical limitations, resource constraints. Assumed premises? |
+
+#### Level 4 — PROCESSES (Flows & Feasibility)
+Map the dynamic behavior: how components interact, transform, and communicate.
+
+| Sub-area | Key Questions |
+|----------|--------------|
+| Use Cases | 3-5 main scenarios (actor/objective/flow). Edge cases? |
+| Relationships | How do components relate? What are the dependencies? |
+| Transformations | What data transformations occur? What are the inputs/outputs? |
+| Flows | What are the main execution flows? What triggers them? |
+| Events | What events does the system react to? What does it emit? |
+| Tech Feasibility | Does the target platform support the fundamental mechanisms? |
+
+**Tech Feasibility (MANDATORY VERIFICATION):**
 **LESSON LEARNED:** Target platform tech feasibility must be VERIFIED, not assumed. In porting/migration projects, confirm BEFORE advancing:
 - Does the destination platform support the fundamental mechanisms? (APIs, protocols, extensibility)
 - Which capabilities are ESSENTIAL vs. DESIRABLE? Any essential one missing → BLOCKER.
 Don't cut scope to fit the technology. Compare alternatives with table (requirements × techs, LOC, libs, platform). Ask user via R2.
 
+#### Level 5 — PRODUCT (Deliverables & Criteria)
+Define what "done" looks like — the expected output and how to measure success.
+
+| Sub-area | Key Questions |
+|----------|--------------|
+| Desired Result | What is the final deliverable? What does the user get? |
+| Deliverables | Concrete artifacts: files, APIs, interfaces, documentation? |
+| Success Criteria | How do we measure success? (measurable and verifiable) |
+| Acceptance Criteria | What must be true for the user to accept the result? |
+| Out of Scope (YAGNI) | What NOT to do, with cost/benefit justification |
+
+#### Cross-cutting — Documentation & Research (all levels):
+- **Documentation:** Specs, RFCs, legacy code, issues. Content in specs/?
+- **Web Research:** If specs/ has critical gaps, ask user permission (via R2) to research and deposit. Options: research and deposit / research and present / don't research. Cite source/URL in all deposited material.
+
 ### SYNTHESIS (Teach-Back) — Template:
 
 ```markdown
 # My Understanding (Iteration N)
-## Summary in 3 Sentences (problem, not solution)
-## Main Use Cases (actor/goal/flow/concrete example)
-## Vocabulary (term | understanding | example)
-## Out of Scope (item | reason)
-## Success Criteria (measurable and verifiable)
-## Assumptions & Constraints
+
+## Level 1 — Domain
+### Vocabulary (term | understanding | example)
+### Domain Context (field, methodologies, relevant standards)
+
+## Level 2 — Problem
+### Summary in 3 Sentences (problem, not solution)
+### 5W1H (Why | Who | What | When | Where | How)
+
+## Level 3 — Elements
+### Components & Entities identified
+### Constraints & Assumptions
+
+## Level 4 — Processes
+### Main Use Cases (actor/objective/flow/concrete example)
+### Key Flows & Relationships
+
+## Level 5 — Product
+### Deliverables & Success Criteria (measurable and verifiable)
+### Out of Scope (item | reason)
+
 ## Remaining Ambiguities
 ## Questions for Next Iteration
 ```
@@ -150,18 +214,18 @@ Don't cut scope to fit the technology. Compare alternatives with table (requirem
 
 ### CONVERGENCE ASSESSMENT (0-100):
 
-| Criterion | Weight |
-|-----------|--------|
-| Problem Clarity | 10 |
-| Complete Use Cases (top 3-5 with actors/goals/flows) | 15 |
-| Defined Vocabulary | 10 |
-| Resolved Ambiguities | 15 |
-| Explicit Out of Scope | 10 |
-| Measurable Success Criteria | 10 |
-| Validated Assumptions | 10 |
-| Research (technical+scientific) + specs/ populated | 5 |
-| User Confirmed | 10 |
-| AI Confident (can answer "why?" for everything) | 5 |
+| Criterion | Weight | HSA Level |
+|-----------|--------|-----------|
+| Problem Clarity | 10 | Level 2 (Problem) |
+| Complete Use Cases (top 3-5 with actors/goals/flows) | 15 | Level 4 (Processes) |
+| Defined Vocabulary | 10 | Level 1 (Domain) |
+| Resolved Ambiguities | 15 | Cross-cutting |
+| Explicit Out of Scope | 10 | Level 5 (Product) |
+| Measurable Success Criteria | 10 | Level 5 (Product) |
+| Validated Assumptions | 10 | Level 3 (Elements) |
+| Research (technical+scientific) + specs/ populated | 5 | Cross-cutting |
+| User Confirmed | 10 | Cross-cutting |
+| AI Confident (can answer "why?" for everything) | 5 | Cross-cutting |
 
 ≥90 → Phase 1 | 70-89 → 1 more iteration | <70 → multiple iterations.
 
@@ -172,7 +236,7 @@ Don't cut scope to fit the technology. Compare alternatives with table (requirem
 - Tech feasibility: if initial doesn't meet 100%, alternatives explored
 - Implementation feasibility: algorithmic components evaluated Tier 1/2/3. If Tier 3 in complex domain → PoC before Phase 1
 - specs/ populated with technical AND scientific references, parameters, validation criteria
-- If specialized domain: complete technical AND scientific research (F.2)
+- If specialized domain: complete technical AND scientific research (Level 1)
 
 ---
 

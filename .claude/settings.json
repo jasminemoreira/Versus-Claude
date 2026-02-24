@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/home/jasmine/INDT/IACDM_Claude/.versus/inject-context.js\""
+            "command": "node \"/home/jasmine/INDT/Versus_Claude/.versus/inject-context.js\""
           }
         ]
       }
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/home/jasmine/INDT/IACDM_Claude/.versus/phase-gate.js\""
+            "command": "node \"/home/jasmine/INDT/Versus_Claude/.versus/phase-gate.js\""
           }
         ]
       },
@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/home/jasmine/INDT/IACDM_Claude/.versus/loop-detector.js\""
+            "command": "node \"/home/jasmine/INDT/Versus_Claude/.versus/loop-detector.js\""
           }
         ]
       }
@@ -72,7 +72,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "MANDATORY: call get_phase_state() from the MCP server versus-claude to know the current phase of the Iterative Convergence methodology. Then call get_phase_guidance() to get detailed instructions for the current phase. If it returns a project not initialized error, ask the user if they want to start a new project with init_project(). Every important decision must be recorded with record_decision(). Before advancing phases, use get_exit_criteria() and advance_phase()."
+            "prompt": "STOP. Before doing ANYTHING else — before reading any files, before exploring the codebase — you MUST execute these two MCP tool calls RIGHT NOW:\n1. Call mcp__versus-claude__get_phase_state() to load the current methodology phase\n2. Call mcp__versus-claude__get_phase_guidance() to get detailed instructions\nDO NOT read .versus/state.json or .versus/server.js directly. DO NOT skip these calls. The MCP server versus-claude manages the IACDM methodology state. All methodology interactions MUST go through MCP tools: record_decision() for decisions, update_score() for scoring, mark_exit_criterion() for criteria, advance_phase() for transitions. If get_phase_state returns an error, ask the user if they want to initialize with init_project()."
           }
         ]
       },
@@ -81,7 +81,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "CONTEXT RESTORED. MANDATORY: call get_phase_state() and get_phase_guidance() to recover methodology state and instructions. Check get_decisions() for previous decisions. Read MEMORY.md (auto memory) for additional context. Continue where you left off."
+            "prompt": "STOP. Context was compacted. Before doing ANYTHING else, you MUST recover methodology state:\n1. Call mcp__versus-claude__get_phase_state() to reload current phase\n2. Call mcp__versus-claude__get_phase_guidance() to reload instructions\n3. Call mcp__versus-claude__get_decisions() to reload previous decisions\n4. Read MEMORY.md (auto memory) for additional context\nDO NOT read .versus/state.json or .versus/server.js directly. DO NOT skip these calls. Continue where you left off only AFTER completing all 4 steps above."
           }
         ]
       }

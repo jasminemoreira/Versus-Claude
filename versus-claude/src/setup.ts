@@ -76,7 +76,13 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
           {
             type: "prompt",
             prompt:
-              "MANDATORY: call get_phase_state() from MCP server versus-claude to know the current phase of the Iterative Convergence methodology. Then call get_phase_guidance() to get detailed instructions for the current phase. If it returns a project not initialized error, ask the user if they want to start a new project with init_project(). Every important decision must be recorded with record_decision(). Before advancing phase, use get_exit_criteria() and advance_phase().",
+              "STOP. Before doing ANYTHING else — before reading any files, before exploring the codebase — you MUST execute these two MCP tool calls RIGHT NOW:\n" +
+              "1. Call mcp__versus-claude__get_phase_state() to load the current methodology phase\n" +
+              "2. Call mcp__versus-claude__get_phase_guidance() to get detailed instructions\n" +
+              "DO NOT read .versus/state.json or .versus/server.js directly. DO NOT skip these calls. " +
+              "The MCP server versus-claude manages the IACDM methodology state. All methodology interactions MUST go through MCP tools: " +
+              "record_decision() for decisions, update_score() for scoring, mark_exit_criterion() for criteria, advance_phase() for transitions. " +
+              "If get_phase_state returns an error, ask the user if they want to initialize with init_project().",
           },
         ],
       },
@@ -86,7 +92,13 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
           {
             type: "prompt",
             prompt:
-              "CONTEXT RESTORED. MANDATORY: call get_phase_state() and get_phase_guidance() to recover methodology state and instructions. Query get_decisions() for previous decisions. Read MEMORY.md (auto memory) for additional context. Continue where you left off.",
+              "STOP. Context was compacted. Before doing ANYTHING else, you MUST recover methodology state:\n" +
+              "1. Call mcp__versus-claude__get_phase_state() to reload current phase\n" +
+              "2. Call mcp__versus-claude__get_phase_guidance() to reload instructions\n" +
+              "3. Call mcp__versus-claude__get_decisions() to reload previous decisions\n" +
+              "4. Read MEMORY.md (auto memory) for additional context\n" +
+              "DO NOT read .versus/state.json or .versus/server.js directly. DO NOT skip these calls. " +
+              "Continue where you left off only AFTER completing all 4 steps above.",
           },
         ],
       },
@@ -134,32 +146,15 @@ export function ensureSettings(workspace: string): boolean {
   if (!settings.hooks) {
     settings.hooks = {};
   }
+  // Force-replace all orchestrator hooks to ensure prompts stay current.
+  // Previous versions appended hooks; now we overwrite the entire hook type
+  // so stale prompts don't linger alongside updated ones.
   const orchestratorHooks = buildOrchestratorHooks(workspace);
   for (const [hookType, hookConfigs] of Object.entries(orchestratorHooks)) {
-    if (!settings.hooks[hookType]) {
-      settings.hooks[hookType] = hookConfigs;
+    const prev = JSON.stringify(settings.hooks[hookType] ?? null);
+    settings.hooks[hookType] = hookConfigs;
+    if (JSON.stringify(hookConfigs) !== prev) {
       modified = true;
-    } else {
-      const existing = settings.hooks[hookType] as any[];
-      for (const config of hookConfigs) {
-        const configHook = (config as any).hooks?.[0];
-        if (!configHook) continue;
-        const alreadyExists = existing.some((e: any) => {
-          const eHook = e.hooks?.[0];
-          if (!eHook) return false;
-          if (configHook.type === "command") {
-            return eHook.command === configHook.command;
-          }
-          if (configHook.type === "prompt") {
-            return eHook.prompt === configHook.prompt;
-          }
-          return false;
-        });
-        if (!alreadyExists) {
-          existing.push(config);
-          modified = true;
-        }
-      }
     }
   }
 
