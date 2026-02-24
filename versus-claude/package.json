@@ -36,11 +36,11 @@
     "commands": [
       {
         "command": "versus-claude.initProject",
-        "title": "Versus: Inicializar Projeto"
+        "title": "Versus Claude: Inicializar Projeto"
       },
       {
         "command": "versus-claude.refreshView",
-        "title": "Versus: Atualizar Sidebar"
+        "title": "Versus Claude: Atualizar Sidebar"
       }
     ]
   },
