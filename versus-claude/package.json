@@ -5,12 +5,33 @@
   "version": "0.2.0",
   "publisher": "indt",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasminemoreira/Versus-Claude"
+  },
+  "bugs": {
+    "url": "https://github.com/jasminemoreira/Versus-Claude/issues"
+  },
+  "homepage": "https://github.com/jasminemoreira/Versus-Claude#readme",
+  "keywords": [
+    "ai",
+    "agent",
+    "methodology",
+    "convergence",
+    "claude",
+    "mcp",
+    "safeguards",
+    "architecture",
+    "code-quality"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Machine Learning"
   ],
+  "icon": "icon.png",
   "activationEvents": [
     "onStartupFinished"
   ],

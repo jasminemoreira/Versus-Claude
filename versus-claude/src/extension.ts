@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
 import { SidebarProvider } from "./views/sidebar";
+import { ensureSettings } from "./setup";
 
 let sidebarProvider: SidebarProvider | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -77,6 +78,7 @@ export function activate(context: vscode.ExtensionContext) {
           // Deploy bundles and configurations (only now, by user action)
           deployServer(extensionPath, workspacePath);
           generateMcpConfig(workspacePath);
+          ensureSettings(workspacePath);
 
           sidebarProvider?.refresh();
           vscode.window.showInformationMessage(
@@ -96,7 +98,8 @@ export function activate(context: vscode.ExtensionContext) {
     if (fs.existsSync(statePath)) {
       deployServer(extensionPath, workspacePath);
       generateMcpConfig(workspacePath);
-      log("Existing project detected — bundles and .mcp.json updated.");
+      ensureSettings(workspacePath);
+      log("Existing project detected — bundles, .mcp.json, and settings updated.");
     } else {
       log("No Versus project in this workspace — nothing to do on activation.");
     }
