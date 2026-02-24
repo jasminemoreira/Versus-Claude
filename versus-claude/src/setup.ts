@@ -82,7 +82,8 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
               "DO NOT read .versus/state.json or .versus/server.js directly. DO NOT skip these calls. " +
               "The MCP server versus-claude manages the IACDM methodology state. All methodology interactions MUST go through MCP tools: " +
               "record_decision() for decisions, update_score() for scoring, mark_exit_criterion() for criteria, advance_phase() for transitions. " +
-              "If get_phase_state returns an error, ask the user if they want to initialize with init_project().",
+              "If get_phase_state returns an error, ask the user if they want to initialize with init_project(). " +
+              "If in Phase 6: also call get_decisions(phase=6) to recover testing progress — manual testing spans sessions.",
           },
         ],
       },

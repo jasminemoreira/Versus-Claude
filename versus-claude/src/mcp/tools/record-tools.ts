@@ -19,7 +19,7 @@ export const recordDecisionTool: Tool = {
       },
       category: {
         type: "string",
-        description: "Category: 'architecture', 'pattern', 'constraint', 'scope', 'technology', 'requirement'.",
+        description: "Category: 'architecture', 'pattern', 'constraint', 'scope', 'technology', 'requirement', 'testing'.",
       },
       content: {
         type: "string",

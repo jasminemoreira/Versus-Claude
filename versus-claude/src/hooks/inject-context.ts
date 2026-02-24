@@ -39,10 +39,18 @@ function main() {
     lines.push(`Score Phase 0: ${state.phase0Score}/100`);
   }
 
-  // Last 3 relevant decisions
-  const recentDecisions = state.decisions.slice(-3);
+  // Last 3 relevant decisions (Phase-6-aware: prioritize testing decisions)
+  let recentDecisions;
+  if (phase === 6) {
+    const testingDecisions = state.decisions
+      .filter((d: any) => d.phase === 6 && d.category === "testing")
+      .slice(-3);
+    recentDecisions = testingDecisions.length > 0 ? testingDecisions : state.decisions.slice(-3);
+  } else {
+    recentDecisions = state.decisions.slice(-3);
+  }
   if (recentDecisions.length > 0) {
-    lines.push("Recent decisions:");
+    lines.push(phase === 6 ? "Testing progress:" : "Recent decisions:");
     for (const d of recentDecisions) {
       lines.push(`  [P${d.phase}/${d.category}] ${d.content.substring(0, 100)}`);
     }

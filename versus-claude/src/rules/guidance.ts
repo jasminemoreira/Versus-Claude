@@ -425,7 +425,31 @@ const PHASE_6_GUIDANCE = `## Phase 6 — Tests
 4. Evaluate feedback: are messages understandable? Non-technical errors? Actionable results?
 5. Document and fix issues
 
-Both (automated + manual) are mandatory gates. Neither replaces the other.`;
+Both (automated + manual) are mandatory gates. Neither replaces the other.
+
+### Multi-Session Testing Protocol:
+Manual testing often spans multiple sessions (user tests outside Claude, returns with feedback).
+To maintain continuity across sessions:
+
+**BEFORE the user leaves to test:**
+Record a testing decision summarizing the current state:
+record_decision(phase=6, category='testing', content='TESTING STATUS: ...')
+The content MUST use this structure:
+- Line 1: TESTING STATUS: [automated-pending | automated-done | manual-in-progress | manual-done]
+- Line 2: PASS: [list of what passed] (or "none yet")
+- Line 3: FAIL: [list of known issues] (or "none")
+- Line 4: NEXT: [what to test next / what user should focus on]
+
+**WHEN the user returns with test feedback:**
+1. Call get_decisions(phase=6) to recover ALL Phase 6 testing decisions
+2. Read the most recent testing-category decisions to reconstruct context
+3. Record the user's feedback as a new testing decision
+4. Update exit criteria based on feedback (mark_exit_criterion for teste_manual, edge_cases)
+5. If issues found: fix them, then record updated status
+
+**WHEN fixing issues from manual testing:**
+After each fix, record a testing decision noting: what was fixed, what still needs retesting.
+This ensures the NEXT session knows exactly what changed since the last test round.`;
 
 // [G5] Meta-iteration v1→v2 + [G11] double-loop + [G8] AV type
 const PHASE_7_GUIDANCE = `## Phase 7 — Post-Review
@@ -552,7 +576,7 @@ export function getCompactGuidance(phase: number): string[] {
       break;
     case 6:
       lines.push("INSTRUCTIONS P6: Specs-based tests + S4 (execute and verify). AP5: human-AV irreplaceable for semantic adequacy.");
-      lines.push("MANDATORY MANUAL TEST: 5 steps. Both (automated+manual) are gates. Neither replaces the other.");
+      lines.push("MULTI-SESSION: record_decision(category='testing') BEFORE user leaves. On return: get_decisions(phase=6) to recover testing state. Both (automated+manual) are gates.");
       break;
     case 7:
       lines.push("INSTRUCTIONS P7: Double-loop: evaluate PRODUCT and PROCESS. Update specs/. 5 steps: human first→AI→consolidate→apply→version.");

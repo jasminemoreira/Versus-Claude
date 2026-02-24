@@ -482,6 +482,15 @@ Apply S6 (Tier 1/2/3) and S7 (sequence discipline) rigorously.
 
 Both (automated + manual) are mandatory gates. Neither replaces the other.
 
+### Multi-session testing:
+Manual testing spans sessions. Use `record_decision(category='testing')` to persist testing state with structured format:
+- Line 1: `TESTING STATUS: [automated-pending | automated-done | manual-in-progress | manual-done]`
+- Line 2: `PASS: [what passed]`
+- Line 3: `FAIL: [known issues]`
+- Line 4: `NEXT: [what to test next]`
+
+On return: `get_decisions(phase=6)` recovers full testing history.
+
 ---
 
 ## Phase 7 — Post-Review
