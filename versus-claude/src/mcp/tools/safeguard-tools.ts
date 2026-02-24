@@ -1,4 +1,4 @@
-// MCP Tools: verificação de salvaguardas S0-S7
+// MCP Tools: verification of safeguards S0-S7
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
@@ -6,16 +6,16 @@ import { StateEngine } from "../../state/engine";
 export const checkSafeguardTool: Tool = {
   name: "check_safeguard",
   description:
-    "Verifica uma salvaguarda específica (S0-S7). Retorna status e recomendações. " +
-    "Salvaguardas protegem contra erros comuns: S0=convergência, S1=anti-bug, " +
-    "S2=parada do usuário, S3=convergência prematura, S4=verificação explícita, " +
-    "S5=preservação de escopo, S6=não reimplementar, S7=disciplina de sequência.",
+    "Checks a specific safeguard (S0-S7). Returns status and recommendations. " +
+    "Safeguards protect against common errors: S0=convergence, S1=anti-bug, " +
+    "S2=user stop, S3=premature convergence, S4=explicit verification, " +
+    "S5=scope preservation, S6=no reimplementation, S7=sequence discipline.",
   inputSchema: {
     type: "object" as const,
     properties: {
       id: {
         type: "string",
-        description: "ID da salvaguarda: 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6' ou 'S7'.",
+        description: "Safeguard ID: 'S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', or 'S7'.",
       },
     },
     required: ["id"],
@@ -25,8 +25,8 @@ export const checkSafeguardTool: Tool = {
 export const checkAllSafeguardsTool: Tool = {
   name: "check_all_safeguards",
   description:
-    "Verifica TODAS as salvaguardas aplicáveis à fase atual. " +
-    "Retorna panorama completo de status. Use antes de transições de fase.",
+    "Checks ALL safeguards applicable to the current phase. " +
+    "Returns a complete status overview. Use before phase transitions.",
   inputSchema: {
     type: "object" as const,
     properties: {},

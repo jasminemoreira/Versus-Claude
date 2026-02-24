@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// MCP Server — processo independente (stdio)
-// Iniciado pela extensão VSCode ou manualmente via `node server.js --workspace <path>`
+// MCP Server — standalone process (stdio)
+// Started by the VSCode extension or manually via `node server.js --workspace <path>`
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -13,7 +13,7 @@ import { StateEngine } from "../state/engine";
 import { ALL_TOOLS, handleToolCall } from "./tools/index";
 
 function getWorkspacePath(): string {
-  // Prioridade: --workspace arg > CLAUDE_PROJECT_DIR env > VERSUS_WORKSPACE env > cwd
+  // Priority: --workspace arg > CLAUDE_PROJECT_DIR env > VERSUS_WORKSPACE env > cwd
   const args = process.argv.slice(2);
   const wsIndex = args.indexOf("--workspace");
   if (wsIndex !== -1 && args[wsIndex + 1]) {
@@ -61,7 +61,7 @@ async function main() {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify({ error: `Erro interno: ${String(err)}` }),
+            text: JSON.stringify({ error: `Internal error: ${String(err)}` }),
           },
         ],
         isError: true,

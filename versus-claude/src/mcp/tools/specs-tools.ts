@@ -1,4 +1,4 @@
-// MCP Tools: verificação do diretório specs/
+// MCP Tools: verification of the specs/ directory
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
@@ -6,9 +6,9 @@ import { StateEngine } from "../../state/engine";
 export const checkSpecsStatusTool: Tool = {
   name: "check_specs_status",
   description:
-    "Verifica quais subdiretórios de specs/ estão populados. " +
-    "Retorna contagem de arquivos por diretório (excluindo README.md). " +
-    "Use antes de implementar para garantir que referências técnicas existem.",
+    "Checks which subdirectories of specs/ are populated. " +
+    "Returns file count per directory (excluding README.md). " +
+    "Use before implementing to ensure technical references exist.",
   inputSchema: {
     type: "object" as const,
     properties: {},

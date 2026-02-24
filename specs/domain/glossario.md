@@ -1,17 +1,17 @@
-# Glossário — Versus for Claude
+# Glossary — Versus for Claude
 
-| Termo | Definição |
-|-------|-----------|
-| Orquestrador | Extensão VSCode (MCP server + sidebar) que gerencia estado da metodologia Convergência Iterativa |
-| IACDM | Iterative Adversarial Convergence Development Methodology — nome técnico da Convergência Iterativa |
-| State | Objeto JSON persistido em `.versus/state.json`: fase atual, iteração, score, decisões, salvaguardas |
-| MCP (Model Context Protocol) | Protocolo que permite expor ferramentas extras ao Claude Code via servidor |
-| MCP Tool | Ferramenta individual exposta pelo MCP server (ex: `get_phase_state`, `advance_phase`) |
-| Gate | Validação de exit criteria que bloqueia transição entre fases |
-| Sidebar | Painel visual read-only no VSCode mostrando estado em tempo real |
-| Phase | Fase da metodologia (0-7), cada uma com entry/exit criteria |
-| Iteration | Ciclo dentro de uma fase (especialmente Phases 0 e 2-3) |
-| Decision | Decisão registrada durante qualquer fase, persistida no state |
-| Safeguard | Regra de proteção (S0-S7) verificada pelo servidor |
-| Exit Criteria | Condições que devem ser atendidas para sair de uma fase |
-| specs/ | Diretório com conhecimento de domínio, referências, dados de teste |
+| Term | Definition |
+|------|------------|
+| Orchestrator | VS Code extension (MCP server + sidebar) that manages the Iterative Convergence methodology state |
+| IACDM | Iterative Adversarial Convergence Development Methodology — technical name for Iterative Convergence |
+| State | JSON object persisted in `.versus/state.json`: current phase, iteration, score, decisions, safeguards |
+| MCP (Model Context Protocol) | Protocol that allows exposing extra tools to Claude Code via a server |
+| MCP Tool | Individual tool exposed by the MCP server (e.g., `get_phase_state`, `advance_phase`) |
+| Gate | Exit criteria validation that blocks transitions between phases |
+| Sidebar | Read-only visual panel in VS Code showing real-time state |
+| Phase | Methodology phase (0-7), each with entry/exit criteria |
+| Iteration | Cycle within a phase (especially Phases 0 and 2-3) |
+| Decision | Decision recorded during any phase, persisted in the state |
+| Safeguard | Protection rule (S0-S7) verified by the server |
+| Exit Criteria | Conditions that must be met to exit a phase |
+| specs/ | Directory containing domain knowledge, references, and test data |

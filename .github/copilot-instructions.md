@@ -1,35 +1,35 @@
-## Metodologia Convergencia Iterativa (Versus)
+## Iterative Convergence Methodology (Versus)
 
-Este projeto usa a metodologia Convergencia Iterativa orquestrada via MCP server `versus-claude`.
+This project uses the Iterative Convergence methodology orchestrated via the MCP server `versus-claude`.
 
-### OBRIGATORIO em toda interacao:
+### MANDATORY in every interaction:
 
-1. **Sempre** chame `get_phase_state` primeiro para saber a fase atual
-2. Chame `get_phase_guidance` para obter instrucoes detalhadas da fase
-3. Se nao houver projeto inicializado, pergunte ao usuario se deseja criar um com `init_project`
-4. Registre toda decisao importante com `record_decision`
-5. Antes de avancar de fase, use `get_exit_criteria` para verificar pendencias e `advance_phase` para transicionar
+1. **Always** call `get_phase_state` first to know the current phase
+2. Call `get_phase_guidance` to get detailed instructions for the phase
+3. If no project is initialized, ask the user if they want to create one with `init_project`
+4. Record every important decision with `record_decision`
+5. Before advancing a phase, use `get_exit_criteria` to check pending items and `advance_phase` to transition
 
-### Interacao com o usuario:
+### User interaction:
 
-Toda decisao do usuario via `ask_user` (menu clicavel com selecao simples ou multipla).
+All user decisions via `ask_user` (clickable menu with single or multiple selection).
 
-**REGRA FUNDAMENTAL:** Ao chamar `ask_user`, SEMPRE forneca opcoes predefinidas sugeridas.
-Nunca envie perguntas sem opcoes — isso gera campos de texto vazios (experiencia ruim).
-Mesmo para perguntas que parecem abertas, SUGIRA respostas provaveis como opcoes.
-As opcoes devem ser **contextualizadas com base na descricao do projeto** fornecida pelo usuario — nunca use sugestoes genericas.
+**FUNDAMENTAL RULE:** When calling `ask_user`, ALWAYS provide suggested predefined options.
+Never send questions without options — this generates empty text fields (bad experience).
+Even for questions that seem open-ended, SUGGEST likely answers as options.
+Options should be **contextualized based on the project description** provided by the user — never use generic suggestions.
 
-Regras:
-- Ate 4 perguntas por chamada, cada uma COM opcoes sugeridas
-- Use `multiSelect: true` para opcoes nao mutuamente exclusivas
-- Sempre marque a recomendada com **(Recomendado)** no label
-- Nunca listar opcoes A/B/C em texto — sempre usar `ask_user`
-- Apos a resposta, registre com `record_decision`
+Rules:
+- Up to 4 questions per call, each WITH suggested options
+- Use `multiSelect: true` for non-mutually exclusive options
+- Always mark the recommended one with **(Recommended)** in the label
+- Never list A/B/C options in text — always use `ask_user`
+- After the response, record with `record_decision`
 
-### Regras gerais:
+### General rules:
 
-- NUNCA pule fases — a metodologia e sequencial (Phase 0 → 7)
-- NUNCA implemente codigo antes de Phase 5
-- Toda decisao arquitetural deve ser registrada
-- Consulte `get_decisions` para recuperar decisoes anteriores
-- Use `check_all_safeguards` antes de transicoes de fase
+- NEVER skip phases — the methodology is sequential (Phase 0 → 7)
+- NEVER implement code before Phase 5
+- Every architectural decision must be recorded
+- Consult `get_decisions` to retrieve previous decisions
+- Use `check_all_safeguards` before phase transitions

@@ -1,4 +1,4 @@
-// MCP Tools: transições de fase
+// MCP Tools: phase transitions
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
@@ -6,15 +6,15 @@ import { StateEngine } from "../../state/engine";
 export const advancePhaseTool: Tool = {
   name: "advance_phase",
   description:
-    "Solicita transição para a próxima fase. O servidor valida todos os exit criteria " +
-    "e salvaguardas antes de permitir. Se critérios não estão atendidos, retorna erro " +
-    "com lista detalhada do que falta. Use get_exit_criteria antes para verificar pendências.",
+    "Requests transition to the next phase. The server validates all exit criteria " +
+    "and safeguards before allowing. If criteria are not met, returns an error " +
+    "with a detailed list of what's missing. Use get_exit_criteria first to check pending items.",
   inputSchema: {
     type: "object" as const,
     properties: {
       target_phase: {
         type: "number",
-        description: "Fase destino (0-7). Transições válidas: sequencial ou loop 2↔3.",
+        description: "Target phase (0-7). Valid transitions: sequential or loop 2↔3.",
       },
     },
     required: ["target_phase"],
@@ -24,14 +24,14 @@ export const advancePhaseTool: Tool = {
 export const startIterationTool: Tool = {
   name: "start_iteration",
   description:
-    "Inicia nova iteração dentro de uma fase cíclica (Phase 0, 2 ou 3). " +
-    "Incrementa o contador de iteração e retorna informações da iteração anterior.",
+    "Starts a new iteration within a cyclic phase (Phase 0, 2, or 3). " +
+    "Increments the iteration counter and returns information from the previous iteration.",
   inputSchema: {
     type: "object" as const,
     properties: {
       phase: {
         type: "number",
-        description: "Fase atual (0, 2 ou 3).",
+        description: "Current phase (0, 2, or 3).",
       },
     },
     required: ["phase"],
@@ -44,7 +44,7 @@ export function handleAdvancePhase(engine: StateEngine, args: { target_phase: nu
     const newState = engine.getPhaseState();
     return JSON.stringify({
       success: true,
-      message: `Avançou para Phase ${args.target_phase}.`,
+      message: `Advanced to Phase ${args.target_phase}.`,
       currentPhase: newState?.currentPhase,
       currentIteration: newState?.currentIteration,
     });

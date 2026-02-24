@@ -1,7 +1,7 @@
 {
   "name": "versus-claude",
   "displayName": "Versus for Claude",
-  "description": "Orquestrador da metodologia Convergência Iterativa v3.6 para Claude Code",
+  "description": "Iterative Convergence methodology v3.6 orchestrator for Claude Code",
   "version": "0.2.0",
   "publisher": "indt",
   "license": "MIT",
@@ -29,18 +29,18 @@
       "versus-claude": [
         {
           "id": "versus-claude.phaseView",
-          "name": "Estado da Metodologia"
+          "name": "Methodology State"
         }
       ]
     },
     "commands": [
       {
         "command": "versus-claude.initProject",
-        "title": "Versus Claude: Inicializar Projeto"
+        "title": "Versus Claude: Initialize Project"
       },
       {
         "command": "versus-claude.refreshView",
-        "title": "Versus Claude: Atualizar Sidebar"
+        "title": "Versus Claude: Refresh Sidebar"
       }
     ]
   },

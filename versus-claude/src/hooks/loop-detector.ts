@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-// Camada 3: Detecção de loop — PreToolUse (Bash)
-// Detecta comandos repetitivos (especialmente testes) e bloqueia após 3 iterações.
-// Salvaguarda S6: "STOP se gastando >2 iterações no mesmo módulo"
+// Layer 3: Loop detection — PreToolUse (Bash)
+// Detects repetitive commands (especially tests) and blocks after 3 iterations.
+// Safeguard S6: "STOP if spending >2 iterations on the same module"
 
 import { StateEngine } from "../state/engine";
 
@@ -49,7 +49,7 @@ function main() {
   const engine = new StateEngine(workspacePath);
   const state = engine.getPhaseState();
 
-  // Sem projeto ou fora de Phase 5-6 — sem detecção
+  // No project or outside Phase 5-6 — no detection
   if (!state || state.currentPhase < 5) {
     allow();
     return;
@@ -63,7 +63,7 @@ function main() {
       const hookInput: HookInput = JSON.parse(input);
       const command = hookInput.tool_input?.command || "";
 
-      // Só monitorar comandos de teste/build
+      // Only monitor test/build commands
       if (!isTestCommand(command)) {
         allow();
         return;
@@ -73,13 +73,13 @@ function main() {
 
       if (result.blocked) {
         deny(
-          `[Versus] Salvaguarda S6 ativada: comando de teste executado ${result.count}x. ` +
-          `Loop detectado. PARE e:\n` +
-          `1. Verifique se o bug tem solução conhecida (Tier 2 — busque implementação de referência)\n` +
-          `2. Consulte specs/technical/ e specs/examples/\n` +
-          `3. Se não encontrar, reconsidere a abordagem\n` +
-          `4. Use record_decision() para documentar o que descobriu\n` +
-          `O contador será resetado quando avançar de fase.`
+          `[Versus] Safeguard S6 activated: test command executed ${result.count}x. ` +
+          `Loop detected. STOP and:\n` +
+          `1. Check if the bug has a known solution (Tier 2 — look for a reference implementation)\n` +
+          `2. Consult specs/technical/ and specs/examples/\n` +
+          `3. If not found, reconsider the approach\n` +
+          `4. Use record_decision() to document what you discovered\n` +
+          `The counter will be reset when advancing to the next phase.`
         );
       } else {
         allow();

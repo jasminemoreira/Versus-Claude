@@ -1,4 +1,4 @@
-// Testes do State Engine e Methodology Rules
+// State Engine and Methodology Rules tests
 
 import * as assert from "assert";
 import * as fs from "fs";
@@ -9,7 +9,7 @@ import { ScoreBreakdown } from "../state/types";
 
 function createTempWorkspace(): string {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "versus-test-"));
-  // Criar specs/ para testes de checkSpecsStatus
+  // Create specs/ for checkSpecsStatus tests
   const specsDirs = ["references", "domain", "technical", "examples", "design", "models", "datasets", "validation", "competitors"];
   for (const dir of specsDirs) {
     fs.mkdirSync(path.join(tmp, "specs", dir), { recursive: true });
@@ -23,7 +23,7 @@ function cleanTempWorkspace(tmp: string): void {
 }
 
 function makeFullBreakdown(total: number): ScoreBreakdown {
-  // Distribui o score proporcionalmente aos pesos
+  // Distributes the score proportionally to the weights
   const factor = total / 100;
   return {
     clarezaProblema: Math.round(10 * factor),
@@ -39,7 +39,7 @@ function makeFullBreakdown(total: number): ScoreBreakdown {
   };
 }
 
-// ===== Testes =====
+// ===== Tests =====
 
 let workspace: string;
 let engine: StateEngine;
@@ -69,9 +69,9 @@ function test(name: string, fn: () => void) {
 
 console.log("\n=== State Engine Tests ===\n");
 
-// --- Projeto ---
+// --- Project ---
 
-test("initProject cria state.json", () => {
+test("initProject creates state.json", () => {
   const state = engine.initProject("Test", "Desc");
   assert.strictEqual(state.projectName, "Test");
   assert.strictEqual(state.currentPhase, 0);
@@ -80,24 +80,24 @@ test("initProject cria state.json", () => {
   assert.strictEqual(state.decisions.length, 0);
   assert.strictEqual(state.safeguards.length, 8);
 
-  // Verifica persistência
+  // Verify persistence
   const statePath = path.join(workspace, ".versus", "state.json");
   assert.ok(fs.existsSync(statePath));
 });
 
-test("initProject rejeita se já existe", () => {
+test("initProject rejects if already exists", () => {
   engine.initProject("Test", "Desc");
   const loaded = engine.getPhaseState();
   assert.ok(loaded !== null);
-  // Segundo init não deve sobrescrever (testado via MCP tool)
+  // Second init should not overwrite (tested via MCP tool)
 });
 
-test("getPhaseState retorna null sem projeto", () => {
+test("getPhaseState returns null without project", () => {
   const state = engine.getPhaseState();
   assert.strictEqual(state, null);
 });
 
-test("load recupera estado de disco", () => {
+test("load recovers state from disk", () => {
   engine.initProject("Persist", "Test");
   const engine2 = new StateEngine(workspace);
   const state = engine2.getPhaseState();
@@ -105,21 +105,21 @@ test("load recupera estado de disco", () => {
   assert.strictEqual(state!.projectName, "Persist");
 });
 
-// --- Decisões ---
+// --- Decisions ---
 
-test("recordDecision persiste e é consultável", () => {
+test("recordDecision persists and is queryable", () => {
   engine.initProject("Test", "Desc");
-  const d = engine.recordDecision(0, "scope", "Fora de escopo: i18n");
+  const d = engine.recordDecision(0, "scope", "Out of scope: i18n");
   assert.ok(d.id);
   assert.strictEqual(d.phase, 0);
   assert.strictEqual(d.category, "scope");
 
   const decisions = engine.getDecisions(0);
   assert.strictEqual(decisions.length, 1);
-  assert.strictEqual(decisions[0].content, "Fora de escopo: i18n");
+  assert.strictEqual(decisions[0].content, "Out of scope: i18n");
 });
 
-test("getDecisions filtra por fase", () => {
+test("getDecisions filters by phase", () => {
   engine.initProject("Test", "Desc");
   engine.recordDecision(0, "scope", "D1");
   engine.recordDecision(1, "arch", "D2");
@@ -132,7 +132,7 @@ test("getDecisions filtra por fase", () => {
 
 // --- Score ---
 
-test("updateScore salva e é consultável", () => {
+test("updateScore saves and is queryable", () => {
   engine.initProject("Test", "Desc");
   engine.updateScore(85, makeFullBreakdown(85));
 
@@ -143,7 +143,7 @@ test("updateScore salva e é consultável", () => {
 
 // --- Exit Criteria ---
 
-test("markExitCriterion cria e atualiza", () => {
+test("markExitCriterion creates and updates", () => {
   engine.initProject("Test", "Desc");
   engine.markExitCriterion(0, "score_90", true, "Score 92");
 
@@ -151,13 +151,13 @@ test("markExitCriterion cria e atualiza", () => {
   assert.strictEqual(criteria.length, 1);
   assert.strictEqual(criteria[0].met, true);
 
-  // Atualizar existente
-  engine.markExitCriterion(0, "score_90", false, "Reavaliado");
+  // Update existing
+  engine.markExitCriterion(0, "score_90", false, "Re-evaluated");
   const updated = engine.getExitCriteriaState(0);
   assert.strictEqual(updated[0].met, false);
 });
 
-test("getExitCriteriaWithDefs mostra defs e estado", () => {
+test("getExitCriteriaWithDefs shows defs and state", () => {
   engine.initProject("Test", "Desc");
   engine.markExitCriterion(0, "score_90", true);
 
@@ -172,9 +172,9 @@ test("getExitCriteriaWithDefs mostra defs e estado", () => {
   assert.strictEqual(other!.met, false);
 });
 
-// --- Transições ---
+// --- Transitions ---
 
-test("advancePhase bloqueia sem exit criteria", () => {
+test("advancePhase blocks without exit criteria", () => {
   engine.initProject("Test", "Desc");
   const result = engine.advancePhase(1);
   assert.strictEqual(result.ok, false);
@@ -183,10 +183,10 @@ test("advancePhase bloqueia sem exit criteria", () => {
   }
 });
 
-test("advancePhase bloqueia sem score 90", () => {
+test("advancePhase blocks without score 90", () => {
   engine.initProject("Test", "Desc");
   engine.updateScore(75, makeFullBreakdown(75));
-  // Marcar todos exit criteria
+  // Mark all exit criteria
   const criteria = engine.getExitCriteriaWithDefs(0);
   for (const c of criteria) {
     engine.markExitCriterion(0, c.criterion, true);
@@ -195,7 +195,7 @@ test("advancePhase bloqueia sem score 90", () => {
   assert.strictEqual(result.ok, false);
 });
 
-test("advancePhase permite com score >= 90 e criteria", () => {
+test("advancePhase allows with score >= 90 and criteria", () => {
   engine.initProject("Test", "Desc");
   engine.updateScore(92, makeFullBreakdown(92));
   const criteria = engine.getExitCriteriaWithDefs(0);
@@ -211,15 +211,15 @@ test("advancePhase permite com score >= 90 e criteria", () => {
   assert.strictEqual(state.history.length, 1);
 });
 
-test("advancePhase bloqueia transição inválida (0→2)", () => {
+test("advancePhase blocks invalid transition (0→2)", () => {
   engine.initProject("Test", "Desc");
   const result = engine.advancePhase(2);
   assert.strictEqual(result.ok, false);
 });
 
-test("loop Phase 2↔3 permitido", () => {
+test("loop Phase 2↔3 allowed", () => {
   engine.initProject("Test", "Desc");
-  // Fast-forward para Phase 2
+  // Fast-forward to Phase 2
   engine.updateScore(95, makeFullBreakdown(95));
   for (const c of engine.getExitCriteriaWithDefs(0)) engine.markExitCriterion(0, c.criterion, true);
   engine.advancePhase(1);
@@ -240,9 +240,9 @@ test("loop Phase 2↔3 permitido", () => {
   assert.strictEqual(engine.getPhaseState()!.currentPhase, 2);
 });
 
-// --- Iterações ---
+// --- Iterations ---
 
-test("startIteration incrementa contador", () => {
+test("startIteration increments counter", () => {
   engine.initProject("Test", "Desc");
   assert.strictEqual(engine.getPhaseState()!.currentIteration, 1);
 
@@ -254,21 +254,21 @@ test("startIteration incrementa contador", () => {
   assert.strictEqual(engine.getPhaseState()!.currentIteration, 2);
 });
 
-test("startIteration rejeita fase errada", () => {
+test("startIteration rejects wrong phase", () => {
   engine.initProject("Test", "Desc");
-  const r = engine.startIteration(1); // está na phase 0
+  const r = engine.startIteration(1); // currently on phase 0
   assert.strictEqual(r.ok, false);
 });
 
-// --- Salvaguardas ---
+// --- Safeguards ---
 
-test("checkSafeguard S0 ok quando na Phase 0", () => {
+test("checkSafeguard S0 ok when on Phase 0", () => {
   engine.initProject("Test", "Desc");
   const r = engine.checkSafeguard("S0");
   assert.strictEqual(r.status, "ok");
 });
 
-test("checkAllSafeguards retorna aplicáveis", () => {
+test("checkAllSafeguards returns applicable", () => {
   engine.initProject("Test", "Desc");
   const results = engine.checkAllSafeguards();
   assert.ok(results.length > 0);
@@ -276,18 +276,18 @@ test("checkAllSafeguards retorna aplicáveis", () => {
 
 // --- Specs ---
 
-test("checkSpecsStatus detecta dirs vazios e populados", () => {
+test("checkSpecsStatus detects empty and populated dirs", () => {
   engine.initProject("Test", "Desc");
 
-  // Tudo vazio (só README.md)
+  // All empty (only README.md)
   let status = engine.checkSpecsStatus();
   assert.strictEqual(status["domain"].populated, false);
 
-  // Popular domain/
-  fs.writeFileSync(path.join(workspace, "specs", "domain", "glossario.md"), "# Glossário");
+  // Populate domain/
+  fs.writeFileSync(path.join(workspace, "specs", "domain", "glossario.md"), "# Glossary");
   status = engine.checkSpecsStatus();
   assert.strictEqual(status["domain"].populated, true);
   assert.strictEqual(status["domain"].fileCount, 1);
 });
 
-console.log("\n=== Todos os testes concluídos ===\n");
+console.log("\n=== All tests completed ===\n");

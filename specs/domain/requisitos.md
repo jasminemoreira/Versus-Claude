@@ -1,47 +1,47 @@
-# Requisitos — Versus for Claude
+# Requirements — Versus for Claude
 
-## Problema
-O Claude perde o estado da metodologia Convergência Iterativa v3.6 durante conversas longas (>50 mensagens) e entre sessões. Sintomas:
-- Esquece a fase atual
-- Pula fases (vai direto para código)
-- Perde decisões tomadas em fases anteriores
-- Ignora salvaguardas S0-S7
-- Não consulta/popula specs/
+## Problem
+Claude loses the Iterative Convergence v3.6 methodology state during long conversations (>50 messages) and between sessions. Symptoms:
+- Forgets the current phase
+- Skips phases (jumps straight to code)
+- Loses decisions made in earlier phases
+- Ignores safeguards S0-S7
+- Does not consult/populate specs/
 
-## Solução
-Extensão VSCode com:
-1. **MCP Server** — fonte de verdade externa, fornece tools ao Claude Code
-2. **Sidebar read-only** — visualização do estado para o usuário
-3. **State persistido** — sobrevive compactação, sessões, crashes
+## Solution
+VS Code extension with:
+1. **MCP Server** — external source of truth, provides tools to Claude Code
+2. **Read-only sidebar** — state visualization for the user
+3. **Persisted state** — survives compaction, sessions, crashes
 
-## Usuários
-- Interno (INDT) inicialmente, público (open-source) depois
+## Users
+- Internal (INDT) initially, public (open-source) later
 
-## Decisões Confirmadas
-- **1 projeto por workspace** — cada workspace VSCode = 1 instância da metodologia
-- **Retomada automática** — ao reabrir, restaura estado exato de onde parou
-- **Metodologia fixa** — hardcoded para Convergência Iterativa v3.6
-- **Sidebar read-only** — somente visualização, ações via Claude Code + MCP
-- **Idioma PT** — interface em português
+## Confirmed Decisions
+- **1 project per workspace** — each VS Code workspace = 1 methodology instance
+- **Automatic resume** — on reopen, restores exact state from where it left off
+- **Fixed methodology** — hardcoded for Iterative Convergence v3.6
+- **Read-only sidebar** — view only, actions via Claude Code + MCP
+- **Language EN** — English interface
 - **Storage**: `.versus/state.json`
-- **Specs verificado** — MCP verifica specs/ mas não bloqueia (alerta + permite com confirmação)
-- **Hooks removidos** — MCP substitui hooks existentes
-- **~12 MCP tools granulares** — propósito claro por ferramenta
-- **Violações**: recusar + explicar (sem notificação UI extra)
+- **Specs verified** — MCP checks specs/ but does not block (alerts + allows with confirmation)
+- **Hooks removed** — MCP replaces existing hooks
+- **~12 granular MCP tools** — clear purpose per tool
+- **Violations**: refuse + explain (no extra UI notification)
 
-## Fora de Escopo
-| Item | Razão |
-|------|-------|
-| Gerar código de negócio | Orquestrador gerencia metodologia, não implementa |
-| Substituir Claude Code | Complementa, não substitui |
-| Editar SKILL.md automaticamente | Só Phase 7 com aprovação manual |
-| Múltiplas metodologias/plugins | Hardcoded para CI v3.6 |
-| i18n | Interface em português |
-| Sidebar interativa | Read-only, ações via MCP |
+## Out of Scope
+| Item | Reason |
+|------|--------|
+| Generate business code | Orchestrator manages methodology, does not implement |
+| Replace Claude Code | Complements, does not replace |
+| Edit SKILL.md automatically | Only Phase 7 with manual approval |
+| Multiple methodologies/plugins | Hardcoded for IC v3.6 |
+| i18n | English interface |
+| Interactive sidebar | Read-only, actions via MCP |
 
-## Critérios de Sucesso
-1. Estado nunca perdido após compactação ou nova sessão
-2. Decisões rastreáveis e consultáveis
-3. Salvaguardas S0-S7 forçadas pelo servidor
-4. Transições de fase validadas com exit criteria
-5. Violações explicadas com mensagem clara sobre pendências
+## Success Criteria
+1. State never lost after compaction or new session
+2. Decisions traceable and queryable
+3. Safeguards S0-S7 enforced by the server
+4. Phase transitions validated with exit criteria
+5. Violations explained with clear message about pending items

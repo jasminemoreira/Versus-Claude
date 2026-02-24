@@ -1,4 +1,4 @@
-// Facade das regras da Convergência Iterativa v3.6
+// Rule facade for Iterative Convergence v3.6
 
 import { PhaseState } from "../state/types";
 import {
@@ -68,16 +68,16 @@ export function validatePhaseTransition(
     safeguardViolations: [],
   };
 
-  // Verificar se transição é válida
+  // Check if transition is valid
   if (!isValidTransition(from, to)) {
     result.valid = false;
     result.missingCriteria.push(
-      `Transição de Phase ${from} para Phase ${to} não é permitida. Transições válidas: sequencial ou loop 2↔3.`
+      `Transition from Phase ${from} to Phase ${to} is not allowed. Valid transitions: sequential or loop 2↔3.`
     );
     return result;
   }
 
-  // Verificar exit criteria da fase atual (para avançar)
+  // Check exit criteria of current phase (to advance)
   if (to > from) {
     const criteria = getExitCriteriaForPhase(from);
     for (const criterion of criteria) {
@@ -90,17 +90,17 @@ export function validatePhaseTransition(
     }
   }
 
-  // Verificar Phase 0 score especificamente
+  // Check Phase 0 score specifically
   if (from === 0 && to === 1) {
     if (state.phase0Score === null || state.phase0Score < 90) {
       result.valid = false;
       result.missingCriteria.push(
-        `Score Phase 0 = ${state.phase0Score ?? "null"}. Necessário >= 90.`
+        `Phase 0 score = ${state.phase0Score ?? "null"}. Required >= 90.`
       );
     }
   }
 
-  // Verificar salvaguardas aplicáveis
+  // Check applicable safeguards
   const safeguards = getSafeguardsForPhase(from);
   for (const safeguard of safeguards) {
     const check = validateSafeguard(safeguard.id, state);

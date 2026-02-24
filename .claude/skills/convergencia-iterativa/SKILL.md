@@ -1,455 +1,455 @@
-# Convergência Iterativa v3.7
+# Iterative Convergence v3.7
 
-Metodologia de desenvolvimento rigoroso em 8 fases (0-7) com meta-iteração e preservação de escopo. Não avançar de fase sem atingir todos os exit criteria.
+Rigorous development methodology in 8 phases (0-7) with meta-iteration and scope preservation. Do not advance phases without meeting all exit criteria.
 
 ---
 
-## REGRAS GLOBAIS
+## GLOBAL RULES
 
-**R1 — Consulte antes de codificar.** Se usuário pediu código/feature: avalie gatilhos → se ativou, comece Phase 0. Nunca pule para implementação.
+**R1 — Consult before coding.** If user requested code/feature: evaluate triggers → if triggered, start Phase 0. Never skip to implementation.
 
-**R2 — Menus clicáveis.** Toda decisão do usuário usa `AskUserQuestion`. Agrupar até 4 perguntas por chamada. `multiSelect: true` para escolhas não-exclusivas. Opção recomendada primeiro com "(Recomendado)". "Other" é automático. Nunca listar opções A/B/C em texto.
+**R2 — Clickable menus.** Every user decision uses `AskUserQuestion`. Group up to 4 questions per call. `multiSelect: true` for non-exclusive choices. Recommended option first with "(Recommended)". "Other" is automatic. Never list options A/B/C in text.
 
-**R3 — Um artefato por resposta.** Máximo 1 arquivo grande por resposta. Indicar progresso "Arquivo X/N". Exceção: arquivos <30 LOC podem ser agrupados se total <50% do limite.
+**R3 — One artifact per response.** Maximum 1 large file per response. Indicate progress "File X/N". Exception: files <30 LOC can be grouped if total <50% of limit.
 
-**R4 — Pasta `specs/`.** Conhecimento de domínio e referências depositados ANTES de codificar. Estrutura:
+**R4 — `specs/` folder.** Domain knowledge and references deposited BEFORE coding. Structure:
 ```
 specs/
-├── references/    # Papers, artigos, normas
-├── domain/        # Glossário, regras de negócio
-├── technical/     # Specs de algoritmos, APIs, fórmulas
-├── examples/      # Código de referência
+├── references/    # Papers, articles, standards
+├── domain/        # Glossary, business rules
+├── technical/     # Algorithm specs, APIs, formulas
+├── examples/      # Reference code
 ├── design/        # Wireframes, mockups
-├── models/        # Diagramas, fluxos, schemas
-├── datasets/      # Ground truth, amostras de teste
-├── validation/    # Critérios de aceitação, benchmarks
-└── competitors/   # Análise de soluções existentes
+├── models/        # Diagrams, flows, schemas
+├── datasets/      # Ground truth, test samples
+├── validation/    # Acceptance criteria, benchmarks
+└── competitors/   # Analysis of existing solutions
 ```
 
-Quando popular: Phase 0 → refs, domain, competitors | Phase 1 → technical, models, examples | Phase 5 → consultar examples, datasets | Phase 6 → usar datasets/validation | Phase 7 → registrar lições. Nunca implementar algoritmos sem referência em specs/.
+When to populate: Phase 0 → refs, domain, competitors | Phase 1 → technical, models, examples | Phase 5 → consult examples, datasets | Phase 6 → use datasets/validation | Phase 7 → record lessons. Never implement algorithms without reference in specs/.
 
 ---
 
-## PRINCÍPIO FUNDAMENTAL
+## FUNDAMENTAL PRINCIPLE
 
-**Invariância Generativa:** A metodologia NÃO melhora o modelo — ela melhora o PROCESSO. O mesmo LLM opera com ou sem metodologia. A diferença é a verificação externa em cada gate.
+**Generative Invariance:** The methodology does NOT improve the model — it improves the PROCESS. The same LLM operates with or without methodology. The difference is external verification at each gate.
 
-**Critério de adoção (assimetria de risco):** Custo de aplicar em projeto simples ≈ 20 min. Custo de NÃO aplicar em projeto complexo ≈ horas/dias de retrabalho. Aplicar quando C_overhead < P(erro) × C_erro.
-
----
-
-## GATILHOS DE ATIVAÇÃO
-
-Antes de propor implementação, avaliar em sequência:
-
-| # | Condição | Resultado |
-|---|----------|-----------|
-| 1 | Não envolve criar/modificar código | Responder diretamente |
-| 2 | Requisito tem palavras vagas ("fancy", "escalável") | **USAR METODOLOGIA** |
-| 3 | Envolve decisão arquitetural | **USAR METODOLOGIA** |
-| 4 | Usuário mencionou metodologia | **OBRIGATÓRIO** |
-| 5 | Sinais de complexidade oculta (abaixo) | **USAR METODOLOGIA** |
-
-**Sinais de complexidade (basta 1):** múltiplos domínios/contextos, integrações externas, pedido não cabe em 1 frase, IA não visualiza solução completa, incerteza sobre complexidade. Regra de ouro: se não consegue afirmar que é simples, não é simples.
-
-**Ao ativar**, anunciar: gatilhos detectados, sinais observados, fases 0-7 resumidas, declarar que não codificará até passar por Phases 0-4.
+**Adoption criterion (risk asymmetry):** Cost of applying to simple project ≈ 20 min. Cost of NOT applying to complex project ≈ hours/days of rework. Apply when C_overhead < P(error) × C_error.
 
 ---
 
-## VISÃO GERAL DAS FASES
+## ACTIVATION TRIGGERS
+
+Before proposing implementation, evaluate in sequence:
+
+| # | Condition | Result |
+|---|-----------|--------|
+| 1 | Does not involve creating/modifying code | Answer directly |
+| 2 | Requirement has vague words ("fancy", "scalable") | **USE METHODOLOGY** |
+| 3 | Involves architectural decision | **USE METHODOLOGY** |
+| 4 | User mentioned methodology | **MANDATORY** |
+| 5 | Signs of hidden complexity (below) | **USE METHODOLOGY** |
+
+**Complexity signals (just 1 is enough):** multiple domains/contexts, external integrations, request doesn't fit in 1 sentence, AI can't visualize complete solution, uncertainty about complexity. Golden rule: if you can't assert it's simple, it's not simple.
+
+**When activating**, announce: detected triggers, observed signals, phases 0-7 summarized, declare that no code will be written until passing through Phases 0-4.
+
+---
+
+## PHASE OVERVIEW
 
 ```
-Phase 0 — Problem Discovery (loop iterativo, score ≥90/100)
+Phase 0 — Problem Discovery (iterative loop, score ≥90/100)
   ↓
-Phase 1 — Architecture (módulos + interfaces)
+Phase 1 — Architecture (modules + interfaces)
   ↓
 ┌ Phase 2 — Adversarial Critique ┐
-│ Phase 3 — Simplification       │ loop até convergência
+│ Phase 3 — Simplification       │ loop until convergence
 └────────────────────────────────┘
   ↓
 Phase 4 — Convergence Gate
   ↓
-Phase 5 — Code Implementation (1 arquivo/resposta)
+Phase 5 — Code Implementation (1 file/response)
   ↓
-Phase 6 — Tests (100% passando + teste manual)
+Phase 6 — Tests (100% passing + manual test)
   ↓
-Phase 7 — Post-Review (lições + meta-iteração)
+Phase 7 — Post-Review (lessons + meta-iteration)
 ```
 
-Múltiplas iterações 2-3 são esperadas: pequenos 1-2, médios 2-3, grandes 3-5. Preferir iterar quando em dúvida.
+Multiple 2-3 iterations are expected: small 1-2, medium 2-3, large 3-5. Prefer iterating when in doubt.
 
-### Tipo de verificação por gate:
+### Verification type per gate:
 
-| Fase | Gate | AV principal | O que verifica |
-|------|------|-------------|----------------|
-| 0 | G₀ | AV-humano | Entendimento do problema |
-| 1 | G₁ | AV-humano | Adequação, completude |
-| 2 | G₂ | AV-humano + AG (lentes) | Zero críticos; decisão p/ importantes |
-| 3 | G₃ | AV-humano | Complexidade ≤ versão anterior |
-| 4 | G₄ | AV-humano | Critérios de exit rigorosos |
-| 5 | G₅ | AV-automático | Sintaxe, tipos, estilo |
-| 6 | G₆ | AV-autom. + humano | Correção funcional + UX |
-| 7 | G₇ | AV-humano | Lições + evolução do método |
+| Phase | Gate | Primary AV | What it verifies |
+|-------|------|-----------|------------------|
+| 0 | G₀ | Human-AV | Problem understanding |
+| 1 | G₁ | Human-AV | Adequacy, completeness |
+| 2 | G₂ | Human-AV + AG (lenses) | Zero critical; decision for important |
+| 3 | G₃ | Human-AV | Complexity ≤ previous version |
+| 4 | G₄ | Human-AV | Rigorous exit criteria |
+| 5 | G₅ | Auto-AV | Syntax, types, style |
+| 6 | G₆ | Auto-AV + human | Functional correctness + UX |
+| 7 | G₇ | Human-AV | Lessons + method evolution |
 
 ---
 
 ## Phase 0 — Problem Discovery Loop
 
-**Entry:** Metodologia ativada.
-**Verificação:** AV-humano (operador valida síntese e teach-back).
+**Entry:** Methodology activated.
+**Verification:** Human-AV (operator validates synthesis and teach-back).
 
-### Loop: COLETA → SÍNTESE → VALIDAÇÃO → AVALIAÇÃO
+### Loop: COLLECT → SYNTHESIZE → VALIDATE → EVALUATE
 
-**Passo 0:** Ler TODO conteúdo de `specs/` antes de perguntar. Construir sobre o que já existe.
+**Step 0:** Read ALL content from `specs/` before asking questions. Build on what already exists.
 
-### COLETA — Perguntas obrigatórias (via R2):
+### COLLECT — Mandatory questions (via R2):
 
-| Categoria | Perguntas-chave |
-|-----------|----------------|
-| A. Problema & Motivação | Por quê precisa? O que acontece sem isso? Quem são os usuários? |
-| B. Casos de Uso | 3-5 cenários principais (quem/o quê/por quê). Casos extremos? |
-| C. Vocabulário | Termos-chave e definições. Sinônimos a evitar? |
-| D. Constraints | Limitações técnicas, de recursos. Premissas assumidas? |
-| E. Fora de Escopo (YAGNI) | O que NÃO fazer, com justificativa custo/benefício |
-| F. Documentação | Specs, RFCs, código legado, issues. Conteúdo em `specs/`? |
-| G. Termos Vagos | Clarificar: "fancy"→concreto, "escalável"→nº usuários, "rápido"→ms |
-| H. Viabilidade Tech | Plataforma-alvo VERIFICADA (não assumida). Em porte: paridade de capacidades confirmada |
+| Category | Key Questions |
+|----------|--------------|
+| A. Problem & Motivation | Why is this needed? What happens without it? Who are the users? |
+| B. Use Cases | 3-5 main scenarios (who/what/why). Edge cases? |
+| C. Vocabulary | Key terms and definitions. Synonyms to avoid? |
+| D. Constraints | Technical limitations, resource constraints. Assumed premises? |
+| E. Out of Scope (YAGNI) | What NOT to do, with cost/benefit justification |
+| F. Documentation | Specs, RFCs, legacy code, issues. Content in `specs/`? |
+| G. Vague Terms | Clarify: "fancy"→concrete, "scalable"→# users, "fast"→ms |
+| H. Tech Feasibility | Target platform VERIFIED (not assumed). In porting: capability parity confirmed |
 
-**F.2 — Pesquisa técnica E científica (obrigatória para domínios especializados):** Se projeto envolve DSP, ML, bioinformática, engenharia, ciências etc., pesquisar ANTES da arquitetura:
-- **Científica:** Papers de referência com peer review, fundamentos teóricos do domínio, modelos matemáticos/físicos aplicáveis, constantes e parâmetros validados pela literatura
-- **Técnica:** Algoritmos candidatos com trade-offs, implementações de referência, benchmarks publicados, ferramentas e libs maduras
-- **Competitiva:** Soluções concorrentes, estado da arte, gaps conhecidos
-- Depositar TUDO em specs/ (references, technical, competitors)
-- Cada parâmetro numérico DEVE ter fonte citada (paper, norma, especificação)
-- Regra: "Não implementar algoritmo sem referência bibliográfica verificável"
+**F.2 — Technical AND scientific research (mandatory for specialized domains):** If project involves DSP, ML, bioinformatics, engineering, sciences etc., research BEFORE architecture:
+- **Scientific:** Peer-reviewed reference papers, theoretical domain foundations, applicable mathematical/physical models, literature-validated constants and parameters
+- **Technical:** Candidate algorithms with trade-offs, reference implementations, published benchmarks, mature tools and libs
+- **Competitive:** Competing solutions, state of the art, known gaps
+- Deposit EVERYTHING in specs/ (references, technical, competitors)
+- Each numerical parameter MUST have a cited source (paper, standard, specification)
+- Rule: "Don't implement algorithm without verifiable bibliographic reference"
 
-**F.3 — Pesquisa web:** Se specs/ tem lacunas críticas, pedir permissão ao usuário (via R2) para pesquisar e depositar. Opções: pesquisar e depositar / pesquisar e apresentar / não pesquisar. Citar fonte/URL em todo material depositado.
+**F.3 — Web research:** If specs/ has critical gaps, ask user permission (via R2) to research and deposit. Options: research and deposit / research and present / don't research. Cite source/URL in all deposited material.
 
-**H — Viabilidade Tech (VERIFICAÇÃO OBRIGATÓRIA):**
-**LIÇÃO APRENDIDA:** Viabilidade tech da plataforma-alvo deve ser VERIFICADA, não assumida. Em projetos de porte/migração, confirmar ANTES de avançar:
-- A plataforma destino suporta os mecanismos fundamentais? (APIs, protocolos, extensibilidade)
-- Que capacidades são ESSENCIAIS vs. DESEJÁVEIS? Alguma essencial ausente → BLOCKER.
-Não cortar escopo para caber na tecnologia. Comparar alternativas com tabela (requisitos × techs, LOC, libs, plataforma). Perguntar ao usuário via R2.
+**H — Tech Feasibility (MANDATORY VERIFICATION):**
+**LESSON LEARNED:** Target platform tech feasibility must be VERIFIED, not assumed. In porting/migration projects, confirm BEFORE advancing:
+- Does the destination platform support the fundamental mechanisms? (APIs, protocols, extensibility)
+- Which capabilities are ESSENTIAL vs. DESIRABLE? Any essential one missing → BLOCKER.
+Don't cut scope to fit the technology. Compare alternatives with table (requirements × techs, LOC, libs, platform). Ask user via R2.
 
-### SÍNTESE (Teach-Back) — Template:
+### SYNTHESIS (Teach-Back) — Template:
 
 ```markdown
-# Meu Entendimento (Iteração N)
-## Resumo em 3 Frases (problema, não solução)
-## Casos de Uso Principais (ator/objetivo/fluxo/exemplo concreto)
-## Vocabulário (termo | entendimento | exemplo)
-## Fora de Escopo (item | razão)
-## Critérios de Sucesso (mensuráveis e verificáveis)
-## Premissas & Constraints
-## Ambiguidades Restantes
-## Perguntas para Próxima Iteração
+# My Understanding (Iteration N)
+## Summary in 3 Sentences (problem, not solution)
+## Main Use Cases (actor/goal/flow/concrete example)
+## Vocabulary (term | understanding | example)
+## Out of Scope (item | reason)
+## Success Criteria (measurable and verifiable)
+## Assumptions & Constraints
+## Remaining Ambiguities
+## Questions for Next Iteration
 ```
 
-### VALIDAÇÃO — via R2: correto/quase/incompleto/errado
-**CUIDADO AP1:** O humano avalia a SÍNTESE escrita — não perguntar à IA se está certo.
+### VALIDATION — via R2: correct/almost/incomplete/wrong
+**BEWARE AP1:** The human evaluates the WRITTEN SYNTHESIS — don't ask the AI if it's correct.
 
-### AVALIAÇÃO DE CONVERGÊNCIA (0-100):
+### CONVERGENCE ASSESSMENT (0-100):
 
-| Critério | Peso |
-|----------|------|
-| Clareza do Problema | 10 |
-| Casos de Uso Completos (top 3-5 com atores/objetivos/fluxos) | 15 |
-| Vocabulário Definido | 10 |
-| Ambiguidades Resolvidas | 15 |
-| Fora de Escopo Explícito | 10 |
-| Critérios de Sucesso mensuráveis | 10 |
-| Premissas Validadas | 10 |
-| Pesquisa (técnica+científica) + specs/ populado | 5 |
-| Usuário Confirmou | 10 |
-| IA Confiante (pode responder "por quê?" para tudo) | 5 |
+| Criterion | Weight |
+|-----------|--------|
+| Problem Clarity | 10 |
+| Complete Use Cases (top 3-5 with actors/goals/flows) | 15 |
+| Defined Vocabulary | 10 |
+| Resolved Ambiguities | 15 |
+| Explicit Out of Scope | 10 |
+| Measurable Success Criteria | 10 |
+| Validated Assumptions | 10 |
+| Research (technical+scientific) + specs/ populated | 5 |
+| User Confirmed | 10 |
+| AI Confident (can answer "why?" for everything) | 5 |
 
-≥90 → Phase 1 | 70-89 → mais 1 iteração | <70 → múltiplas iterações.
+≥90 → Phase 1 | 70-89 → 1 more iteration | <70 → multiple iterations.
 
 ### Exit Criteria Phase 0:
-- Score ≥90/100 + usuário confirmou
-- Ambiguidades = 0 (ou aceitas)
-- Casos de uso completos, vocabulário acordado, fora de escopo claro
-- Viabilidade tech: se inicial não atende 100%, alternativas exploradas
-- Viabilidade de implementação: componentes algorítmicos avaliados Tier 1/2/3. Se Tier 3 em domínio complexo → PoC antes de Phase 1
-- specs/ populado com referências técnicas E científicas, parâmetros, critérios de validação
-- Se domínio especializado: pesquisa técnica E científica completa (F.2)
+- Score ≥90/100 + user confirmed
+- Ambiguities = 0 (or accepted)
+- Use cases complete, vocabulary agreed, out of scope clear
+- Tech feasibility: if initial doesn't meet 100%, alternatives explored
+- Implementation feasibility: algorithmic components evaluated Tier 1/2/3. If Tier 3 in complex domain → PoC before Phase 1
+- specs/ populated with technical AND scientific references, parameters, validation criteria
+- If specialized domain: complete technical AND scientific research (F.2)
 
 ---
 
 ## Phase 1 — Architecture
 
 **Entry:** Phase 0 score ≥90/100.
-**Verificação:** AV-humano (operador valida adequação e completude).
+**Verification:** Human-AV (operator validates adequacy and completeness).
 
-### Passo 0: Consultar e popular specs/
-Ler specs/technical, examples, models, design. Se falta material técnico/científico crítico, pesquisar e depositar ANTES de definir módulos.
+### Step 0: Consult and populate specs/
+Read specs/technical, examples, models, design. If critical technical/scientific material is missing, research and deposit BEFORE defining modules.
 
-### As 4 questões que a arquitetura DEVE responder:
-1. **Decomposição.** Quais são os módulos? Quais suas responsabilidades? Onde estão os limites?
-2. **Interfaces.** Como os módulos se comunicam? Quais são os contratos?
-3. **Premissas.** O que o sistema assume como verdade? Premissas implícitas são a fonte mais comum de falhas.
-4. **Escopo negativo.** O que o sistema deliberadamente NÃO faz?
+### The 4 questions architecture MUST answer:
+1. **Decomposition.** What are the modules? What are their responsibilities? Where are the boundaries?
+2. **Interfaces.** How do modules communicate? What are the contracts?
+3. **Assumptions.** What does the system assume as true? Implicit assumptions are the most common source of failures.
+4. **Negative scope.** What does the system deliberately NOT do?
 
-### Princípio de granularização (E = I₀/C):
-Cada módulo deve ser compreensível pela IA em uma ÚNICA interação. Se não cabe no contexto com suas dependências, precisa ser decomposto. Interfaces funcionam como "resumos executáveis".
+### Granularity principle (E = I₀/C):
+Each module must be comprehensible by the AI in a SINGLE interaction. If it doesn't fit in context with its dependencies, it needs to be decomposed. Interfaces work as "executable summaries".
 
-### Passo 1: Coleta de Padrões e Princípios (via R2)
+### Step 1: Pattern and Principle Collection (via R2)
 
-Agrupar em 2 chamadas AskUserQuestion:
+Group into 2 AskUserQuestion calls:
 
-**Chamada 1 (até 4 perguntas):**
-1. **Padrão Arquitetural** (single): Clean Architecture / Layered / Hexagonal / Modular Monolith
-2. **Princípios Transversais** (multi): SOLID / KISS+YAGNI / DDD / Composition over Inheritance. Adicionais via Other: DRY, LoD, CoC, Separation of Concerns, Fail Fast
-3. **Concorrência** (single): Single-threaded / Actor Model / Message Queue / N/A
+**Call 1 (up to 4 questions):**
+1. **Architectural Pattern** (single): Clean Architecture / Layered / Hexagonal / Modular Monolith
+2. **Cross-cutting Principles** (multi): SOLID / KISS+YAGNI / DDD / Composition over Inheritance. Additional via Other: DRY, LoD, CoC, Separation of Concerns, Fail Fast
+3. **Concurrency** (single): Single-threaded / Actor Model / Message Queue / N/A
 
-**Chamada 2 (até 4 perguntas):**
-4. **GoF relevantes** (multi): selecionar os mais pertinentes ao projeto + opção "Nenhum específico"
-5. **Padrões Fowler** — Domínio (single): Domain Model / Transaction Script / Table Module
-6. **Padrões Fowler** — Dados (single): Repository+Data Mapper / Active Record / Table Data Gateway. Outros: Unit of Work, Identity Map, Lazy Load, Service Layer, DTO
+**Call 2 (up to 4 questions):**
+4. **Relevant GoF** (multi): select most pertinent to the project + "None specific" option
+5. **Fowler Patterns** — Domain (single): Domain Model / Transaction Script / Table Module
+6. **Fowler Patterns** — Data (single): Repository+Data Mapper / Active Record / Table Data Gateway. Others: Unit of Work, Identity Map, Lazy Load, Service Layer, DTO
 
-Apresentar resumo das escolhas em tabela, confirmar via R2.
+Present summary of choices in table, confirm via R2.
 
-### Validação Tecnológica
-Se há mais de uma opção tech: tabela comparativa (requisitos × techs, LOC, dependências, consumo contexto LLM). Premissas verificadas com evidência (specs/technical), não assumidas. Se tech forçar redução de escopo → tech errada. Preferir techs que minimizem artefatos.
+### Technology Validation
+If there's more than one tech option: comparative table (requirements × techs, LOC, dependencies, LLM context consumption). Assumptions verified with evidence (specs/technical), not assumed. If tech forces scope reduction → wrong tech. Prefer techs that minimize artifacts.
 
-### Escopo Progressivo
-Quando maturidade/risco é desigual entre requisitos: apresentar mapa de maturidade (req | lib madura? | LOC | risco) e oferecer via R2: escopo progressivo (v1.0 maduro, v2.0 resto) / tudo em v1.0 / outro agrupamento. Escopo progressivo ≠ corte: preserva 100%, distribui entre versões.
+### Progressive Scope
+When maturity/risk is uneven across requirements: present maturity map (req | mature lib? | LOC | risk) and offer via R2: progressive scope (v1.0 mature, v2.0 rest) / everything in v1.0 / other grouping. Progressive scope ≠ cut: preserves 100%, distributes across versions.
 
-### Planejamento de sessões (ciclo desacoplado):
-- Sessão de Design (Phases 0-4): contexto = domínio + restrições → arquitetura + interfaces
-- Sessão de Código (Phase 5): contexto = arquitetura + interface do módulo → 100% dedicado
-- Sessão de Testes (Phase 6): contexto = interface + contrato → sem necessidade do código interno
-- Sessão de Validação: CI/CD executa testes → IA só invocada se correções
+### Session planning (decoupled cycle):
+- Design Session (Phases 0-4): context = domain + constraints → architecture + interfaces
+- Code Session (Phase 5): context = architecture + module interface → 100% dedicated
+- Test Session (Phase 6): context = interface + contract → no need for internal code
+- Validation Session: CI/CD runs tests → AI only invoked for corrections
 
 ### Exit Criteria Phase 1:
-- As 4 questões respondidas (Decomposição, Interfaces, Premissas, Escopo negativo)
-- Padrões/princípios definidos e confirmados
-- Cada módulo tem responsabilidade clara e única
-- Interfaces definidas (assinaturas, tipos I/O)
-- Dependências entre módulos explícitas
-- Premissas listadas
-- Doc de arquitetura cabe em ~2k tokens
-- Tech suporta 100% do escopo, premissas tech verificadas
-- Módulos aderentes aos padrões escolhidos
+- The 4 questions answered (Decomposition, Interfaces, Assumptions, Negative scope)
+- Patterns/principles defined and confirmed
+- Each module has clear and unique responsibility
+- Interfaces defined (signatures, I/O types)
+- Dependencies between modules explicit
+- Assumptions listed
+- Architecture doc fits in ~2k tokens
+- Tech supports 100% of scope, tech assumptions verified
+- Modules adherent to chosen patterns
 
 ---
 
 ## Phase 2 — Adversarial Critique
 
-**Propósito:** Atacar arquitetura com lentes especializadas, gerando matriz de cobertura auditável.
-**Verificação:** AV-humano + AG (7 lentes como AVs operacionalmente distintos).
+**Purpose:** Attack architecture with specialized lenses, generating auditable coverage matrix.
+**Verification:** Human-AV + AG (7 lenses as operationally distinct AVs).
 
-### Princípio da assimetria crítica-resposta:
-**Phase 2 = MÚLTIPLOS agentes para ATACAR** (diversidade de lentes é valor).
-**Phase 3 = agente UNIFICADO para RESPONDER** (correções integradas no todo).
-**Operador humano = ARBITRAR trade-offs** (visão sistêmica).
+### Critical-response asymmetry principle:
+**Phase 2 = MULTIPLE agents to ATTACK** (lens diversity is value).
+**Phase 3 = UNIFIED agent to RESPOND** (corrections integrated into the whole).
+**Human operator = ARBITRATE trade-offs** (systemic view).
 
-### Lentes Universais (TODAS sempre aplicadas — custo baixo em planejamento, risco alto se omitida):
+### Universal Lenses (ALL always applied — low cost in planning, high risk if omitted):
 
-| Lente | Pergunta Central | Classe de falha exclusiva |
-|-------|-----------------|--------------------------|
-| Premissas | O que este design assume como verdade sem declarar? | Falhas por premissas ocultas |
-| Arquitetural | Cada módulo pode ser substituído, removido ou testado isoladamente? | Acoplamento oculto, SRP |
-| Implementabilidade | Consigo codificar este módulo numa única sessão com o contexto disponível? | Specs incompletos, granularização insuficiente |
-| Científica | Cada valor/fórmula/algoritmo tem referência bibliográfica verificável? | Parâmetros inventados, lógica baseada em plausibilidade |
-| Segurança | Como um atacante exploraria com esforço mínimo? | Superfície de ataque não analisada |
-| Performance | Onde estão os gargalos? Comportamento assintótico? | Gargalos ocultos, degradação com escala |
-| Regulatória | Cada requisito normativo tem rastreabilidade até um módulo? | Não-conformidade normativa |
+| Lens | Central Question | Exclusive failure class |
+|------|-----------------|------------------------|
+| Assumptions | What does this design assume as true without declaring? | Failures from hidden assumptions |
+| Architectural | Can each module be replaced, removed, or tested in isolation? | Hidden coupling, SRP |
+| Implementability | Can I code this module in a single session with available context? | Incomplete specs, insufficient granularity |
+| Scientific | Does each value/formula/algorithm have a verifiable bibliographic reference? | Invented parameters, plausibility-based logic |
+| Security | How would an attacker exploit with minimum effort? | Unanalyzed attack surface |
+| Performance | Where are the bottlenecks? Asymptotic behavior? | Hidden bottlenecks, degradation at scale |
+| Regulatory | Does each regulatory requirement have traceability to a module? | Regulatory non-compliance |
 
-Princípio de seleção: se remover esta lente, existe uma classe de falha que NENHUMA outra detecta? Se sim → legítima.
+Selection principle: if removing this lens, is there a failure class that NO other detects? If yes → legitimate.
 
-### Protocolo por lente:
-1. Aplicar pergunta central a CADA módulo
-2. Classificar achados: 🔴 Crítico (bloqueia) | 🟡 Importante (degrada) | 🟢 Sugestão
-3. Achado = evidência concreta, não opinião
-4. Passadas são independentes (uma lente por vez)
+### Protocol per lens:
+1. Apply central question to EACH module
+2. Classify findings: 🔴 Critical (blocks) | 🟡 Important (degrades) | 🟢 Suggestion
+3. Finding = concrete evidence, not opinion
+4. Passes are independent (one lens at a time)
 
-### Matriz de Cobertura:
-Tabela módulos × lentes com severidades.
+### Coverage Matrix:
+Table modules × lenses with severities.
 
-### Análise de concentração (obrigatória após a matriz):
-- **Concentração por módulo:** Módulo com achados em TODAS as lentes → mal concebido → requer REDESIGN, não patch.
-- **Concentração por lente:** Lente com achados em TODOS os módulos → falha SISTÊMICA.
-- Documentar padrões com record_decision().
+### Concentration analysis (mandatory after the matrix):
+- **Concentration by module:** Module with findings in ALL lenses → poorly conceived → requires REDESIGN, not patch.
+- **Concentration by lens:** Lens with findings in ALL modules → SYSTEMIC failure.
+- Document patterns with record_decision().
 
-### Gate de Saída Phase 2:
-- Zero 🔴 para avançar → todos endereçados em Phase 3
-- Cada 🟡 requer decisão EXPLÍCITA: tratar OU aceitar risco COM JUSTIFICATIVA (record_decision)
-- 🟢 podem ser postergados para v2.0
+### Phase 2 Exit Gate:
+- Zero 🔴 to advance → all addressed in Phase 3
+- Each 🟡 requires EXPLICIT decision: treat OR accept risk WITH JUSTIFICATION (record_decision)
+- 🟢 can be deferred to v2.0
 
-### Regra de Fronteira: Escopo vs Arquitetura
+### Boundary Rule: Scope vs Architecture
 
-Phase 2-3 **PODE:** mudar libs/padrões/comunicação, simplificar módulos, adicionar mecanismos técnicos.
+Phase 2-3 **CAN:** change libs/patterns/communication, simplify modules, add technical mechanisms.
 
-Phase 2-3 **NÃO PODE:** cortar requisitos, adicionar features, mudar público-alvo/casos de uso.
+Phase 2-3 **CANNOT:** cut requirements, add features, change target audience/use cases.
 
-Teste: "Isso muda O QUE o sistema faz?" ou "PARA QUEM serve?" → ESCOPO → voltar Phase 0 com opções via R2.
+Test: "Does this change WHAT the system does?" or "WHO it serves?" → SCOPE → return to Phase 0 with options via R2.
 
 ---
 
 ## Phase 3 — Simplification
 
-**Propósito:** Simplificar V(N) → V(N+1), eliminando complexidade.
-**Verificação:** AV-humano (operador valida que complexidade diminuiu e escopo preservado).
+**Purpose:** Simplify V(N) → V(N+1), eliminating complexity.
+**Verification:** Human-AV (operator validates that complexity decreased and scope preserved).
 
-### Princípio da assimetria (continuação de Phase 2):
-Phase 2 atacou com MÚLTIPLAS lentes. Phase 3 responde com VISÃO UNIFICADA.
-Correções individualmente corretas podem ser sistemicamente contraditórias.
-Trade-offs resolvidos pelo OPERADOR HUMANO (S2: critério de parada é do usuário).
+### Asymmetry principle (continuation from Phase 2):
+Phase 2 attacked with MULTIPLE lenses. Phase 3 responds with UNIFIED VISION.
+Individually correct corrections can be systemically contradictory.
+Trade-offs resolved by the HUMAN OPERATOR (S2: stopping criterion belongs to the user).
 
 ### Exit Criteria:
-- Problemas de Phase 2 endereçados
-- Arquitetura mais simples que versão anterior
-- **S1:** Nenhum bug introduzido (funcionalidades mantidas)
-- **S5:** Escopo de Phase 0 preservado
-- Nenhuma feature nova (apenas mudanças arquiteturais)
-- Se LOC aumentou >10%, justificativa documentada
+- Phase 2 issues addressed
+- Architecture simpler than previous version
+- **S1:** No bugs introduced (features maintained)
+- **S5:** Phase 0 scope preserved
+- No new features (only architectural changes)
+- If LOC increased >10%, documented justification
 
-**Distinção:** Adicionar Worker/cache/fallback = arquitetura (OK). Adicionar tutorial/botão/animação = feature (proibido).
+**Distinction:** Adding Worker/cache/fallback = architecture (OK). Adding tutorial/button/animation = feature (prohibited).
 
-### Decisão pós-ciclo 2-3 (via R2):
+### Post-cycle 2-3 decision (via R2):
 
-| Mudança estrutural | Críticos | Ação |
+| Structural change | Critical | Action |
 |---|---|---|
 | <15% | 0 | → Phase 4 |
-| 15-25% | 0-1 | Mais 1 iteração |
-| >25% | 2+ | Múltiplas iterações |
+| 15-25% | 0-1 | 1 more iteration |
+| >25% | 2+ | Multiple iterations |
 
-### Checklist Anti-Scope-Creep (obrigatório antes de avançar):
-- TODOS os requisitos de Phase 0 contemplados
-- Nenhuma funcionalidade não solicitada adicionada
-- O que o sistema FAZ não mudou (apenas COMO)
-- Casos de uso de Phase 0 continuam válidos
-
----
-
-## SALVAGUARDAS
-
-**S0 — Convergência no Problema.** Nunca avançar para Phase 1 sem ≥90/100. Custo relativo: problema errado 100×, arquitetura errada 10×, bug 1×.
-
-**S1 — Anti-Bug.** Simplificação nunca introduz bugs. Funcionalidades mantidas após cada Phase 3.
-
-**S2 — Critério de Parada.** Critério de parada é do USUÁRIO, não da IA.
-
-**S3 — Custo de Convergência Prematura.** Parar cedo ≈ -400% a -600% ROI.
-
-**S4 — Verificação Explícita (AV-humano obrigatório).** O AV-humano é insubstituível em cada gate. Testes automáticos verificam propriedades formalizáveis; adequação semântica, usabilidade e correção de domínio REQUEREM julgamento humano. Aplica-se a: P0 (validar síntese), P2 (arbitrar trade-offs), P4 (confirmar convergência), P6 (teste manual + executar e verificar output).
-
-**S5 — Preservação de Escopo.** Phase 2-3 opera DENTRO do escopo de Phase 0.
-- **5.1** Escopo é do usuário. Phase 2-3 sugere, nunca decide mudança de escopo.
-- **5.2** Se não foi pedido, não adicione. Se útil, documente como sugestão v2.0.
-- **5.3** Detector: "Se o usuário comparar V(N) com Phase 0, diria 'não é o que pedi'?" Se sim → violou escopo.
-
-**S6 — Não reimplemente o que já existe.** Avaliação por módulo:
-- **Tier 1:** Existe lib madura? → USAR. Código novo = UI + integração + glue.
-- **Tier 2:** Existe algoritmo documentado com implementação de referência? → PORTAR literalmente. Protocolo: encontrar ref → depositar em specs/examples → ler/entender → traduzir linha a linha (mesma estrutura, mesmos nomes) → testar contra mesmos inputs. Tradução fiel primeiro, otimização depois.
-- **Tier 3:** Nenhum dos anteriores. Se domínio complexo (solvers, crypto, DSP, ML) → PoC isolado obrigatório (~2h max). Se PoC falhou → reconsiderar escopo. Depositar lógica em specs/technical antes de codar.
-
-**Sinal de alarme (STOP imediato):** Se durante Phase 5-6 a IA está criando heurísticas para problemas com solução conhecida, debugando lógica complexa escrita do zero, fazendo trial-and-error em algo que deveria ser determinístico, ou gastando >2 iterações no mesmo módulo → PARAR, comunicar, buscar implementação de referência (Tier 2).
-
-Checklist por módulo: lib madura? → se não, por quê? → algoritmo documentado? → implementação portável? → decisão (usar lib / portar / implementar do zero + justificativa).
-
-**S7 — Disciplina de Sequência.** Após cada arquivo: marcar completed, identificar próximo, anunciar "X/N concluído, próximo: Y", iniciar imediatamente. Não iniciar discussões tangenciais (→ Phase 7). Se interrompido: consultar todo list → anunciar retomada → continuar.
+### Anti-Scope-Creep Checklist (mandatory before advancing):
+- ALL Phase 0 requirements covered
+- No unsolicited features added
+- What the system DOES hasn't changed (only HOW)
+- Phase 0 use cases remain valid
 
 ---
 
-## ANTIPADRÕES A EVITAR
+## SAFEGUARDS
 
-| # | Antipadrão | Descrição | Antídoto |
-|---|-----------|-----------|----------|
-| AP1 | Teatro de validação | Perguntar à IA "esse design está bom?" — viés de concordância (RLHF) | Nunca pedir validação — pedir REFUTAÇÃO |
-| AP2 | Complexidade como falsa solução | Adicionar componentes quando crítica revela fragilidade | Cada iteração deve simplificar |
-| AP3 | Sessão monolítica | Design, código e testes numa conversa | Uma sessão por fase, uma fase por módulo |
-| AP4 | Premissa implícita | Design funciona se condições não listadas forem verdadeiras | Lente de Premissas P2 + premissas P1 |
-| AP5 | Ausência de AV-humano | Confiar só em testes automáticos | S4 + teste manual obrigatório |
-| AP6 | Pular Phase 0 | Começar pela arquitetura sem entender o problema (100×) | S0: Score ≥90 |
-| AP7 | Codificar sem referência | Implementar sem consultar specs/ ou literatura | S6 + R4 |
-| AP8 | Perfeccionismo convergente | Ciclos infinitos buscando perfeição | <15% mudança + 0 críticos → avançar |
-| AP9 | Scope creep silencioso | Adicionar funcionalidades sem aprovação | S5: escopo é do usuário |
+**S0 — Problem Convergence.** Never advance to Phase 1 without ≥90/100. Relative cost: wrong problem 100×, wrong architecture 10×, bug 1×.
+
+**S1 — Anti-Bug.** Simplification never introduces bugs. Features maintained after each Phase 3.
+
+**S2 — Stopping Criterion.** Stopping criterion belongs to the USER, not the AI.
+
+**S3 — Premature Convergence Cost.** Stopping early ≈ -400% to -600% ROI.
+
+**S4 — Explicit Verification (mandatory human-AV).** Human-AV is irreplaceable at each gate. Automated tests verify formalizable properties; semantic adequacy, usability, and domain correctness REQUIRE human judgment. Applies to: P0 (validate synthesis), P2 (arbitrate trade-offs), P4 (confirm convergence), P6 (manual test + execute and verify output).
+
+**S5 — Scope Preservation.** Phase 2-3 operates WITHIN Phase 0 scope.
+- **5.1** Scope belongs to the user. Phase 2-3 suggests, never decides scope change.
+- **5.2** If not requested, don't add. If useful, document as v2.0 suggestion.
+- **5.3** Detector: "If the user compared V(N) with Phase 0, would they say 'this isn't what I asked for'?" If yes → scope violated.
+
+**S6 — Don't reimplement what already exists.** Assessment per module:
+- **Tier 1:** Mature lib exists? → USE IT. New code = UI + integration + glue.
+- **Tier 2:** Documented algorithm with reference implementation exists? → PORT literally. Protocol: find ref → deposit in specs/examples → read/understand → translate line by line (same structure, same names) → test against same inputs. Faithful translation first, optimization later.
+- **Tier 3:** Neither of the above. If complex domain (solvers, crypto, DSP, ML) → mandatory isolated PoC (~2h max). If PoC failed → reconsider scope. Deposit logic in specs/technical before coding.
+
+**Alarm signal (immediate STOP):** If during Phase 5-6 the AI is creating heuristics for problems with known solutions, debugging complex logic written from scratch, doing trial-and-error on something that should be deterministic, or spending >2 iterations on the same module → STOP, communicate, look for reference implementation (Tier 2).
+
+Checklist per module: mature lib? → if not, why? → documented algorithm? → portable implementation? → decision (use lib / port / implement from scratch + justification).
+
+**S7 — Sequence Discipline.** After each file: mark completed, identify next, announce "X/N completed, next: Y", start immediately. Don't start tangential discussions (→ Phase 7). If interrupted: consult todo list → announce resumption → continue.
+
+---
+
+## ANTIPATTERNS TO AVOID
+
+| # | Antipattern | Description | Antidote |
+|---|------------|-------------|----------|
+| AP1 | Validation theater | Asking the AI "is this design good?" — agreement bias (RLHF) | Never ask for validation — ask for REFUTATION |
+| AP2 | Complexity as false solution | Adding components when critique reveals fragility | Each iteration must simplify |
+| AP3 | Monolithic session | Design, code, and tests in one conversation | One session per phase, one phase per module |
+| AP4 | Implicit assumption | Design works if unlisted conditions are true | Assumptions Lens P2 + P1 assumptions |
+| AP5 | Absence of human-AV | Trusting only automated tests | S4 + mandatory manual testing |
+| AP6 | Skip Phase 0 | Starting with architecture without understanding the problem (100×) | S0: Score ≥90 |
+| AP7 | Code without reference | Implementing without consulting specs/ or literature | S6 + R4 |
+| AP8 | Convergent perfectionism | Infinite cycles seeking perfection | <15% change + 0 critical → advance |
+| AP9 | Silent scope creep | Adding features without approval | S5: scope belongs to the user |
 
 ---
 
 ## Phase 4 — Convergence Gate
 
-**Verificação:** AV-humano (operador confirma convergência com critérios rigorosos).
+**Verification:** Human-AV (operator confirms convergence with rigorous criteria).
 
-Validar convergência completa:
-1. Exit criteria de Phases 2-3 verificados
-2. Salvaguardas S1-S5 atingidas
-3. As 4 questões de P1 ainda respondidas (Decomposição, Interfaces, Premissas, Escopo negativo)
-4. Análise de concentração não revelou falhas sistêmicas não resolvidas
-5. specs/ populado com referências técnicas e científicas para Phase 5
-6. Só avançar se TUDO OK
+Validate complete convergence:
+1. Exit criteria from Phases 2-3 verified
+2. Safeguards S1-S5 met
+3. The 4 P1 questions still answered (Decomposition, Interfaces, Assumptions, Negative scope)
+4. Concentration analysis revealed no unresolved systemic failures
+5. specs/ populated with technical and scientific references for Phase 5
+6. Only advance if EVERYTHING OK
 
 ---
 
 ## Phase 5 — Code Implementation
 
-**Propósito:** Implementar arquitetura final. Um arquivo por resposta (R3).
-**Verificação:** AV-automático (compile, lint, type check). Sessão dedicada por módulo.
+**Purpose:** Implement final architecture. One file per response (R3).
+**Verification:** Auto-AV (compile, lint, type check). Dedicated session per module.
 
-### Sessão desacoplada:
-Cada módulo implementável em sessão independente. Contexto: arquitetura (~2k tokens) + interface + specs/. Se precisa de mais → granularização insuficiente (voltar P1).
+### Decoupled session:
+Each module implementable in independent session. Context: architecture (~2k tokens) + interface + specs/. If needs more → insufficient granularity (return to P1).
 
-Antes de cada módulo, consultar specs/technical (algoritmo, fórmulas, params), specs/examples (código ref), specs/references (paper original), specs/datasets (dados de teste). Se parâmetros numéricos sem valores em specs/ → PARAR e pesquisar. Referenciar fonte no código.
+Before each module, consult specs/technical (algorithm, formulas, params), specs/examples (ref code), specs/references (original paper), specs/datasets (test data). If numerical parameters without values in specs/ → STOP and research. Reference source in code.
 
-Aplicar S6 (Tier 1/2/3) e S7 (disciplina de sequência) rigorosamente.
+Apply S6 (Tier 1/2/3) and S7 (sequence discipline) rigorously.
 
 ---
 
 ## Phase 6 — Tests
 
-**Propósito:** 100% testes passando + teste manual.
-**Verificação:** AV-automático (testes) + AV-humano (teste manual exploratório).
+**Purpose:** 100% tests passing + manual test.
+**Verification:** Auto-AV (tests) + Human-AV (manual exploratory testing).
 
-### Testes baseados em specs/:
-- specs/datasets → testar contra ground truth (se vazio, gerar dados sintéticos e depositar)
-- specs/validation → cada critério ≥ 1 teste
-- specs/technical → outputs dentro dos ranges documentados
+### Tests based on specs/:
+- specs/datasets → test against ground truth (if empty, generate synthetic data and deposit)
+- specs/validation → each criterion ≥ 1 test
+- specs/technical → outputs within documented ranges
 
-**S4 — Verificação Explícita.** NUNCA assumir que testes passaram. Executar e verificar. AV-humano insubstituível para adequação semântica e UX.
+**S4 — Explicit Verification.** NEVER assume tests passed. Execute and verify. Human-AV is irreplaceable for semantic adequacy and UX.
 
-### Teste Manual Exploratório (obrigatório antes de Phase 7):
-1. Iniciar aplicação
-2. Executar cada caso de uso de Phase 0 como usuário final
-3. Testar edge cases: cliques rápidos/duplos, inputs vazios, interrupções, timeouts
-4. Avaliar feedback: mensagens compreensíveis? Erros não-técnicos? Resultado acionável?
-5. Documentar e corrigir problemas
+### Manual Exploratory Testing (mandatory before Phase 7):
+1. Start application
+2. Execute each Phase 0 use case as end user
+3. Test edge cases: rapid/double clicks, empty inputs, interruptions, timeouts
+4. Evaluate feedback: understandable messages? Non-technical errors? Actionable result?
+5. Document and fix issues
 
-Ambos (automatizados + manual) são gates obrigatórios. Nenhum substitui o outro.
+Both (automated + manual) are mandatory gates. Neither replaces the other.
 
 ---
 
 ## Phase 7 — Post-Review
 
-**Verificação:** AV-humano (operador avalia lições e aprova mudanças).
+**Verification:** Human-AV (operator evaluates lessons and approves changes).
 
-### Atualizar specs/:
-- specs/validation → resultados reais (esperado vs obtido)
-- specs/technical → decisões finais, algoritmos descartados e por quê
-- specs/references → referências descobertas durante correção
+### Update specs/:
+- specs/validation → actual results (expected vs obtained)
+- specs/technical → final decisions, discarded algorithms and why
+- specs/references → references discovered during correction
 
 ### Double-loop learning:
-Single-loop: avaliar o PRODUTO (o software funciona?).
-Double-loop: avaliar o PROCESSO (a metodologia funcionou? Onde houve atrito?).
+Single-loop: evaluate the PRODUCT (does the software work?).
+Double-loop: evaluate the PROCESS (did the methodology work? Where was there friction?).
 
-### Auto-Aprimoramento da Metodologia:
+### Methodology Self-Improvement:
 
-**Passo 1 — Coleta humana (obrigatório PRIMEIRO):** Perguntar via R2 se alguma parte causou atrito ou falhou. O humano vivenciou o processo e detecta atrito que a IA não percebe.
+**Step 1 — Human collection (mandatory FIRST):** Ask via R2 if any part caused friction or failed. The human experienced the process and detects friction the AI doesn't perceive.
 
-**Passo 2 — Auto-avaliação IA (complementar):** Fase que faltou checklist, salvaguarda ausente, template inadequado, regra sem valor, padrão recorrente.
+**Step 2 — AI self-assessment (complementary):** Phase that lacked checklist, missing safeguard, inadequate template, valueless rule, recurring pattern.
 
-**Passo 3 — Consolidar** em tabela (fonte [humano/IA] | fase | proposta | justificativa).
+**Step 3 — Consolidate** into table (source [human/AI] | phase | proposal | justification).
 
-**Passo 4 — Aplicar** via R2: revisar um a um (recomendado) / aplicar todos / não atualizar. Para cada diff, mostrar antes/depois e pedir aprovação.
+**Step 4 — Apply** via R2: review one by one (recommended) / apply all / don't update. For each diff, show before/after and request approval.
 
-**Passo 5 — Incrementar versão** do SKILL.md.
+**Step 5 — Increment version** of SKILL.md.
 
-Limites: IA tem viés de concordância sobre si mesma. Humano detecta atrito → IA propõe → humano aprova. Nunca alterar SKILL.md sem aprovação.
+Limits: AI has agreement bias about itself. Human detects friction → AI proposes → human approves. Never modify SKILL.md without approval.
 
-### Meta-iteração v1.0 → v2.0:
-- specs/ de v1.0 é BASELINE para v2.0 — conhecimento NÃO é perdido entre ciclos
-- Phase 0 de v2.0 parte do specs/ existente (não recomeça do zero)
-- Decisões anteriores servem como contexto — o que foi descartado e por quê
-- Escopo negativo de v1.0 pode virar escopo de v2.0 (com aprovação do operador)
-- Lições de Phase 7 de v1.0 alimentam o processo de v2.0
+### Meta-iteration v1.0 → v2.0:
+- specs/ from v1.0 is BASELINE for v2.0 — knowledge is NOT lost between cycles
+- Phase 0 of v2.0 starts from existing specs/ (doesn't restart from zero)
+- Previous decisions serve as context — what was discarded and why
+- Negative scope from v1.0 can become scope of v2.0 (with operator approval)
+- Phase 7 lessons from v1.0 feed the v2.0 process

@@ -1,4 +1,4 @@
-// TreeView Sidebar — visualização read-only do estado da metodologia
+// TreeView Sidebar — read-only view of the methodology state
 
 import * as vscode from "vscode";
 import * as fs from "fs";
@@ -67,7 +67,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
     this.watcher.onDidDelete(() => this.refresh());
   }
 
-  /** Polling: verifica a cada 3s se state.json mudou (criação, remoção ou conteúdo) */
+  /** Polling: checks every 3s if state.json changed (creation, removal, or content) */
   private setupPolling(): void {
     this.pollTimer = setInterval(() => {
       const statePath = path.join(this.workspacePath, ".versus", "state.json");
@@ -75,12 +75,12 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
         const stat = fs.statSync(statePath);
         const mtime = stat.mtimeMs;
         if (mtime !== this.lastMtime) {
-          // Arquivo criado ou modificado desde última verificação
+          // File created or modified since last check
           this.lastMtime = mtime;
           this.refresh();
         }
       } catch {
-        // Arquivo não existe
+        // File does not exist
         if (this.state) {
           this.lastMtime = 0;
           this.refresh();
@@ -95,7 +95,7 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
 
   getChildren(element?: StateItem): StateItem[] {
     if (!this.state) {
-      return [new StateItem("Nenhum projeto inicializado", "", "info")];
+      return [new StateItem("No project initialized", "", "info")];
     }
 
     if (!element) {
@@ -110,18 +110,18 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
 
     const items: StateItem[] = [];
 
-    // Projeto
+    // Project
     items.push(new StateItem(
       this.state.projectName,
       this.state.projectDescription,
       "project"
     ));
 
-    // Fase atual
-    const phaseName = PHASE_NAMES[this.state.currentPhase] ?? "Desconhecida";
+    // Current phase
+    const phaseName = PHASE_NAMES[this.state.currentPhase] ?? "Unknown";
     const phaseItem = new StateItem(
       `Phase ${this.state.currentPhase} — ${phaseName}`,
-      `Iteração ${this.state.currentIteration}`,
+      `Iteration ${this.state.currentIteration}`,
       "phase"
     );
     items.push(phaseItem);
@@ -131,14 +131,14 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
       const scoreIcon = this.state.phase0Score >= 90 ? "pass" : "warning";
       items.push(new StateItem(
         `Score Phase 0: ${this.state.phase0Score}/100`,
-        this.state.phase0Score >= 90 ? "Limiar atingido" : "Abaixo do limiar (90)",
+        this.state.phase0Score >= 90 ? "Threshold reached" : "Below threshold (90)",
         scoreIcon
       ));
     }
 
-    // Decisões
+    // Decisions
     const decisionsItem = new StateItem(
-      `Decisões: ${this.state.decisions.length}`,
+      `Decisions: ${this.state.decisions.length}`,
       "",
       "decisions",
       this.state.decisions.slice(-5).map(
@@ -151,13 +151,13 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
     );
     items.push(decisionsItem);
 
-    // Salvaguardas
+    // Safeguards
     const violated = this.state.safeguards.filter((s) => s.status === "violated");
     const warnings = this.state.safeguards.filter((s) => s.status === "warning");
     const sgIcon = violated.length > 0 ? "error" : warnings.length > 0 ? "warning" : "pass";
     const sgItem = new StateItem(
-      `Salvaguardas`,
-      `${violated.length} violadas, ${warnings.length} alertas`,
+      `Safeguards`,
+      `${violated.length} violated, ${warnings.length} warnings`,
       sgIcon,
       this.state.safeguards.map(
         (s) => new StateItem(
@@ -169,10 +169,10 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
     );
     items.push(sgItem);
 
-    // Última atualização
+    // Last updated
     const updated = new Date(this.state.updatedAt);
     items.push(new StateItem(
-      `Atualizado: ${updated.toLocaleString("pt-BR")}`,
+      `Updated: ${updated.toLocaleString("en-US")}`,
       "",
       "info"
     ));

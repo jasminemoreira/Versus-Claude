@@ -1,4 +1,4 @@
-// MCP Tools: instruções comportamentais detalhadas por fase
+// MCP Tools: detailed behavioral instructions per phase
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
@@ -7,16 +7,16 @@ import { getFullGuidance } from "../../rules/guidance";
 export const getPhaseGuidanceTool: Tool = {
   name: "get_phase_guidance",
   description:
-    "Retorna instruções COMPLETAS da fase atual ou especificada: regras globais, " +
-    "perguntas obrigatórias, templates, protocolos, checklists, e critérios. " +
-    "Chame ao entrar em cada nova fase para saber exatamente o que fazer. " +
-    "Complementa get_phase_state que retorna apenas o estado.",
+    "Returns COMPLETE instructions for the current or specified phase: global rules, " +
+    "mandatory questions, templates, protocols, checklists, and criteria. " +
+    "Call when entering each new phase to know exactly what to do. " +
+    "Complements get_phase_state which returns only the state.",
   inputSchema: {
     type: "object" as const,
     properties: {
       phase: {
         type: "number",
-        description: "Número da fase (0-7). Se omitido, usa a fase atual.",
+        description: "Phase number (0-7). If omitted, uses the current phase.",
       },
     },
     required: [],
@@ -27,14 +27,14 @@ export function handleGetPhaseGuidance(engine: StateEngine, args: { phase?: numb
   const state = engine.getPhaseState();
   if (!state) {
     return JSON.stringify({
-      error: "Projeto não inicializado. Chame init_project primeiro.",
+      error: "Project not initialized. Call init_project first.",
     });
   }
 
   const phase = args.phase ?? state.currentPhase;
 
   if (phase < 0 || phase > 7) {
-    return JSON.stringify({ error: `Fase inválida: ${phase}. Use 0-7.` });
+    return JSON.stringify({ error: `Invalid phase: ${phase}. Use 0-7.` });
   }
 
   const guidance = getFullGuidance(phase);

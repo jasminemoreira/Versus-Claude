@@ -1,24 +1,24 @@
 # Versus for Claude
 
-**Orquestrador da metodologia Convergencia Iterativa v3.7 para Claude Code.**
+**Iterative Convergence methodology v3.7 orchestrator for Claude Code.**
 
-Uma extensao VS Code que impede o Claude de pular etapas, perder decisoes e esquecer o contexto durante projetos complexos. Funciona como um copiloto do copiloto: um MCP server que gerencia estado, valida transicoes e forca disciplina metodologica.
-
----
-
-## O Problema
-
-LLMs em modo agente (Claude Code, Copilot, etc.) sofrem de tres problemas sistematicos em projetos nao-triviais:
-
-1. **Amnesia** -- apos compactacao de contexto ou nova sessao, o modelo esquece a fase do projeto, decisoes tomadas e criterios pendentes
-2. **Ansiedade de codigo** -- o modelo pula direto para implementacao sem entender o problema, definir arquitetura ou validar decisoes
-3. **Deriva de escopo** -- sem restricoes externas, o modelo adiciona features nao solicitadas, reimplementa bibliotecas existentes e diverge do objetivo
-
-O Versus resolve isso com **estado externo persistente** + **gates de transicao** + **salvaguardas ativas**.
+A VS Code extension that prevents Claude from skipping steps, losing decisions, and forgetting context during complex projects. It works as a copilot for the copilot: an MCP server that manages state, validates transitions, and enforces methodological discipline.
 
 ---
 
-## Como Funciona
+## The Problem
+
+LLMs in agent mode (Claude Code, Copilot, etc.) suffer from three systemic problems in non-trivial projects:
+
+1. **Amnesia** -- after context compaction or a new session, the model forgets the project phase, decisions made, and pending criteria
+2. **Code anxiety** -- the model jumps straight to implementation without understanding the problem, defining architecture, or validating decisions
+3. **Scope drift** -- without external constraints, the model adds unsolicited features, reimplements existing libraries, and diverges from the objective
+
+Versus solves this with **persistent external state** + **transition gates** + **active safeguards**.
+
+---
+
+## How It Works
 
 ```
                                     VS Code
@@ -33,7 +33,7 @@ O Versus resolve isso com **estado externo persistente** + **gates de transicao*
                     │                             │          │
   ┌──────────┐  MCP stdio   ┌─────────────────────┴───┐     │
   │  Claude  │◄────────────►│      MCP Server         │     │
-  │   Code   │   13 tools   │  (validacao + regras)   │     │
+  │   Code   │   13 tools   │  (validation + rules)   │     │
   └──────────┘              └─────────────────────────┘     │
                     │                                         │
                     │   ┌─────────────────────────────────┐  │
@@ -43,84 +43,84 @@ O Versus resolve isso com **estado externo persistente** + **gates de transicao*
                     └─────────────────────────────────────────┘
 ```
 
-A extensao expoe **13 MCP tools** que o Claude Code usa automaticamente. Tres hooks reforcam o comportamento:
+The extension exposes **13 MCP tools** that Claude Code uses automatically. Three hooks reinforce the behavior:
 
-| Hook | Evento | Funcao |
-|------|--------|--------|
-| inject-context | UserPromptSubmit | Injeta fase atual e regras no inicio de cada mensagem |
-| phase-gate | PreToolUse (Edit/Write) | Bloqueia edicao de codigo antes de Phase 5 |
-| loop-detector | PreToolUse (Bash) | Detecta loops de comandos repetidos (>3x) |
+| Hook | Event | Function |
+|------|-------|----------|
+| inject-context | UserPromptSubmit | Injects current phase and rules at the start of each message |
+| phase-gate | PreToolUse (Edit/Write) | Blocks code editing before Phase 5 |
+| loop-detector | PreToolUse (Bash) | Detects loops of repeated commands (>3x) |
 
 ---
 
-## A Metodologia: Convergencia Iterativa
+## The Methodology: Iterative Convergence
 
-Oito fases sequenciais com gates de saida validados. O modelo so avanca quando todos os exit criteria sao atendidos.
+Eight sequential phases with validated exit gates. The model only advances when all exit criteria are met.
 
 ```
-Phase 0  Problem Discovery        (loop iterativo, score >= 90/100)
+Phase 0  Problem Discovery        (iterative loop, score >= 90/100)
    |
-Phase 1  Architecture             (modulos + interfaces + padroes)
+Phase 1  Architecture             (modules + interfaces + patterns)
    |
 Phase 2  Adversarial Critique  ┐
-   |                           │  loop ate convergencia
+   |                           │  loop until convergence
 Phase 3  Simplification        ┘
    |
-Phase 4  Convergence Gate         (validacao final do design)
+Phase 4  Convergence Gate         (final design validation)
    |
-Phase 5  Code Implementation      (1 arquivo por resposta)
+Phase 5  Code Implementation      (1 file per response)
    |
-Phase 6  Tests                    (100% passando + manual exploratorio)
+Phase 6  Tests                    (100% passing + manual exploratory)
    |
-Phase 7  Post-Review              (licoes aprendidas + meta-iteracao)
+Phase 7  Post-Review              (lessons learned + meta-iteration)
 ```
 
 ### Phase 0 -- Problem Discovery
 
-O modelo faz perguntas iterativas para entender o problema. Um score de convergencia (0-100) com 10 criterios ponderados mede a qualidade do entendimento:
+The model asks iterative questions to understand the problem. A convergence score (0-100) with 10 weighted criteria measures the quality of understanding:
 
-| Criterio | Peso |
-|----------|------|
-| Clareza do problema | 10 |
-| Casos de uso | 15 |
-| Vocabulario compartilhado | 10 |
-| Ambiguidades resolvidas | 15 |
-| Fora de escopo definido | 10 |
-| Criterios de sucesso | 10 |
-| Premissas explicitas | 10 |
-| Documentacao (specs/) | 5 |
-| Usuario confirmou | 10 |
-| IA confiante | 5 |
+| Criterion | Weight |
+|-----------|--------|
+| Problem clarity | 10 |
+| Use cases | 15 |
+| Shared vocabulary | 10 |
+| Ambiguities resolved | 15 |
+| Out of scope defined | 10 |
+| Success criteria | 10 |
+| Explicit assumptions | 10 |
+| Documentation (specs/) | 5 |
+| User confirmed | 10 |
+| AI confident | 5 |
 
-**Score >= 90 obrigatorio para avancar.** O modelo nao consegue pular essa fase.
+**Score >= 90 required to advance.** The model cannot skip this phase.
 
-### Phases 2-3 -- Loop Adversarial
+### Phases 2-3 -- Adversarial Loop
 
-A arquitetura e atacada com 7 lentes especializadas (performance, seguranca, manutenibilidade, edge cases, dependencias, simplicidade, alternativas) e simplificada iterativamente. O loop repete ate que as criticas sejam enderecadas.
+The architecture is attacked with 7 specialized lenses (performance, security, maintainability, edge cases, dependencies, simplicity, alternatives) and simplified iteratively. The loop repeats until critiques are addressed.
 
-### Salvaguardas S0-S7
+### Safeguards S0-S7
 
-Regras de protecao verificaveis em qualquer momento:
+Protection rules verifiable at any time:
 
-| ID | Nome | Protege contra |
-|----|------|----------------|
-| S0 | Convergencia no Problema | Avancar sem entender o problema |
-| S1 | Anti-Bug | Simplificacao que introduz bugs |
-| S2 | Criterio de Parada | IA decidindo por conta quando parar |
-| S3 | Convergencia Prematura | Parar iteracoes cedo demais |
-| S4 | Verificacao Explicita | Pular validacao humana nos gates |
-| S5 | Preservacao de Escopo | Adicionar features nao solicitadas |
-| S6 | Nao Reimplementar | Recriar o que ja existe como biblioteca |
-| S7 | Disciplina de Sequencia | Pular entre arquivos sem completar |
+| ID | Name | Protects against |
+|----|------|-----------------|
+| S0 | Problem Convergence | Advancing without understanding the problem |
+| S1 | Anti-Bug | Simplification that introduces bugs |
+| S2 | Stopping Criterion | AI deciding on its own when to stop |
+| S3 | Premature Convergence | Stopping iterations too early |
+| S4 | Explicit Verification | Skipping human validation at gates |
+| S5 | Scope Preservation | Adding unsolicited features |
+| S6 | Do Not Reimplement | Recreating what already exists as a library |
+| S7 | Sequence Discipline | Jumping between files without completing |
 
 ---
 
-## Instalacao
+## Installation
 
-### Pre-requisitos
+### Prerequisites
 
 - VS Code 1.85+
-- Claude Code (extensao)
+- Claude Code (extension)
 - Node.js 18+
 
 ### Via .vsix
@@ -129,9 +129,9 @@ Regras de protecao verificaveis em qualquer momento:
 code --install-extension versus-claude-0.2.0.vsix
 ```
 
-Ou: `Ctrl+Shift+P` > "Extensions: Install from VSIX..."
+Or: `Ctrl+Shift+P` > "Extensions: Install from VSIX..."
 
-### Via source
+### From source
 
 ```bash
 git clone git@github.com:jasminemoreira/Versus-Claude.git
@@ -144,24 +144,24 @@ code --install-extension versus-claude-*.vsix
 
 ---
 
-## Uso
+## Usage
 
-### 1. Inicializar um projeto
+### 1. Initialize a project
 
-`Ctrl+Shift+P` > **"Versus: Inicializar Projeto"** > nome e descricao.
+`Ctrl+Shift+P` > **"Versus Claude: Initialize Project"** > name and description.
 
-Isso cria no workspace:
+This creates in the workspace:
 
 ```
 .versus/
-├── state.json            # estado da metodologia
+├── state.json            # methodology state
 ├── server.js             # MCP server
-├── inject-context.js     # hook: contexto
-├── phase-gate.js         # hook: gate de edicao
+├── inject-context.js     # hook: context
+├── phase-gate.js         # hook: editing gate
 └── loop-detector.js      # hook: anti-loop
 
-.mcp.json                 # registro do MCP server para Claude Code
-.claude/settings.json     # permissoes e hooks
+.mcp.json                 # MCP server registration for Claude Code
+.claude/settings.json     # permissions and hooks
 
 specs/
 ├── references/
@@ -175,89 +175,89 @@ specs/
 └── competitors/
 ```
 
-### 2. Trabalhar com Claude Code
+### 2. Work with Claude Code
 
-Abra o Claude Code normalmente. O hook SessionStart faz o Claude chamar `get_phase_state()` automaticamente e seguir a metodologia.
+Open Claude Code normally. The SessionStart hook makes Claude call `get_phase_state()` automatically and follow the methodology.
 
-### 3. Acompanhar pela sidebar
+### 3. Monitor via sidebar
 
-O painel "Versus" na activity bar mostra em tempo real: fase atual, iteracao, score, ultimas decisoes e status das salvaguardas.
+The "Versus" panel in the activity bar shows in real time: current phase, iteration, score, latest decisions, and safeguard status.
 
 ---
 
 ## 13 MCP Tools
 
-### Consulta
-| Tool | Descricao |
-|------|-----------|
-| `get_phase_state` | Fase atual, iteracao, score, resumo |
-| `get_phase_guidance` | Instrucoes detalhadas da fase (regras, perguntas, checklists) |
-| `get_decisions` | Decisoes registradas (filtro por fase opcional) |
-| `get_exit_criteria` | Criterios de saida com status (atendido/pendente) |
-| `check_specs_status` | Contagem de arquivos por subdiretorio de specs/ |
+### Query
+| Tool | Description |
+|------|-------------|
+| `get_phase_state` | Current phase, iteration, score, summary |
+| `get_phase_guidance` | Detailed phase instructions (rules, questions, checklists) |
+| `get_decisions` | Recorded decisions (optional phase filter) |
+| `get_exit_criteria` | Exit criteria with status (met/pending) |
+| `check_specs_status` | File count per specs/ subdirectory |
 
-### Transicao
-| Tool | Descricao |
-|------|-----------|
-| `advance_phase` | Avanca para proxima fase (valida exit criteria) |
-| `start_iteration` | Nova iteracao em fases ciclicas (0, 2, 3) |
+### Transition
+| Tool | Description |
+|------|-------------|
+| `advance_phase` | Advance to next phase (validates exit criteria) |
+| `start_iteration` | New iteration in cyclic phases (0, 2, 3) |
 
-### Registro
-| Tool | Descricao |
-|------|-----------|
-| `record_decision` | Persiste decisao (fase, categoria, conteudo) |
-| `update_score` | Atualiza score Phase 0 com breakdown por criterio |
-| `mark_exit_criterion` | Marca criterio como atendido/pendente |
+### Recording
+| Tool | Description |
+|------|-------------|
+| `record_decision` | Persist decision (phase, category, content) |
+| `update_score` | Update Phase 0 score with per-criterion breakdown |
+| `mark_exit_criterion` | Mark criterion as met/pending |
 
-### Salvaguardas
-| Tool | Descricao |
-|------|-----------|
-| `check_safeguard` | Verifica salvaguarda especifica (S0-S7) |
-| `check_all_safeguards` | Panorama de todas as salvaguardas |
+### Safeguards
+| Tool | Description |
+|------|-------------|
+| `check_safeguard` | Check specific safeguard (S0-S7) |
+| `check_all_safeguards` | Overview of all safeguards |
 
-### Projeto
-| Tool | Descricao |
-|------|-----------|
-| `init_project` | Inicializa projeto (state + bundles + specs + configs) |
+### Project
+| Tool | Description |
+|------|-------------|
+| `init_project` | Initialize project (state + bundles + specs + configs) |
 
 ---
 
-## Compatibilidade com Versus for Copilot
+## Compatibility with Versus for Copilot
 
-O estado da metodologia fica em `.versus/` -- um diretorio neutro compartilhado entre extensoes. Isso significa que voce pode:
+The methodology state lives in `.versus/` -- a neutral directory shared between extensions. This means you can:
 
-- Iniciar um projeto com Claude Code e continuar com Copilot (ou vice-versa)
-- Usar ambos no mesmo workspace sem conflito
-- O `state.json` e identico e intercambiavel
+- Start a project with Claude Code and continue with Copilot (or vice versa)
+- Use both in the same workspace without conflict
+- The `state.json` is identical and interchangeable
 
-Veja o projeto irmao: [Versus for Copilot](https://github.com/jasminemoreira/Versus-Copilot) (mesmo conceito para GitHub Copilot Agent Mode).
+See the sibling project: [Versus for Copilot](https://github.com/jasminemoreira/Versus-Copilot) (same concept for GitHub Copilot Agent Mode).
 
 ---
 
 ## Zero footprint
 
-A extensao **nao cria nenhum arquivo automaticamente**. Tudo so acontece quando voce executa "Inicializar Projeto" pela paleta de comandos. Se voce instalar a extensao e nunca usar, seu workspace permanece intacto.
+The extension **does not create any files automatically**. Everything only happens when you execute "Initialize Project" from the command palette. If you install the extension and never use it, your workspace remains untouched.
 
 ---
 
-## Estrutura do Repositorio
+## Repository Structure
 
 ```
 Versus-Claude/
-├── versus-claude/           # extensao VS Code
+├── versus-claude/           # VS Code extension
 │   ├── src/
 │   │   ├── extension.ts        # lifecycle (lazy init)
 │   │   ├── mcp/
 │   │   │   ├── server.ts       # MCP server (stdio)
-│   │   │   └── tools/          # 13 tools organizadas por grupo
+│   │   │   └── tools/          # 13 tools organized by group
 │   │   ├── state/
-│   │   │   ├── engine.ts       # leitura/escrita do state.json
-│   │   │   └── types.ts        # tipos TypeScript
+│   │   │   ├── engine.ts       # state.json read/write
+│   │   │   └── types.ts        # TypeScript types
 │   │   ├── rules/
-│   │   │   ├── phases.ts       # definicoes de fases e exit criteria
+│   │   │   ├── phases.ts       # phase and exit criteria definitions
 │   │   │   ├── safeguards.ts   # S0-S7
-│   │   │   ├── guidance.ts     # instrucoes comportamentais por fase
-│   │   │   └── methodology.ts  # facade de validacao
+│   │   │   ├── guidance.ts     # behavioral instructions per phase
+│   │   │   └── methodology.ts  # validation facade
 │   │   ├── hooks/
 │   │   │   ├── inject-context.ts
 │   │   │   ├── phase-gate.ts
@@ -266,12 +266,12 @@ Versus-Claude/
 │   │       └── sidebar.ts      # TreeDataProvider (read-only)
 │   ├── package.json
 │   └── tsconfig.json
-├── specs/                  # especificacoes do proprio projeto
-└── AGENTS.md               # instrucoes para Agent Mode
+├── specs/                  # project specifications
+└── AGENTS.md               # Agent Mode instructions
 ```
 
 ---
 
-## Licenca
+## License
 
 MIT

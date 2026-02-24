@@ -1,4 +1,4 @@
-// State Engine — gerencia estado persistente da metodologia
+// State Engine — manages persistent methodology state
 
 import * as fs from "fs";
 import * as path from "path";
@@ -50,7 +50,7 @@ export class StateEngine {
         return this.state;
       }
     } catch (err) {
-      // state.json corrompido — retorna null
+      // state.json corrupted — returns null
     }
     return null;
   }
@@ -65,7 +65,7 @@ export class StateEngine {
     fs.writeFileSync(this.statePath, JSON.stringify(this.state, null, 2), "utf-8");
   }
 
-  // --- Projeto ---
+  // --- Project ---
 
   initProject(name: string, description: string): PhaseState {
     this.state = createDefaultState(name, description);
@@ -88,7 +88,7 @@ export class StateEngine {
     return (Date.now() - last) > thresholdMinutes * 60 * 1000;
   }
 
-  // --- Consulta ---
+  // --- Query ---
 
   getPhaseState(): PhaseState | null {
     if (!this.state) this.load();
@@ -122,11 +122,11 @@ export class StateEngine {
     });
   }
 
-  // --- Transições ---
+  // --- Transitions ---
 
   advancePhase(targetPhase: number): Result<void, TransitionError> {
     if (!this.state) {
-      return { ok: false, error: { message: "Projeto não inicializado.", missingCriteria: [] } };
+      return { ok: false, error: { message: "Project not initialized.", missingCriteria: [] } };
     }
 
     const from = this.state.currentPhase;
@@ -139,14 +139,14 @@ export class StateEngine {
 
     const validation = validatePhaseTransition(from, targetPhase, this.state, exitCriteriaMet);
 
-    // Verificar specs/ (alerta, não bloqueia)
+    // Check specs/ (warning, does not block)
     const specsWarnings: string[] = [];
     if (targetPhase >= 1) {
       const specsStatus = this.checkSpecsStatus();
       const expectedDirs = this.getExpectedSpecsDirs(from);
       for (const dir of expectedDirs) {
         if (specsStatus[dir] && !specsStatus[dir].populated) {
-          specsWarnings.push(`specs/${dir}/ está vazio (esperado antes de Phase ${targetPhase})`);
+          specsWarnings.push(`specs/${dir}/ is empty (expected before Phase ${targetPhase})`);
         }
       }
     }
@@ -155,14 +155,14 @@ export class StateEngine {
       return {
         ok: false,
         error: {
-          message: `Não é possível avançar de Phase ${from} para Phase ${targetPhase}.`,
+          message: `Cannot advance from Phase ${from} to Phase ${targetPhase}.`,
           missingCriteria: validation.missingCriteria,
           specsWarnings,
         },
       };
     }
 
-    // Transição válida
+    // Valid transition
     this.state.history.push({
       from,
       to: targetPhase,
@@ -177,16 +177,16 @@ export class StateEngine {
     this.state.loopCounter = { pattern: "", count: 0, firstSeen: "", lastSeen: "" };
     this.save();
 
-    // Retorna OK com warnings de specs se houver
+    // Returns OK with specs warnings if any
     return { ok: true, value: undefined };
   }
 
   startIteration(phase: number): Result<IterationInfo, string> {
     if (!this.state) {
-      return { ok: false, error: "Projeto não inicializado." };
+      return { ok: false, error: "Project not initialized." };
     }
     if (this.state.currentPhase !== phase) {
-      return { ok: false, error: `Fase atual é ${this.state.currentPhase}, não ${phase}.` };
+      return { ok: false, error: `Current phase is ${this.state.currentPhase}, not ${phase}.` };
     }
 
     this.state.currentIteration += 1;
@@ -201,10 +201,10 @@ export class StateEngine {
     };
   }
 
-  // --- Registro ---
+  // --- Recording ---
 
   recordDecision(phase: number, category: string, content: string): Decision {
-    if (!this.state) throw new Error("Projeto não inicializado.");
+    if (!this.state) throw new Error("Project not initialized.");
 
     const decision: Decision = {
       id: randomUUID(),
@@ -220,7 +220,7 @@ export class StateEngine {
   }
 
   updateProjectSpec(spec: Partial<{ stack: string[]; outOfScope: string[]; patterns: string[]; constraints: string[] }>): void {
-    if (!this.state) throw new Error("Projeto não inicializado.");
+    if (!this.state) throw new Error("Project not initialized.");
     if (!this.state.projectSpec) {
       this.state.projectSpec = { stack: [], outOfScope: [], patterns: [], constraints: [] };
     }
@@ -233,19 +233,19 @@ export class StateEngine {
   }
 
   getProjectSpec(): { stack: string[]; outOfScope: string[]; patterns: string[]; constraints: string[] } {
-    if (!this.state) throw new Error("Projeto não inicializado.");
+    if (!this.state) throw new Error("Project not initialized.");
     return this.state.projectSpec ?? { stack: [], outOfScope: [], patterns: [], constraints: [] };
   }
 
   updateScore(score: number, breakdown: ScoreBreakdown): void {
-    if (!this.state) throw new Error("Projeto não inicializado.");
+    if (!this.state) throw new Error("Project not initialized.");
     this.state.phase0Score = score;
     this.state.phase0Breakdown = breakdown;
     this.save();
   }
 
   markExitCriterion(phase: number, criterion: string, met: boolean, details?: string): void {
-    if (!this.state) throw new Error("Projeto não inicializado.");
+    if (!this.state) throw new Error("Project not initialized.");
 
     const existing = this.state.exitCriteria.find(
       (c) => c.phase === phase && c.criterion === criterion
@@ -261,15 +261,15 @@ export class StateEngine {
     this.save();
   }
 
-  // --- Salvaguardas ---
+  // --- Safeguards ---
 
   checkSafeguard(id: string): SafeguardResult {
     if (!this.state) {
-      return { id, status: "ok", details: "Projeto não inicializado." };
+      return { id, status: "ok", details: "Project not initialized." };
     }
     const result = ruleSafeguard(id, this.state);
 
-    // Atualizar estado interno da salvaguarda
+    // Update internal safeguard state
     const sg = this.state.safeguards.find((s) => s.id === id);
     if (sg) {
       sg.status = result.status;
@@ -362,7 +362,7 @@ export class StateEngine {
   }
 
   private normalizeCommandPattern(cmd: string): string {
-    // Normaliza comandos de teste para detectar repetições
+    // Normalizes test commands to detect repetitions
     // "npm test", "npm run test", "npx jest" → "test"
     // "pytest src/test_foo.py", "python -m pytest" → "pytest"
     const trimmed = cmd.trim().toLowerCase();
@@ -372,11 +372,11 @@ export class StateEngine {
     if (/\b(go\s+test)\b/.test(trimmed)) return "test:go";
     if (/\bnpm\s+run\s+build\b/.test(trimmed)) return "build";
     if (/\btsc\b/.test(trimmed)) return "compile";
-    // Fallback: primeiros 50 chars
+    // Fallback: first 50 chars
     return trimmed.substring(0, 50);
   }
 
-  // --- Helpers privados ---
+  // --- Private helpers ---
 
   private getExpectedSpecsDirs(phase: number): string[] {
     switch (phase) {

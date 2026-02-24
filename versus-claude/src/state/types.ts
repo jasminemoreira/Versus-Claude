@@ -1,49 +1,49 @@
-// Tipos centrais do Versus
+// Versus core types
 
 export interface PhaseState {
   projectName: string;
   projectDescription: string;
-  projectSpec: ProjectSpec;      // contexto técnico estruturado
+  projectSpec: ProjectSpec;      // structured technical context
   currentPhase: number;          // 0-7
-  currentIteration: number;      // dentro da fase
+  currentIteration: number;      // within the phase
   phase0Score: number | null;    // 0-100
   phase0Breakdown: ScoreBreakdown | null;
   decisions: Decision[];
   exitCriteria: ExitCriterionState[];
   safeguards: SafeguardState[];
   loopCounter: LoopCounter;
-  lastPhaseStateCheck?: string;  // ISO timestamp — gateway guard para modelos menores
+  lastPhaseStateCheck?: string;  // ISO timestamp — gateway guard for smaller models
   createdAt: string;             // ISO timestamp
   updatedAt: string;
-  history: PhaseTransition[];    // log de transições
+  history: PhaseTransition[];    // transition log
 }
 
-/** Contexto técnico estruturado — sobrevive a trocas de modelo */
+/** Structured technical context — survives model switches */
 export interface ProjectSpec {
-  stack: string[];               // tecnologias aprovadas (ex: "TypeScript", "Node 18+")
-  outOfScope: string[];          // explicitamente excluído (ex: "Modelos locais")
-  patterns: string[];            // padrões arquiteturais (ex: "MCP server standalone")
-  constraints: string[];         // restrições rígidas (ex: "Copilot-only, sem Claude Code artifacts")
+  stack: string[];               // approved technologies (e.g., "TypeScript", "Node 18+")
+  outOfScope: string[];          // explicitly excluded (e.g., "Local models")
+  patterns: string[];            // architectural patterns (e.g., "MCP server standalone")
+  constraints: string[];         // hard constraints (e.g., "Copilot-only, no Claude Code artifacts")
 }
 
 export interface LoopCounter {
-  pattern: string;             // padrão do comando detectado
-  count: number;               // quantas vezes repetiu
+  pattern: string;             // detected command pattern
+  count: number;               // how many times repeated
   firstSeen: string;           // ISO timestamp
   lastSeen: string;
 }
 
 export interface ScoreBreakdown {
-  clarezaProblema: number;       // peso 10
-  casosDeUso: number;            // peso 15
-  vocabulario: number;           // peso 10
-  ambiguidades: number;          // peso 15
-  foraDeEscopo: number;          // peso 10
-  criteriosSucesso: number;      // peso 10
-  premissas: number;             // peso 10
-  documentacao: number;          // peso 5
-  usuarioConfirmou: number;      // peso 10
-  iaConfiante: number;           // peso 5
+  clarezaProblema: number;       // weight 10
+  casosDeUso: number;            // weight 15
+  vocabulario: number;           // weight 10
+  ambiguidades: number;          // weight 15
+  foraDeEscopo: number;          // weight 10
+  criteriosSucesso: number;      // weight 10
+  premissas: number;             // weight 10
+  documentacao: number;          // weight 5
+  usuarioConfirmou: number;      // weight 10
+  iaConfiante: number;           // weight 5
 }
 
 export interface Decision {
@@ -62,7 +62,7 @@ export interface ExitCriterionState {
 }
 
 export interface SafeguardState {
-  id: string;                  // "S0" a "S7"
+  id: string;                  // "S0" to "S7"
   status: "ok" | "warning" | "violated";
   details?: string;
   lastChecked?: string;

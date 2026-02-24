@@ -1,4 +1,4 @@
-// Registro central de todas as MCP tools
+// Central registry of all MCP tools
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
@@ -28,12 +28,12 @@ export const ALL_TOOLS: Tool[] = [
   updateProjectSpecTool,
 ];
 
-// Tools que não precisam do gateway guard (são elas mesmas o "carregamento de contexto")
+// Tools exempt from gateway guard (they are themselves the "context loading")
 const GUARD_EXEMPT = new Set(["get_phase_state", "init_project"]);
 
 const CONTEXT_WARNING =
-  "ACAO OBRIGATORIA: Chame get_phase_state() e get_phase_guidance() ANTES de prosseguir. " +
-  "Sem contexto carregado, suas acoes podem ser inconsistentes com decisoes ja tomadas no projeto.";
+  "MANDATORY ACTION: Call get_phase_state() and get_phase_guidance() BEFORE proceeding. " +
+  "Without loaded context, your actions may be inconsistent with decisions already made in the project.";
 
 export function handleToolCall(
   toolName: string,
@@ -42,7 +42,7 @@ export function handleToolCall(
 ): string {
   const result = dispatch(toolName, args, engine);
 
-  // Gateway guard: avisa modelos que não carregaram contexto
+  // Gateway guard: warns models that haven't loaded context
   if (!GUARD_EXEMPT.has(toolName) && engine.isContextStale()) {
     try {
       const parsed = JSON.parse(result);
@@ -91,6 +91,6 @@ function dispatch(
     case "update_project_spec":
       return handleUpdateProjectSpec(engine, args as { stack?: string[]; outOfScope?: string[]; patterns?: string[]; constraints?: string[] });
     default:
-      return JSON.stringify({ error: `Ferramenta desconhecida: ${toolName}` });
+      return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
 }

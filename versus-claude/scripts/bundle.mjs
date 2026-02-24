@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// Bundla os 4 entry points em arquivos standalone (sem dependências externas)
-// Resultado: out/bundle/ com 4 arquivos self-contained
+// Bundles the 4 entry points into standalone files (no external dependencies)
+// Output: out/bundle/ with 4 self-contained files
 
 import { build } from "esbuild";
 import { rmSync, mkdirSync } from "fs";
@@ -12,7 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 const outDir = resolve(root, "out", "bundle");
 
-// Limpar e recriar
+// Clean and recreate
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
@@ -31,16 +31,16 @@ try {
     target: "node18",
     format: "cjs",
     outdir: outDir,
-    minify: false,        // legível para debug
+    minify: false,        // readable for debug
     sourcemap: false,
-    external: [],          // tudo inline, sem dependências externas
+    external: [],          // all inline, no external dependencies
   });
 
-  console.log("Bundle concluído em out/bundle/:");
+  console.log("Bundle completed in out/bundle/:");
   for (const e of entryPoints) {
     console.log(`  ${e.out}.js`);
   }
 } catch (err) {
-  console.error("Erro no bundle:", err);
+  console.error("Bundle error:", err);
   process.exit(1);
 }

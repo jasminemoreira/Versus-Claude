@@ -1,4 +1,4 @@
-// MCP Tools: inicialização de projeto
+// MCP Tools: project initialization
 
 import * as fs from "fs";
 import * as path from "path";
@@ -37,9 +37,9 @@ const MCP_TOOL_PERMISSIONS = [
 const BUNDLE_FILES = ["inject-context.js", "phase-gate.js", "loop-detector.js", "server.js"];
 
 /**
- * Resolve o diretório dos bundles.
- * Se rodando do bundle (out/bundle/server.js) → bundles estão no mesmo dir (__dirname).
- * Se rodando do source (out/mcp/tools/project-tools.js) → bundles em out/bundle/.
+ * Resolves the bundle directory.
+ * If running from bundle (out/bundle/server.js) → bundles are in the same dir (__dirname).
+ * If running from source (out/mcp/tools/project-tools.js) → bundles in out/bundle/.
  */
 function getBundleDir(): string {
   if (fs.existsSync(path.join(__dirname, "inject-context.js"))) {
@@ -49,8 +49,8 @@ function getBundleDir(): string {
 }
 
 /**
- * Copia os 4 bundles para .versus/ no projeto.
- * Retorna true se algum arquivo foi criado/atualizado.
+ * Copies the 4 bundles to .versus/ in the project.
+ * Returns true if any file was created/updated.
  */
 function deployBundles(workspace: string): boolean {
   const bundleDir = getBundleDir();
@@ -66,7 +66,7 @@ function deployBundles(workspace: string): boolean {
     const dest = path.join(targetDir, file);
 
     if (!fs.existsSync(src)) {
-      continue; // bundle não encontrado, pular
+      continue; // bundle not found, skip
     }
 
     const srcContent = fs.readFileSync(src);
@@ -83,7 +83,7 @@ function deployBundles(workspace: string): boolean {
 }
 
 /**
- * Gera hooks config usando caminhos LOCAIS do projeto (.versus/).
+ * Generates hooks config using LOCAL project paths (.versus/).
  */
 function buildOrchestratorHooks(workspace: string): Record<string, any> {
   const orchDir = path.join(workspace, ".versus");
@@ -125,7 +125,7 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
           {
             type: "prompt",
             prompt:
-              "ANTES da compactacao: chame get_phase_state() e salve o resultado em MEMORY.md (no seu diretorio de auto memory). Inclua: fase atual, iteracao, decisoes-chave, proximos passos.",
+              "BEFORE compaction: call get_phase_state() and save the result in MEMORY.md (in your auto memory directory). Include: current phase, iteration, key decisions, next steps.",
           },
         ],
       },
@@ -137,7 +137,7 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
           {
             type: "prompt",
             prompt:
-              "OBRIGATORIO: chame get_phase_state() do MCP server versus-claude para saber a fase atual da metodologia Convergencia Iterativa. Em seguida chame get_phase_guidance() para obter as instrucoes detalhadas da fase atual. Se retornar erro de projeto nao inicializado, pergunte ao usuario se deseja iniciar um novo projeto com init_project(). Toda decisao importante deve ser registrada com record_decision(). Antes de avancar de fase, use get_exit_criteria() e advance_phase().",
+              "MANDATORY: call get_phase_state() from MCP server versus-claude to know the current phase of the Iterative Convergence methodology. Then call get_phase_guidance() to get detailed instructions for the current phase. If it returns a project not initialized error, ask the user if they want to start a new project with init_project(). Every important decision must be recorded with record_decision(). Before advancing phase, use get_exit_criteria() and advance_phase().",
           },
         ],
       },
@@ -147,7 +147,7 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
           {
             type: "prompt",
             prompt:
-              "CONTEXTO RESTAURADO. OBRIGATORIO: chame get_phase_state() e get_phase_guidance() para recuperar estado e instrucoes da metodologia. Consulte get_decisions() para decisoes anteriores. Leia MEMORY.md (auto memory) para contexto adicional. Continue de onde parou.",
+              "CONTEXT RESTORED. MANDATORY: call get_phase_state() and get_phase_guidance() to recover methodology state and instructions. Query get_decisions() for previous decisions. Read MEMORY.md (auto memory) for additional context. Continue where you left off.",
           },
         ],
       },
@@ -156,8 +156,8 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
 }
 
 /**
- * Cria ou atualiza .mcp.json no workspace para registrar o MCP server LOCAL.
- * O server.js está em .versus/server.js do próprio projeto.
+ * Creates or updates .mcp.json in the workspace to register the LOCAL MCP server.
+ * The server.js is in .versus/server.js of the project itself.
  */
 function ensureMcpJson(workspace: string): boolean {
   const mcpPath = path.join(workspace, ".mcp.json");
@@ -180,7 +180,7 @@ function ensureMcpJson(workspace: string): boolean {
     }
   }
 
-  // Verificar se já está correto
+  // Check if already correct
   const existing = mcpJson.mcpServers["versus-claude"];
   if (existing && JSON.stringify(existing.args) === JSON.stringify(expectedConfig.args)) {
     return false;
@@ -192,8 +192,8 @@ function ensureMcpJson(workspace: string): boolean {
 }
 
 /**
- * Garante que settings.json tenha as permissões MCP e hooks do orquestrador.
- * Preserva permissões e hooks existentes do usuário.
+ * Ensures settings.json has MCP permissions and orchestrator hooks.
+ * Preserves existing user permissions and hooks.
  */
 function ensureSettings(workspace: string): boolean {
   const settingsPath = path.join(workspace, ".claude", "settings.json");
@@ -203,7 +203,7 @@ function ensureSettings(workspace: string): boolean {
     fs.mkdirSync(settingsDir, { recursive: true });
   }
 
-  // Ler settings existente ou criar vazio
+  // Read existing settings or create empty
   let settings: Record<string, any> = {};
   if (fs.existsSync(settingsPath)) {
     try {
@@ -215,7 +215,7 @@ function ensureSettings(workspace: string): boolean {
 
   let modified = false;
 
-  // Garantir permissions.allow contém todas as tools MCP
+  // Ensure permissions.allow contains all MCP tools
   if (!settings.permissions) {
     settings.permissions = { allow: [] };
   }
@@ -230,7 +230,7 @@ function ensureSettings(workspace: string): boolean {
     }
   }
 
-  // Garantir hooks do orquestrador
+  // Ensure orchestrator hooks
   if (!settings.hooks) {
     settings.hooks = {};
   }
@@ -240,7 +240,7 @@ function ensureSettings(workspace: string): boolean {
       settings.hooks[hookType] = hookConfigs;
       modified = true;
     } else {
-      // Verificar se os hooks do orquestrador já estão presentes
+      // Check if orchestrator hooks are already present
       const existing = settings.hooks[hookType] as any[];
       for (const config of hookConfigs) {
         const configHook = (config as any).hooks?.[0];
@@ -274,19 +274,19 @@ function ensureSettings(workspace: string): boolean {
 export const initProjectTool: Tool = {
   name: "init_project",
   description:
-    "Inicializa um novo projeto com a metodologia Convergência Iterativa. " +
-    "Cria state.json em .versus/ e começa na Phase 0. " +
-    "Se já existe um projeto, retorna erro — use get_phase_state para verificar.",
+    "Initializes a new project with the Iterative Convergence methodology. " +
+    "Creates state.json in .versus/ and starts at Phase 0. " +
+    "If a project already exists, returns an error — use get_phase_state to check.",
   inputSchema: {
     type: "object" as const,
     properties: {
       name: {
         type: "string",
-        description: "Nome do projeto.",
+        description: "Project name.",
       },
       description: {
         type: "string",
-        description: "Descrição breve do projeto.",
+        description: "Brief project description.",
       },
     },
     required: ["name", "description"],
@@ -301,7 +301,7 @@ export function handleInitProject(
   if (existing) {
     return JSON.stringify({
       success: false,
-      error: `Projeto '${existing.projectName}' já existe (Phase ${existing.currentPhase}). Use get_phase_state para consultar.`,
+      error: `Project '${existing.projectName}' already exists (Phase ${existing.currentPhase}). Use get_phase_state to query.`,
     });
   }
 
@@ -309,10 +309,10 @@ export function handleInitProject(
 
   const workspace = engine.getWorkspace();
 
-  // Copiar bundles para .versus/ do projeto
+  // Copy bundles to .versus/ of the project
   const bundlesDeployed = deployBundles(workspace);
 
-  // Criar specs/ e subpastas se não existem
+  // Create specs/ and subfolders if they don't exist
   const specsDir = path.join(workspace, "specs");
   let specsCreated = false;
   if (!fs.existsSync(specsDir)) {
@@ -322,10 +322,10 @@ export function handleInitProject(
     specsCreated = true;
   }
 
-  // Garantir .mcp.json apontando para server.js LOCAL
+  // Ensure .mcp.json pointing to LOCAL server.js
   const mcpCreated = ensureMcpJson(workspace);
 
-  // Garantir settings.json com permissões e hooks
+  // Ensure settings.json with permissions and hooks
   const settingsUpdated = ensureSettings(workspace);
 
   const settingsPath = path.join(workspace, ".claude", "settings.json");
@@ -340,11 +340,11 @@ export function handleInitProject(
     mcpCreated,
     settingsUpdated,
     message:
-      `PROJETO NOVO '${args.name}' inicializado em ${workspace}. ` +
-      `Este é um projeto INDEPENDENTE e AUTÔNOMO — NÃO busque specs, decisões ou código de outros projetos. ` +
-      `Estrutura criada: state.json, server.js + 3 hooks (em .versus/), specs/ (9 subpastas), .mcp.json, settings.json. ` +
-      `Tudo local — nenhuma dependência externa. ` +
-      `AÇÃO OBRIGATÓRIA: Leia ${settingsPath} com a ferramenta Read para carregar permissões e hooks. ` +
-      `Em seguida chame get_phase_guidance() para instruções da Phase 0.`,
+      `NEW PROJECT '${args.name}' initialized in ${workspace}. ` +
+      `This is an INDEPENDENT and AUTONOMOUS project — DO NOT fetch specs, decisions, or code from other projects. ` +
+      `Structure created: state.json, server.js + 3 hooks (in .versus/), specs/ (9 subfolders), .mcp.json, settings.json. ` +
+      `Everything local — no external dependencies. ` +
+      `MANDATORY ACTION: Read ${settingsPath} with the Read tool to load permissions and hooks. ` +
+      `Then call get_phase_guidance() for Phase 0 instructions.`,
   });
 }

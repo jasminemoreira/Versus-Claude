@@ -1,21 +1,21 @@
-# AGENTS.md — Instrucoes obrigatorias para Agent Mode
+# AGENTS.md — Mandatory instructions for Agent Mode
 
-## PRIMEIRA ACAO (antes de qualquer outra coisa):
+## FIRST ACTION (before anything else):
 
-Chame a tool `get_phase_state` do MCP server `versus-claude`.
-Isso retorna a fase atual da metodologia Convergencia Iterativa.
+Call the `get_phase_state` tool from the MCP server `versus-claude`.
+This returns the current phase of the Iterative Convergence methodology.
 
-- Se retornar erro "projeto nao inicializado": pergunte ao usuario se deseja iniciar com `init_project`
-- Se retornar uma fase: chame `get_phase_guidance` e siga as instrucoes da fase
+- If it returns a "project not initialized" error: ask the user if they want to start with `init_project`
+- If it returns a phase: call `get_phase_guidance` and follow the phase instructions
 
-NAO faca nada antes de chamar `get_phase_state`. NAO pergunte ao usuario o que quer fazer.
-NAO improvise. O fluxo da metodologia e determinado pelo estado retornado.
+DO NOT do anything before calling `get_phase_state`. DO NOT ask the user what they want to do.
+DO NOT improvise. The methodology flow is determined by the returned state.
 
-## Regras do fluxo:
+## Flow rules:
 
-1. Cada interacao comeca com `get_phase_state` → `get_phase_guidance`
-2. Decisoes do usuario via `ask_user` (menu com opcoes predefinidas contextualizadas)
-3. Registre decisoes com `record_decision`
-4. Antes de avancar fase: `get_exit_criteria` → `advance_phase`
-5. NUNCA pule fases (0→7 sequencial)
-6. NUNCA implemente codigo antes de Phase 5
+1. Each interaction starts with `get_phase_state` → `get_phase_guidance`
+2. User decisions via `ask_user` (menu with contextualized predefined options)
+3. Record decisions with `record_decision`
+4. Before advancing a phase: `get_exit_criteria` → `advance_phase`
+5. NEVER skip phases (0→7 sequential)
+6. NEVER implement code before Phase 5

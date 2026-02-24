@@ -1,99 +1,99 @@
-# Arquitetura — Versus for Claude
+# Architecture — Versus for Claude
 
-## Padrão: Modular Monolith | Princípios: KISS + YAGNI
+## Pattern: Modular Monolith | Principles: KISS + YAGNI
 
-## Módulos
+## Modules
 
 ### 1. Extension Core (`src/extension.ts`)
-- **Responsabilidade:** Lifecycle da extensão VSCode — activation, deactivation, registro de componentes
-- **Depende de:** todos os outros módulos (orquestra inicialização)
+- **Responsibility:** VS Code extension lifecycle — activation, deactivation, component registration
+- **Depends on:** all other modules (orchestrates initialization)
 - **Interface:**
-  - `activate(context: ExtensionContext): void` — registra sidebar, gera .mcp.json
+  - `activate(context: ExtensionContext): void` — registers sidebar, generates .mcp.json
   - `deactivate(): void` — cleanup
 
 ### 2. MCP Server (`src/mcp/server.ts`, `src/mcp/tools/*.ts`)
-- **Responsabilidade:** Expor 12 MCP tools ao Claude Code via stdio. Recebe chamadas, delega ao State Engine, retorna resultados/erros
-- **Depende de:** State Engine, Methodology Rules
-- **Interface:** Protocolo MCP (JSON-RPC via stdio)
-  - `ListToolsRequest` → retorna catálogo de 12 tools
-  - `CallToolRequest` → executa tool, retorna resultado ou erro
-- **Execução:** Processo filho separado (spawned pela Extension Core)
-- **Comunicação com Extension Core:** via arquivo state.json compartilhado + file watcher
+- **Responsibility:** Expose 12 MCP tools to Claude Code via stdio. Receives calls, delegates to State Engine, returns results/errors
+- **Depends on:** State Engine, Methodology Rules
+- **Interface:** MCP Protocol (JSON-RPC via stdio)
+  - `ListToolsRequest` → returns catalog of 12 tools
+  - `CallToolRequest` → executes tool, returns result or error
+- **Execution:** Separate child process (spawned by Extension Core)
+- **Communication with Extension Core:** via shared state.json file + file watcher
 
 ### 3. State Engine (`src/state/engine.ts`, `src/state/types.ts`)
-- **Responsabilidade:** Gerenciar estado persistente — ler/escrever state.json, validar transições, registrar decisões
-- **Depende de:** Methodology Rules (para validação)
+- **Responsibility:** Manage persistent state — read/write state.json, validate transitions, record decisions
+- **Depends on:** Methodology Rules (for validation)
 - **Interface:**
   ```typescript
-  // Consulta
+  // Query
   getPhaseState(): PhaseState
   getDecisions(phase?: number): Decision[]
   getExitCriteria(phase: number): ExitCriterion[]
 
-  // Transições
+  // Transitions
   advancePhase(target: number): Result<void, TransitionError>
   startIteration(phase: number): IterationInfo
 
-  // Registro
+  // Recording
   recordDecision(phase: number, category: string, content: string): Decision
   updateScore(score: number, breakdown: ScoreBreakdown): void
   markExitCriterion(phase: number, criterion: string, met: boolean): void
 
-  // Salvaguardas
+  // Safeguards
   checkSafeguard(id: string): SafeguardStatus
   checkAllSafeguards(): SafeguardStatus[]
 
   // Specs
   checkSpecsStatus(): SpecsStatus
 
-  // Projeto
+  // Project
   initProject(name: string, description: string): void
   ```
-- **Persistência:** `.versus/state.json` no workspace
-- **Estado:** Singleton por workspace
+- **Persistence:** `.versus/state.json` in the workspace
+- **State:** Singleton per workspace
 
 ### 4. Methodology Rules (`src/rules/methodology.ts`, `src/rules/phases.ts`, `src/rules/safeguards.ts`)
-- **Responsabilidade:** Definir regras da Convergência Iterativa v3.6 — exit criteria por fase, definições de salvaguardas, regras de transição
-- **Depende de:** nenhum (dados puros)
+- **Responsibility:** Define Iterative Convergence v3.6 rules — exit criteria per phase, safeguard definitions, transition rules
+- **Depends on:** nothing (pure data)
 - **Interface:**
   ```typescript
-  // Definições
+  // Definitions
   getPhaseDefinition(phase: number): PhaseDefinition
   getExitCriteriaDefinitions(phase: number): ExitCriterionDef[]
   getSafeguardDefinition(id: string): SafeguardDef
 
-  // Validação
+  // Validation
   validateTransition(from: number, to: number, state: PhaseState): ValidationResult
   validateSafeguard(id: string, state: PhaseState): SafeguardResult
   ```
-- **Natureza:** Módulo de dados/configuração, sem estado. Regras hardcoded da CI v3.6.
+- **Nature:** Data/configuration module, stateless. Hardcoded IC v3.6 rules.
 
 ### 5. TreeView Sidebar (`src/views/sidebar.ts`)
-- **Responsabilidade:** UI read-only nativa — mostrar fase atual, score, iteração, decisões, salvaguardas
-- **Depende de:** State Engine (via Extension Core)
+- **Responsibility:** Native read-only UI — display current phase, score, iteration, decisions, safeguards
+- **Depends on:** State Engine (via Extension Core)
 - **Interface:**
-  - Implementa `vscode.TreeDataProvider<StateItem>`
-  - `refresh(): void` — chamado quando state.json muda
-  - Sem interação do usuário (read-only)
-- **Atualização:** File watcher no state.json dispara `refresh()` do TreeView
+  - Implements `vscode.TreeDataProvider<StateItem>`
+  - `refresh(): void` — called when state.json changes
+  - No user interaction (read-only)
+- **Update:** File watcher on state.json triggers TreeView `refresh()`
 
-## Tipos Principais
+## Main Types
 
 ```typescript
 interface PhaseState {
   projectName: string
   projectDescription: string
   currentPhase: number        // 0-7
-  currentIteration: number    // dentro da fase
+  currentIteration: number    // within the phase
   phase0Score: number | null  // 0-100
   phase0Breakdown: ScoreBreakdown | null
   decisions: Decision[]
-  exitCriteria: ExitCriterionState[]  // por fase
+  exitCriteria: ExitCriterionState[]  // per phase
   safeguards: SafeguardState[]
   specsStatus: SpecsStatus
   createdAt: string           // ISO timestamp
   updatedAt: string
-  history: PhaseTransition[]  // log de transições
+  history: PhaseTransition[]  // transition log
 }
 
 interface Decision {
@@ -112,7 +112,7 @@ interface ExitCriterionState {
 }
 
 interface SafeguardState {
-  id: string                  // "S0" a "S7"
+  id: string                  // "S0" to "S7"
   status: "ok" | "warning" | "violated"
   details?: string
 }
@@ -132,27 +132,27 @@ interface PhaseTransition {
 }
 ```
 
-## Fluxo de Dados
+## Data Flow
 
 ```
 Claude Code → (stdio/MCP) → MCP Server → State Engine → state.json
                                               ↓
                                        Methodology Rules
-                                       (valida transição)
+                                       (validates transition)
                                               ↓
 state.json → (file watcher) → Extension Core → TreeView.refresh()
 ```
 
-## Estrutura de Arquivos
+## File Structure
 
 ```
 versus-claude/
 ├── src/
 │   ├── extension.ts              # Extension Core
 │   ├── mcp/
-│   │   ├── server.ts             # MCP server entry (processo separado)
+│   │   ├── server.ts             # MCP server entry (separate process)
 │   │   └── tools/
-│   │       ├── index.ts          # Registro de todas as tools
+│   │       ├── index.ts          # Registration of all tools
 │   │       ├── state-tools.ts    # get_phase_state, get_decisions, get_exit_criteria
 │   │       ├── transition-tools.ts  # advance_phase, start_iteration
 │   │       ├── record-tools.ts   # record_decision, update_score, mark_exit_criterion
@@ -161,27 +161,27 @@ versus-claude/
 │   │       └── project-tools.ts  # init_project
 │   ├── state/
 │   │   ├── engine.ts             # State Engine
-│   │   └── types.ts              # Tipos TypeScript
+│   │   └── types.ts              # TypeScript Types
 │   ├── rules/
-│   │   ├── methodology.ts        # Facade das regras
-│   │   ├── phases.ts             # Definições de fases e exit criteria
-│   │   └── safeguards.ts         # Definições de salvaguardas S0-S7
+│   │   ├── methodology.ts        # Rules facade
+│   │   ├── phases.ts             # Phase and exit criteria definitions
+│   │   └── safeguards.ts         # Safeguard definitions S0-S7
 │   └── views/
 │       └── sidebar.ts            # TreeDataProvider (read-only)
-├── package.json                  # Manifest VSCode
+├── package.json                  # VS Code Manifest
 ├── tsconfig.json
-└── .mcp.json                     # Gerado automaticamente
+└── .mcp.json                     # Automatically generated
 ```
 
-## Decisões Arquiteturais
+## Architectural Decisions
 
-| Decisão | Razão |
-|---------|-------|
-| MCP server como processo filho | Isolamento de falhas, padrão MCP stdio |
-| State em JSON no filesystem | Persistência simples, legível, versionável |
-| Comunicação via file watcher | Desacopla MCP server da sidebar sem IPC complexo |
-| Regras hardcoded (não config) | KISS — CI v3.6 é fixa, não precisa de parser |
-| TreeView nativo (não Webview) | Menos boilerplate, nativo VSCode, read-only por natureza |
-| Hook mínimo + descriptions fortes | Resolver P1 (Claude pode não chamar tools). Dupla camada leve |
-| 1 arquivo por grupo de tools | Organização sem over-engineering |
-| Workspace path via env var | MCP server (processo separado) precisa saber onde ler/escrever state |
+| Decision | Reason |
+|----------|--------|
+| MCP server as child process | Fault isolation, MCP stdio pattern |
+| State in JSON on filesystem | Simple, readable, versionable persistence |
+| Communication via file watcher | Decouples MCP server from sidebar without complex IPC |
+| Hardcoded rules (not config) | KISS — IC v3.6 is fixed, no parser needed |
+| Native TreeView (not Webview) | Less boilerplate, native VS Code, read-only by nature |
+| Minimal hook + strong descriptions | Addresses P1 (Claude may not call tools). Lightweight dual layer |
+| 1 file per tool group | Organization without over-engineering |
+| Workspace path via env var | MCP server (separate process) needs to know where to read/write state |

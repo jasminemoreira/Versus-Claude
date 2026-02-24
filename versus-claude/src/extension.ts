@@ -1,5 +1,5 @@
-// Extension Core — lifecycle, registro de componentes
-// Nenhum arquivo é criado automaticamente; tudo depende de ação explícita do usuário.
+// Extension Core — lifecycle, component registration
+// No files are created automatically; everything depends on explicit user action.
 
 import * as vscode from "vscode";
 import * as path from "path";
@@ -16,11 +16,11 @@ function log(msg: string) {
 export function activate(context: vscode.ExtensionContext) {
   outputChannel = vscode.window.createOutputChannel("Versus for Claude");
   context.subscriptions.push(outputChannel);
-  log("Ativando extensão...");
+  log("Activating extension...");
 
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders || workspaceFolders.length === 0) {
-    log("Nenhum workspace aberto — ativação abortada.");
+    log("No workspace open — activation aborted.");
     return;
   }
 
@@ -29,35 +29,35 @@ export function activate(context: vscode.ExtensionContext) {
   log(`Workspace: ${workspacePath}`);
 
   try {
-    // Registrar TreeView sidebar (somente leitura — não cria arquivos)
+    // Register TreeView sidebar (read-only — does not create files)
     sidebarProvider = new SidebarProvider(workspacePath);
     const treeView = vscode.window.createTreeView("versus-claude.phaseView", {
       treeDataProvider: sidebarProvider,
       showCollapseAll: true,
     });
     context.subscriptions.push(treeView);
-    log("TreeView registrada.");
+    log("TreeView registered.");
 
-    // Comando: refresh manual
+    // Command: manual refresh
     context.subscriptions.push(
       vscode.commands.registerCommand("versus-claude.refreshView", () => {
         sidebarProvider?.refresh();
       })
     );
-    log("Comando refreshView registrado.");
+    log("Command refreshView registered.");
 
-    // Comando: inicializar projeto (única forma de criar arquivos no workspace)
+    // Command: initialize project (only way to create files in the workspace)
     context.subscriptions.push(
       vscode.commands.registerCommand("versus-claude.initProject", async () => {
         const name = await vscode.window.showInputBox({
-          prompt: "Nome do projeto",
-          placeHolder: "meu-projeto",
+          prompt: "Project name",
+          placeHolder: "my-project",
         });
         if (!name) return;
 
         const description = await vscode.window.showInputBox({
-          prompt: "Descrição breve",
-          placeHolder: "Descrição do projeto...",
+          prompt: "Brief description",
+          placeHolder: "Project description...",
         });
         if (!description) return;
 
@@ -67,50 +67,50 @@ export function activate(context: vscode.ExtensionContext) {
           const existing = engine.getPhaseState();
           if (existing) {
             vscode.window.showWarningMessage(
-              `Projeto '${existing.projectName}' já existe (Phase ${existing.currentPhase}).`
+              `Project '${existing.projectName}' already exists (Phase ${existing.currentPhase}).`
             );
             return;
           }
 
           engine.initProject(name, description);
 
-          // Deploy bundles e configurações (somente agora, por ação do usuário)
+          // Deploy bundles and configurations (only now, by user action)
           deployServer(extensionPath, workspacePath);
           generateMcpConfig(workspacePath);
 
           sidebarProvider?.refresh();
           vscode.window.showInformationMessage(
-            `Projeto '${name}' inicializado. Phase 0 — Problem Discovery.`
+            `Project '${name}' initialized. Phase 0 — Problem Discovery.`
           );
-          log("initProject: concluído com sucesso.");
+          log("initProject: completed successfully.");
         } catch (err) {
-          log(`initProject ERRO: ${String(err)}`);
-          vscode.window.showErrorMessage(`Versus: Erro ao inicializar projeto: ${String(err)}`);
+          log(`initProject ERROR: ${String(err)}`);
+          vscode.window.showErrorMessage(`Versus: Error initializing project: ${String(err)}`);
         }
       })
     );
-    log("Comando initProject registrado.");
+    log("Command initProject registered.");
 
-    // Se o projeto já foi inicializado antes, atualizar bundles (manutenção)
+    // If the project was already initialized, update bundles (maintenance)
     const statePath = path.join(workspacePath, ".versus", "state.json");
     if (fs.existsSync(statePath)) {
       deployServer(extensionPath, workspacePath);
       generateMcpConfig(workspacePath);
-      log("Projeto existente detectado — bundles e .mcp.json atualizados.");
+      log("Existing project detected — bundles and .mcp.json updated.");
     } else {
-      log("Nenhum projeto Versus neste workspace — nada a fazer na ativação.");
+      log("No Versus project in this workspace — nothing to do on activation.");
     }
 
-    log("Ativação concluída com sucesso.");
+    log("Activation completed successfully.");
   } catch (err) {
-    log(`ERRO NA ATIVAÇÃO: ${String(err)}`);
-    vscode.window.showErrorMessage(`Versus: Erro na ativação — ${String(err)}`);
+    log(`ACTIVATION ERROR: ${String(err)}`);
+    vscode.window.showErrorMessage(`Versus: Activation error — ${String(err)}`);
   }
 }
 
 /**
- * Copia os bundles da extensão para .versus/ do workspace.
- * Só atualiza se o conteúdo mudou (idempotente).
+ * Copies extension bundles to .versus/ in the workspace.
+ * Only updates if content has changed (idempotent).
  */
 function deployServer(extensionPath: string, workspacePath: string) {
   const bundleDir = path.join(extensionPath, "out", "bundle");
@@ -134,7 +134,7 @@ function deployServer(extensionPath: string, workspacePath: string) {
 }
 
 /**
- * Cria ou atualiza .mcp.json apontando para o server.js LOCAL do projeto.
+ * Creates or updates .mcp.json pointing to the project's LOCAL server.js.
  */
 function generateMcpConfig(workspacePath: string) {
   const mcpJsonPath = path.join(workspacePath, ".mcp.json");
@@ -154,7 +154,7 @@ function generateMcpConfig(workspacePath: string) {
     try {
       const existing = JSON.parse(fs.readFileSync(mcpJsonPath, "utf-8"));
       if (existing.mcpServers?.["versus-claude"]) {
-        // Já registrado e args corretos — nada a fazer
+        // Already registered and args correct — nothing to do
         if (JSON.stringify(existing.mcpServers["versus-claude"].args) === JSON.stringify(mcpEntry.args)) {
           return;
         }

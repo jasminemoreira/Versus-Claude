@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// Camada 1: Injeção de contexto — UserPromptSubmit
-// Injeta estado da metodologia antes de TODA mensagem do usuário.
+// Layer 1: Context injection — UserPromptSubmit
+// Injects methodology state before EVERY user message.
 
 import { StateEngine } from "../state/engine";
 import { getCompactGuidance } from "../rules/guidance";
@@ -23,49 +23,49 @@ function main() {
   const state = engine.getPhaseState();
 
   if (!state) {
-    // Sem projeto, sem injeção
+    // No project, no injection
     process.exit(0);
   }
 
   const phase = state.currentPhase;
-  const phaseName = PHASE_NAMES[phase] ?? "Desconhecida";
+  const phaseName = PHASE_NAMES[phase] ?? "Unknown";
 
-  // Resumo compacto (não gastar tokens demais)
+  // Compact summary (avoid spending too many tokens)
   const lines: string[] = [
-    `[Versus] Phase ${phase} — ${phaseName} | Iteração ${state.currentIteration}`,
+    `[Versus] Phase ${phase} — ${phaseName} | Iteration ${state.currentIteration}`,
   ];
 
   if (state.phase0Score !== null) {
     lines.push(`Score Phase 0: ${state.phase0Score}/100`);
   }
 
-  // Últimas 3 decisões relevantes
+  // Last 3 relevant decisions
   const recentDecisions = state.decisions.slice(-3);
   if (recentDecisions.length > 0) {
-    lines.push("Decisões recentes:");
+    lines.push("Recent decisions:");
     for (const d of recentDecisions) {
       lines.push(`  [P${d.phase}/${d.category}] ${d.content.substring(0, 100)}`);
     }
   }
 
-  // Restrição de código em Phases 0-4
+  // Code restriction in Phases 0-4
   if (phase < 5) {
-    lines.push("RESTRIÇÃO: Phases 0-4 — NÃO implemente código. Use as MCP tools para gerenciar a metodologia.");
+    lines.push("RESTRICTION: Phases 0-4 — DO NOT implement code. Use the MCP tools to manage the methodology.");
   }
 
-  // Instruções comportamentais compactas por fase
+  // Compact behavioral instructions per phase
   const compactGuidance = getCompactGuidance(phase);
   for (const line of compactGuidance) {
     lines.push(line);
   }
 
-  // Lembrete de get_phase_guidance para instruções completas
-  lines.push("Para instruções detalhadas da fase: chame get_phase_guidance().");
+  // Reminder to use get_phase_guidance for full instructions
+  lines.push("For detailed phase instructions: call get_phase_guidance().");
 
   // Loop counter warning
   const loop = engine.getLoopCounter();
   if (loop.count >= 2) {
-    lines.push(`⚠ Loop detector: padrão "${loop.pattern}" executado ${loop.count}x. Limiar: 3.`);
+    lines.push(`⚠ Loop detector: pattern "${loop.pattern}" executed ${loop.count}x. Threshold: 3.`);
   }
 
   process.stdout.write(lines.join("\n") + "\n");

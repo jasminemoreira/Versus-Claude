@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "ANTES da compactacao: chame get_phase_state() e salve o resultado em MEMORY.md (no seu diretorio de auto memory). Inclua: fase atual, iteracao, decisoes-chave, proximos passos."
+            "prompt": "BEFORE compaction: call get_phase_state() and save the result to MEMORY.md (in your auto memory directory). Include: current phase, iteration, key decisions, next steps."
           }
         ]
       }
@@ -72,7 +72,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "OBRIGATORIO: chame get_phase_state() do MCP server versus-claude para saber a fase atual da metodologia Convergencia Iterativa. Em seguida chame get_phase_guidance() para obter as instrucoes detalhadas da fase atual. Se retornar erro de projeto nao inicializado, pergunte ao usuario se deseja iniciar um novo projeto com init_project(). Toda decisao importante deve ser registrada com record_decision(). Antes de avancar de fase, use get_exit_criteria() e advance_phase()."
+            "prompt": "MANDATORY: call get_phase_state() from the MCP server versus-claude to know the current phase of the Iterative Convergence methodology. Then call get_phase_guidance() to get detailed instructions for the current phase. If it returns a project not initialized error, ask the user if they want to start a new project with init_project(). Every important decision must be recorded with record_decision(). Before advancing phases, use get_exit_criteria() and advance_phase()."
           }
         ]
       },
@@ -81,7 +81,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "CONTEXTO RESTAURADO. OBRIGATORIO: chame get_phase_state() e get_phase_guidance() para recuperar estado e instrucoes da metodologia. Consulte get_decisions() para decisoes anteriores. Leia MEMORY.md (auto memory) para contexto adicional. Continue de onde parou."
+            "prompt": "CONTEXT RESTORED. MANDATORY: call get_phase_state() and get_phase_guidance() to recover methodology state and instructions. Check get_decisions() for previous decisions. Read MEMORY.md (auto memory) for additional context. Continue where you left off."
           }
         ]
       }

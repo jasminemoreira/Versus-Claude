@@ -1,39 +1,39 @@
-# Resultados — Versus for Claude v0.1.0
+# Results — Versus for Claude v0.1.0
 
 ## Build
-- TypeScript compila sem erros (extensão + MCP server)
-- Dependências instaladas: @modelcontextprotocol/sdk ^1.12.0
+- TypeScript compiles without errors (extension + MCP server)
+- Dependencies installed: @modelcontextprotocol/sdk ^1.12.0
 
-## Testes (19/19 passando)
-- initProject cria state.json ✓
-- initProject rejeita se já existe ✓
-- getPhaseState retorna null sem projeto ✓
-- load recupera estado de disco ✓
-- recordDecision persiste e é consultável ✓
-- getDecisions filtra por fase ✓
-- updateScore salva e é consultável ✓
-- markExitCriterion cria e atualiza ✓
-- getExitCriteriaWithDefs mostra defs e estado ✓
-- advancePhase bloqueia sem exit criteria ✓
-- advancePhase bloqueia sem score 90 ✓
-- advancePhase permite com score >= 90 e criteria ✓
-- advancePhase bloqueia transição inválida (0→2) ✓
-- loop Phase 2↔3 permitido ✓
-- startIteration incrementa contador ✓
-- startIteration rejeita fase errada ✓
-- checkSafeguard S0 ok quando na Phase 0 ✓
-- checkAllSafeguards retorna aplicáveis ✓
-- checkSpecsStatus detecta dirs vazios e populados ✓
+## Tests (19/19 passing)
+- initProject creates state.json ✓
+- initProject rejects if already exists ✓
+- getPhaseState returns null without project ✓
+- load recovers state from disk ✓
+- recordDecision persists and is queryable ✓
+- getDecisions filters by phase ✓
+- updateScore saves and is queryable ✓
+- markExitCriterion creates and updates ✓
+- getExitCriteriaWithDefs shows defs and state ✓
+- advancePhase blocks without exit criteria ✓
+- advancePhase blocks without score 90 ✓
+- advancePhase allows with score >= 90 and criteria ✓
+- advancePhase blocks invalid transition (0→2) ✓
+- loop Phase 2↔3 allowed ✓
+- startIteration increments counter ✓
+- startIteration rejects wrong phase ✓
+- checkSafeguard S0 ok when in Phase 0 ✓
+- checkAllSafeguards returns applicable ones ✓
+- checkSpecsStatus detects empty and populated dirs ✓
 
-## Critérios de Sucesso
-1. Estado nunca perdido — ✓ state.json persiste, load() recupera
-2. Decisões rastreáveis — ✓ recordDecision + getDecisions
-3. Salvaguardas forçadas — ✓ checkSafeguard/checkAllSafeguards
-4. Transições validadas — ✓ advancePhase valida exit criteria
-5. Violações explicadas — ✓ retorna missingCriteria detalhado
+## Success Criteria
+1. State never lost — ✓ state.json persists, load() recovers
+2. Decisions traceable — ✓ recordDecision + getDecisions
+3. Safeguards enforced — ✓ checkSafeguard/checkAllSafeguards
+4. Transitions validated — ✓ advancePhase validates exit criteria
+5. Violations explained — ✓ returns detailed missingCriteria
 
-## Pendente para v0.2
-- Teste manual com Claude Code (integração real)
-- Hook mínimo no settings.json
-- Teste da sidebar TreeView em runtime VSCode
-- Teste de integração MCP server ↔ Claude Code
+## Pending for v0.2
+- Manual testing with Claude Code (real integration)
+- Minimal hook in settings.json
+- Sidebar TreeView test in VS Code runtime
+- MCP server ↔ Claude Code integration test

@@ -1,76 +1,76 @@
 # MCP Tools — Versus for Claude
 
-## Catálogo de Ferramentas (~12 tools)
+## Tool Catalog (~12 tools)
 
-### Consulta de Estado
+### State Query
 
 #### `get_phase_state()`
-- **Parâmetros:** nenhum
-- **Retorna:** `{ phase, iteration, score, decisions_count, safeguards_status, summary }`
-- **Propósito:** Claude consulta estado atual antes de agir. Fonte de verdade.
+- **Parameters:** none
+- **Returns:** `{ phase, iteration, score, decisions_count, safeguards_status, summary }`
+- **Purpose:** Claude queries current state before acting. Source of truth.
 
 #### `get_decisions(phase?)`
-- **Parâmetros:** `phase` (opcional, 0-7) — se omitido, retorna todas
-- **Retorna:** `[{ phase, category, content, timestamp }...]`
-- **Propósito:** consultar decisões tomadas em qualquer fase
+- **Parameters:** `phase` (optional, 0-7) — if omitted, returns all
+- **Returns:** `[{ phase, category, content, timestamp }...]`
+- **Purpose:** query decisions made in any phase
 
 #### `get_exit_criteria(phase)`
-- **Parâmetros:** `phase` (0-7)
-- **Retorna:** `[{ criterion, met, details }...]`
-- **Propósito:** saber o que falta para avançar
+- **Parameters:** `phase` (0-7)
+- **Returns:** `[{ criterion, met, details }...]`
+- **Purpose:** find out what is needed to advance
 
-### Transições
+### Transitions
 
 #### `advance_phase(target_phase)`
-- **Parâmetros:** `target_phase` (0-7)
-- **Retorna:** OK ou ERRO com lista de critérios não atendidos
-- **Validação:** verifica exit criteria da fase atual, specs/ status (alerta sem bloquear)
-- **Propósito:** transição controlada entre fases
+- **Parameters:** `target_phase` (0-7)
+- **Returns:** OK or ERROR with list of unmet criteria
+- **Validation:** checks exit criteria for the current phase, specs/ status (alerts without blocking)
+- **Purpose:** controlled transition between phases
 
 #### `start_iteration(phase)`
-- **Parâmetros:** `phase` (0, 2, 3)
-- **Retorna:** `{ iteration_number, previous_summary }`
-- **Propósito:** iniciar nova iteração em fases cíclicas (Phase 0 discovery, Phases 2-3 loop)
+- **Parameters:** `phase` (0, 2, 3)
+- **Returns:** `{ iteration_number, previous_summary }`
+- **Purpose:** start a new iteration in cyclic phases (Phase 0 discovery, Phases 2-3 loop)
 
-### Registro
+### Recording
 
 #### `record_decision(phase, category, content)`
-- **Parâmetros:** `phase` (0-7), `category` (ex: "architecture", "pattern", "constraint"), `content` (texto livre)
-- **Retorna:** `{ id, timestamp }`
-- **Propósito:** persistir decisão fora do contexto do Claude
+- **Parameters:** `phase` (0-7), `category` (e.g., "architecture", "pattern", "constraint"), `content` (free text)
+- **Returns:** `{ id, timestamp }`
+- **Purpose:** persist a decision outside of Claude's context
 
 #### `update_score(score, breakdown)`
-- **Parâmetros:** `score` (0-100), `breakdown` (objeto com pesos)
-- **Retorna:** OK + histórico de scores
-- **Propósito:** registrar score de convergência Phase 0
+- **Parameters:** `score` (0-100), `breakdown` (object with weights)
+- **Returns:** OK + score history
+- **Purpose:** record Phase 0 convergence score
 
 #### `mark_exit_criterion(phase, criterion, met)`
-- **Parâmetros:** `phase` (0-7), `criterion` (string), `met` (boolean)
-- **Retorna:** OK + exit criteria atualizado
-- **Propósito:** marcar critério individual como atendido
+- **Parameters:** `phase` (0-7), `criterion` (string), `met` (boolean)
+- **Returns:** OK + updated exit criteria
+- **Purpose:** mark an individual criterion as met
 
-### Salvaguardas
+### Safeguards
 
 #### `check_safeguard(id)`
-- **Parâmetros:** `id` ("S0" a "S7")
-- **Retorna:** `{ status, details, recommendation }`
-- **Propósito:** verificar salvaguarda específica
+- **Parameters:** `id` ("S0" to "S7")
+- **Returns:** `{ status, details, recommendation }`
+- **Purpose:** check a specific safeguard
 
 #### `check_all_safeguards()`
-- **Parâmetros:** nenhum
-- **Retorna:** `[{ id, status, details }...]`
-- **Propósito:** panorama de todas as salvaguardas
+- **Parameters:** none
+- **Returns:** `[{ id, status, details }...]`
+- **Purpose:** overview of all safeguards
 
 ### Specs
 
 #### `check_specs_status()`
-- **Parâmetros:** nenhum
-- **Retorna:** `{ directory: "populated"|"empty", file_count }...` para cada subdiretório
-- **Propósito:** verificar estado do specs/ (alerta, não bloqueia)
+- **Parameters:** none
+- **Returns:** `{ directory: "populated"|"empty", file_count }...` for each subdirectory
+- **Purpose:** check specs/ status (alerts, does not block)
 
-### Projeto
+### Project
 
 #### `init_project(name, description)`
-- **Parâmetros:** `name`, `description`
-- **Retorna:** state.json inicial criado
-- **Propósito:** inicializar novo projeto com estado Phase 0
+- **Parameters:** `name`, `description`
+- **Returns:** initial state.json created
+- **Purpose:** initialize a new project with Phase 0 state

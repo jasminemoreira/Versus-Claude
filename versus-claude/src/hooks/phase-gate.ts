@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-// Camada 2: Bloqueio de ferramentas — PreToolUse (Edit|Write)
-// Bloqueia edição de código em Phases 0-4.
-// Exceções: specs/, .versus/, .claude/, package.json, tsconfig.json, README
+// Layer 2: Tool blocking — PreToolUse (Edit|Write)
+// Blocks code editing in Phases 0-4.
+// Exceptions: specs/, .versus/, .claude/, package.json, tsconfig.json, README
 
 import { StateEngine } from "../state/engine";
 
@@ -52,19 +52,19 @@ function main() {
   const engine = new StateEngine(workspacePath);
   const state = engine.getPhaseState();
 
-  // Sem projeto inicializado — permitir tudo
+  // No project initialized — allow everything
   if (!state) {
     allow();
     return;
   }
 
-  // Phase 5+ permite edição
+  // Phase 5+ allows editing
   if (state.currentPhase >= 5) {
     allow();
     return;
   }
 
-  // Phase 0-4: ler input para verificar o arquivo
+  // Phase 0-4: read input to check the file
   let input = "";
   process.stdin.setEncoding("utf-8");
   process.stdin.on("data", (chunk) => { input += chunk; });
@@ -77,14 +77,14 @@ function main() {
         allow();
       } else {
         deny(
-          `[Versus] Bloqueado: Phase ${state.currentPhase} não permite edição de código. ` +
-          `Arquivo: ${filePath}. ` +
-          `Complete Phases 0→4 antes de implementar. ` +
-          `Use get_exit_criteria() para ver o que falta.`
+          `[Versus] Blocked: Phase ${state.currentPhase} does not allow code editing. ` +
+          `File: ${filePath}. ` +
+          `Complete Phases 0→4 before implementing. ` +
+          `Use get_exit_criteria() to see what is missing.`
         );
       }
     } catch {
-      // Se não conseguir parsear input, permitir (fail-open)
+      // If unable to parse input, allow (fail-open)
       allow();
     }
   });
