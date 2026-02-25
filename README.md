@@ -69,7 +69,7 @@ F₀ → G₀ → F₁ → G₁ → ... → Fₙ → Gₙ → delivery
 | 6 | Tests | Test against interfaces; mandatory manual testing | 100% tests passing |
 | 7 | Post-Review | Systematic learning; methodology evolution | Lessons + method improvement proposal |
 
-Phases 2-3 form an iterative loop (typically 1-3 iterations). Phase 7 implements **double-loop learning** (Argyris, 1977): evaluating both the product and the process itself.
+Phases 2-3 form an iterative loop (typically 1-3 iterations). Phase 7 implements **double-loop learning** (Argyris, 1977): evaluating both the product and the process itself. After Phase 7, the methodology offers **meta-iteration** (v1.0 → v2.0): reset to Phase 0 while preserving all decisions, specs/, and project context as baseline for the next cycle.
 
 ## Phase 0: Hierarchical Semantic Analysis (HSA)
 
@@ -155,6 +155,12 @@ Three key properties:
 | TDD (Beck, 2003) | Tests drive design | Adversarial critique functions as "design test" before code |
 | ADR (Nygard, 2011) | Decision documentation with context | Documented assumptions and limitations serve equivalent role |
 
+## Requirements
+
+- **VS Code** >= 1.85.0
+- **Node.js** >= 18.0.0 (runs the MCP server)
+- **Claude Code** extension installed and authenticated
+
 ## Installation
 
 ### From VS Code Marketplace
@@ -174,7 +180,11 @@ code --install-extension versus-claude-*.vsix
 ## Quick Start
 
 1. Open the Command Palette (`Ctrl+Shift+P`) → **Versus Claude: Initialize Project**
-2. Use Claude Code in your project — the agent is automatically guided by the methodology
+2. Enter a project name and description when prompted
+3. Open a **new Claude Code conversation**
+4. Type **`start`** — Claude loads the methodology and begins Phase 0
+
+> After initializing, always start a new conversation so Claude picks up the MCP server and hooks.
 
 ## Companion Extension
 

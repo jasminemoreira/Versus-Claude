@@ -176,6 +176,12 @@ Define what "done" looks like — the expected output and how to measure success
 | Acceptance Criteria | What must be true for the user to accept the result? |
 | Out of Scope (YAGNI) | What NOT to do, with cost/benefit justification |
 
+**Delivery Target (MANDATORY question via R2):**
+Ask: "What is the delivery target for this project?"
+Options: Complete product / MVP first, then iterate / Prototype (disposable).
+Record with record_decision(category='scope', content='DELIVERY TARGET: ...').
+This decision conditions Phase 1's Progressive Scope: "Complete product" blocks scope splitting unless a technical blocker exists.
+
 #### Cross-cutting — Documentation & Research (all levels):
 - **Documentation:** Specs, RFCs, legacy code, issues. Content in specs/?
 - **Web Research:** If specs/ has critical gaps, ask user permission (via R2) to research and deposit. Options: research and deposit / research and present / don't research. Cite source/URL in all deposited material.
@@ -277,7 +283,11 @@ Present summary of choices in table, confirm via R2.
 If there's more than one tech option: comparative table (requirements × techs, LOC, dependencies, LLM context consumption). Assumptions verified with evidence (specs/technical), not assumed. If tech forces scope reduction → wrong tech. Prefer techs that minimize artifacts.
 
 ### Progressive Scope
-When maturity/risk is uneven across requirements: present maturity map (req | mature lib? | LOC | risk) and offer via R2: progressive scope (v1.0 mature, v2.0 rest) / everything in v1.0 / other grouping. Progressive scope ≠ cut: preserves 100%, distributes across versions.
+**FIRST:** Check Phase 0 delivery target (get_decisions, category='scope', look for 'DELIVERY TARGET').
+- "Complete product" → do NOT offer v1.0/v2.0 split. Only split if there is a documented TECHNICAL BLOCKER.
+- "MVP first" or "Prototype" → offer progressive scope as below.
+
+When maturity/risk is uneven across requirements: present maturity map (req | mature lib? | LOC | risk) and offer via R2: progressive scope (v1.0 mature, v2.0 rest) / everything in v1.0 / other grouping. Progressive scope ≠ cut: preserves 100%, distributes across versions. The AI must NEVER reduce scope by preference — only by documented technical necessity.
 
 ### Session planning (decoupled cycle):
 - Design Session (Phases 0-4): context = domain + constraints → architecture + interfaces
@@ -526,8 +536,11 @@ Double-loop: evaluate the PROCESS (did the methodology work? Where was there fri
 Limits: AI has agreement bias about itself. Human detects friction → AI proposes → human approves. Never modify SKILL.md without approval.
 
 ### Meta-iteration v1.0 → v2.0:
+After completing all Phase 7 steps, offer start_new_cycle() via AskUserQuestion (R2).
+start_new_cycle() resets to Phase 0 while PRESERVING decisions, projectSpec, history, and specs/.
+Do NOT use init_project() for meta-iteration — it wipes all previous context.
 - specs/ from v1.0 is BASELINE for v2.0 — knowledge is NOT lost between cycles
 - Phase 0 of v2.0 starts from existing specs/ (doesn't restart from zero)
-- Previous decisions serve as context — what was discarded and why
+- Previous decisions (get_decisions) serve as context — what was discarded and why
 - Negative scope from v1.0 can become scope of v2.0 (with operator approval)
 - Phase 7 lessons from v1.0 feed the v2.0 process

@@ -4,7 +4,11 @@
 import * as fs from "fs";
 import * as path from "path";
 
-const MCP_TOOL_PERMISSIONS = [
+// Permissions auto-approved in user projects when the extension initializes.
+// Includes MCP tools + general development tools so Claude can work without
+// permission prompts for routine operations (read, write, search, execute).
+const AUTO_APPROVED_PERMISSIONS = [
+  // MCP tools
   "mcp__versus-claude__get_phase_state",
   "mcp__versus-claude__get_decisions",
   "mcp__versus-claude__get_exit_criteria",
@@ -19,6 +23,17 @@ const MCP_TOOL_PERMISSIONS = [
   "mcp__versus-claude__init_project",
   "mcp__versus-claude__get_phase_guidance",
   "mcp__versus-claude__update_project_spec",
+  "mcp__versus-claude__start_new_cycle",
+  // General development tools
+  "Read",
+  "Write",
+  "Edit",
+  "Glob",
+  "Grep",
+  "Bash",
+  "WebFetch",
+  "WebSearch",
+  "NotebookEdit",
 ];
 
 /**
@@ -137,7 +152,7 @@ export function ensureSettings(workspace: string): boolean {
     settings.permissions.allow = [];
   }
   const allow: string[] = settings.permissions.allow;
-  for (const perm of MCP_TOOL_PERMISSIONS) {
+  for (const perm of AUTO_APPROVED_PERMISSIONS) {
     if (!allow.includes(perm)) {
       allow.push(perm);
       modified = true;

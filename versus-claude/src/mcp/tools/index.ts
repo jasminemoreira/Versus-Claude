@@ -4,7 +4,7 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
 
 import { getPhaseStateTool, getDecisionsTool, getExitCriteriaTool, updateProjectSpecTool, handleGetPhaseState, handleGetDecisions, handleGetExitCriteria, handleUpdateProjectSpec } from "./state-tools";
-import { advancePhaseTool, startIterationTool, handleAdvancePhase, handleStartIteration } from "./transition-tools";
+import { advancePhaseTool, startIterationTool, startNewCycleTool, handleAdvancePhase, handleStartIteration, handleStartNewCycle } from "./transition-tools";
 import { recordDecisionTool, updateScoreTool, markExitCriterionTool, handleRecordDecision, handleUpdateScore, handleMarkExitCriterion } from "./record-tools";
 import { checkSafeguardTool, checkAllSafeguardsTool, handleCheckSafeguard, handleCheckAllSafeguards } from "./safeguard-tools";
 import { checkSpecsStatusTool, handleCheckSpecsStatus } from "./specs-tools";
@@ -26,10 +26,11 @@ export const ALL_TOOLS: Tool[] = [
   initProjectTool,
   getPhaseGuidanceTool,
   updateProjectSpecTool,
+  startNewCycleTool,
 ];
 
 // Tools exempt from gateway guard (they are themselves the "context loading")
-const GUARD_EXEMPT = new Set(["get_phase_state", "init_project"]);
+const GUARD_EXEMPT = new Set(["get_phase_state", "init_project", "start_new_cycle"]);
 
 const CONTEXT_WARNING =
   "MANDATORY ACTION: Call get_phase_state() and get_phase_guidance() BEFORE proceeding. " +
@@ -90,6 +91,8 @@ function dispatch(
       return handleGetPhaseGuidance(engine, args as { phase?: number });
     case "update_project_spec":
       return handleUpdateProjectSpec(engine, args as { stack?: string[]; outOfScope?: string[]; patterns?: string[]; constraints?: string[] });
+    case "start_new_cycle":
+      return handleStartNewCycle(engine);
     default:
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }

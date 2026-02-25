@@ -17,7 +17,7 @@ Versus implements the AG/AV (Generative Agent / Verification Agent) model: the A
 - **8 sequential phases** with verifiable exit criteria — no skipping steps
 - **8 safeguards (S0-S7)** that prevent common AI agent errors (premature convergence, scope creep, reimplementation)
 - **Convergence score** (0-100) that gates advancement until the problem is truly understood
-- **14 MCP tools** for state management, decision recording, and phase transitions
+- **15 MCP tools** for state management, decision recording, phase transitions, and meta-iteration (v1→v2)
 - **3 Claude Code hooks** — context injection, edit blocking in early phases, loop detection
 - **Persistent decision registry** that survives context switches
 - **Gateway guard** that detects when models skip loading context
@@ -58,10 +58,11 @@ The methodology maximizes `E = I₀/C` (relevant information / total context con
 
 1. Install the extension
 2. Open the Command Palette (`Ctrl+Shift+P`) and run **Versus Claude: Initialize Project**
-3. Use Claude Code in your project — the agent is automatically guided by the methodology
+3. Enter a project name and description when prompted
+4. Open a **new Claude Code conversation** (the extension configures hooks and MCP on initialization)
+5. Type **`start`** — Claude will automatically load the methodology state and begin Phase 0
 
-Or ask Claude Code directly:
-> "Initialize a Versus project called my-project"
+> **Important:** After initializing, always start a **new conversation** so Claude picks up the MCP server and hooks. If Claude doesn't use MCP tools, run "Developer: Reload Window" from the Command Palette.
 
 ## Claude Code Hooks
 
@@ -99,8 +100,13 @@ F₀ → G₀ → F₁ → G₁ → ... → Fₙ → Gₙ → delivery
 
 ## Requirements
 
-- VS Code >= 1.85.0
-- Claude Code CLI installed
+| Requirement | Minimum | Why |
+|---|---|---|
+| **VS Code** | >= 1.85.0 | Extension API compatibility |
+| **Node.js** | >= 18.0.0 | Runs the MCP server (`node .versus/server.js`) |
+| **Claude Code** | Latest | Extension + CLI for MCP and hooks |
+
+> **Node.js is mandatory.** Without it, the MCP server cannot start and Claude will ignore the methodology entirely. Install from [nodejs.org](https://nodejs.org).
 
 ## Companion Extension
 

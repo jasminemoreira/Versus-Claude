@@ -12,7 +12,17 @@ export interface PhaseGuidance {
 const GLOBAL_RULES = {
   R1: "R1: Evaluate triggers before coding. If triggered → Phase 0. Never skip to implementation.",
   R2: "R2: Every user decision via AskUserQuestion. ALWAYS provide suggested options (single or multi-select) — never send questions without options. Up to 4 questions/call. multiSelect for non-exclusive. Recommended first with '(Recommended)'. Never list options A/B/C in text.",
-  R3: "R3: Maximum 1 file per response. Indicate 'File X/N'. Exception: files <30 LOC groupable if total <50% of limit.",
+  R5: `R5: Mandatory Display — essential outputs MUST be shown in chat. Do NOT process internally without displaying.
+Per phase:
+- P0: Score breakdown table (all 10 criteria + weights + total). Teach-back synthesis (full 5-level template). Delivery Target question.
+- P1: 4 architecture answers. Pattern summary table. Progressive Scope decision (if applicable). Technology comparison table (if >1 option).
+- P2: Coverage matrix (modules × lenses with 🔴🟡🟢). Concentration analysis (by module + by lens). Activated conditional lenses list. Exit gate summary.
+- P3: Post-cycle decision table (<15%/15-25%/>25%). Anti-scope-creep checklist verification. LOC justification (if >10% increase).
+- P4: Convergence verification report (exit criteria + safeguards + specs status). LLM Switch Point notification.
+- P5: Progress announcements ("X/N completed, next: Y") after each file.
+- P6: Testing status record (TESTING STATUS / PASS / FAIL / NEXT). Manual testing report.
+- P7: Double-loop learning report. Consolidation table (source | phase | proposal | justification). Meta-iteration offer.
+Rule: If you computed it, SHOW it. The user cannot validate what they cannot see.`,
   R4_TIMING: {
     0: "R4: Populate specs/ — refs, domain, competitors.",
     1: "R4: Populate specs/ — technical, models, examples.",
@@ -153,6 +163,15 @@ Define what "done" looks like — the expected output and how to measure success
 | Acceptance Criteria | What must be true for the user to accept the result? |
 | Out of Scope (YAGNI) | What NOT to do, with cost/benefit justification |
 
+**Delivery Target (MANDATORY question via AskUserQuestion):**
+Ask: "What is the delivery target for this project?"
+- Option 1: "Complete product" — all requirements delivered in a single cycle. No scope splitting unless a technical blocker exists.
+- Option 2: "MVP first, then iterate" — minimal viable product, with deferred features planned for future cycles.
+- Option 3: "Prototype / proof of concept" — disposable, for validation only.
+
+Record the answer with record_decision(category='scope', content='DELIVERY TARGET: ...').
+This decision conditions Phase 1's Progressive Scope: if the user chose "Complete product", do NOT offer v1.0/v2.0 scope splitting unless there is an explicit technical blocker (missing platform capability, immature dependency). The AI must not reduce scope by preference — only by necessity.
+
 ---
 
 ### CROSS-CUTTING — Documentation & Research (all levels):
@@ -163,7 +182,7 @@ Define what "done" looks like — the expected output and how to measure success
 
 ---
 
-### SYNTHESIS (Teach-Back) — Mandatory template:
+### SYNTHESIS (Teach-Back) — Mandatory template (⚠️ MUST DISPLAY full template in chat):
 \`\`\`markdown
 # My Understanding (Iteration N)
 
@@ -194,7 +213,7 @@ Define what "done" looks like — the expected output and how to measure success
 ### VALIDATION — via AskUserQuestion: correct / almost / incomplete / wrong
 **CAUTION AP1 (Validation theater):** The human evaluates the WRITTEN SYNTHESIS, does not ask the AI if it's correct.
 
-### CONVERGENCE ASSESSMENT (0-100) — use update_score():
+### CONVERGENCE ASSESSMENT (0-100) — use update_score() (⚠️ MUST DISPLAY breakdown table in chat):
 | Criterion | Weight |
 |-----------|--------|
 | Problem Clarity | 10 |
@@ -252,9 +271,14 @@ Assumptions verified with evidence (specs/technical), not assumed. **CAUTION AP4
 If tech forces scope reduction → wrong tech.
 
 ### Progressive Scope:
+**FIRST:** Check the Phase 0 delivery target decision (get_decisions with category='scope', look for 'DELIVERY TARGET').
+- If "Complete product": do NOT offer v1.0/v2.0 scope splitting. All requirements must be delivered in a single cycle. Only split if there is an explicit TECHNICAL BLOCKER (missing platform capability, immature dependency, infeasible Tier 3 without PoC). If splitting is forced by a blocker, document the blocker clearly with record_decision().
+- If "MVP first" or "Prototype": offer progressive scope as below.
+
 When maturity/risk is unequal: maturity map (req | mature lib? | LOC | risk).
 Offer via AskUserQuestion: progressive scope (v1.0 mature, v2.0 rest) / all in v1.0 / other.
 Progressive scope ≠ cut: preserves 100%, distributes across versions.
+**The AI must NEVER reduce scope by preference — only by documented technical necessity.**
 
 ### Session planning (decoupled cycle):
 Future work will follow independent sessions:
@@ -308,15 +332,15 @@ Conditional lens activation: review ProjectSpec (stack, constraints, out-of-scop
 4. Passes are independent (one lens at a time)
 **CAUTION AP1 (Validation theater):** Never ask "is it good?". Ask for refutation.
 
-### Coverage Matrix (mandatory):
+### Coverage Matrix (mandatory) (⚠️ MUST DISPLAY complete table in chat — do NOT summarize or skip modules/lenses):
 Table of modules × lenses (universal + activated conditional) with severities.
 
-### Concentration analysis (MANDATORY after the matrix):
+### Concentration analysis (MANDATORY after the matrix) (⚠️ MUST DISPLAY analysis in chat):
 - **Concentration by module:** Module with findings across ALL lenses → probably poorly conceived → requires REDESIGN, not patch.
 - **Concentration by lens:** Lens with findings across ALL modules → SYSTEMIC failure (e.g.: no parameter has a reference, no module testable in isolation).
 - Document concentration patterns with record_decision().
 
-### Exit Gate:
+### Exit Gate (⚠️ MUST DISPLAY gate summary in chat — show total 🔴/🟡/🟢 counts and verdict):
 - Zero 🔴 to advance → all must be addressed in Phase 3
 - Each 🟡 requires EXPLICIT decision: treat OR accept risk WITH DOCUMENTED justification (record_decision)
 - 🟢 can be deferred to v2.0 (record in record_decision)
@@ -346,7 +370,7 @@ Trade-offs resolved by the HUMAN OPERATOR (S2: stopping criterion is the user's)
 
 ### If LOC increased >10%: MANDATORY justification documented with record_decision().
 
-### Post-cycle 2-3 decision (via AskUserQuestion):
+### Post-cycle 2-3 decision (via AskUserQuestion) (⚠️ MUST DISPLAY table in chat — show measured %, count, action):
 | Structural change | Critical | Action |
 |---|---|---|
 | <15% | 0 | → Phase 4 |
@@ -355,7 +379,7 @@ Trade-offs resolved by the HUMAN OPERATOR (S2: stopping criterion is the user's)
 
 **CAUTION AP8 (Perfectionism):** The stopping criterion is honesty — we know what works, what we assume, and what we don't know.
 
-### Anti-Scope-Creep Checklist (MANDATORY before advancing):
+### Anti-Scope-Creep Checklist (MANDATORY before advancing) (⚠️ MUST DISPLAY checklist with ✅/❌ in chat):
 1. ALL Phase 0 requirements covered
 2. No unsolicited features added
 3. What the system DOES hasn't changed (only HOW)
@@ -365,19 +389,19 @@ Trade-offs resolved by the HUMAN OPERATOR (S2: stopping criterion is the user's)
 const PHASE_4_GUIDANCE = `## Phase 4 — Convergence Gate
 ### Verification: Human-AV (operator validates convergence with rigorous criteria)
 
-Validate complete convergence — this gate decides if the design is ready for code:
+Validate complete convergence — this gate decides if the design is ready for code (⚠️ MUST DISPLAY convergence verification report with ✅/❌ per item):
 
-1. Verify ALL exit criteria of Phases 2-3 (use get_exit_criteria for Phase 2 and Phase 3)
-2. Verify ALL safeguards S1-S5 (use check_all_safeguards)
-3. Verify: are the 4 P1 questions still answered? (Decomposition, Interfaces, Assumptions, Negative scope)
-4. Verify: did the matrix concentration analysis reveal unresolved systemic failures?
-5. Verify: is specs/ populated with technical and scientific references needed for Phase 5?
-6. Only advance to Phase 5 if EVERYTHING is OK
-7. If something failed → return to Phase 2 or 3 as needed
+1. ✅/❌ Verify ALL exit criteria of Phases 2-3 (use get_exit_criteria for Phase 2 and Phase 3)
+2. ✅/❌ Verify ALL safeguards S1-S5 (use check_all_safeguards)
+3. ✅/❌ Verify: are the 4 P1 questions still answered? (Decomposition, Interfaces, Assumptions, Negative scope)
+4. ✅/❌ Verify: did the matrix concentration analysis reveal unresolved systemic failures?
+5. ✅/❌ Verify: is specs/ populated with technical and scientific references needed for Phase 5?
+6. Only advance to Phase 5 if EVERYTHING is ✅
+7. If something is ❌ → return to Phase 2 or 3 as needed
 
 **CAUTION AP6 (Skipping phases):** Don't advance with pending items. The cost of discovering problems in Phase 5-6 is 10× higher than solving them here.
 
-### LLM Switch Point:
+### LLM Switch Point (⚠️ MUST DISPLAY this notification to the user):
 Phase 4 is the natural boundary for switching LLMs to reduce cost. Phases 0-4 (design) require high reasoning capability — use the most capable model available. Phases 5-7 (implementation, tests, review) require code generation and execution — a cheaper/faster model is sufficient since the architecture is already validated and documented in specs/.
 Inform the user: "The architecture is fully validated. From Phase 5 onward, you can switch to a faster/cheaper model (e.g., Sonnet instead of Opus) — the design decisions are persisted in state.json and specs/, so no context is lost."`;
 
@@ -405,7 +429,8 @@ If numerical parameters without values in specs/ → STOP and research. Referenc
 ### Checklist per module: mature lib? → if not, why? → documented algorithm? → portable implementation? → decision with record_decision().
 
 ### Apply S7 (Discipline):
-After each file: mark completed, identify next, announce "X/N completed, next: Y", start immediately. Don't start tangential discussions.
+After each file: mark completed, identify next, announce "X/N completed, next: Y", start immediately.
+Do NOT ask permission between files — implement sequentially and autonomously. Only stop for actual decisions (ambiguity, blocker, Tier choice). Don't start tangential discussions.
 
 ### S6 alarm signal (immediate STOP):
 If creating heuristics for problems with known solutions, debugging complex logic written from scratch, doing trial-and-error on something deterministic, or spending >2 iterations on the same module → STOP, communicate, seek reference implementation (Tier 2).`;
@@ -435,7 +460,7 @@ Both (automated + manual) are mandatory gates. Neither replaces the other.
 Manual testing often spans multiple sessions (user tests outside Claude, returns with feedback).
 To maintain continuity across sessions:
 
-**BEFORE the user leaves to test:**
+**BEFORE the user leaves to test (⚠️ MUST DISPLAY testing status summary in chat):**
 Record a testing decision summarizing the current state:
 record_decision(phase=6, category='testing', content='TESTING STATUS: ...')
 The content MUST use this structure:
@@ -464,7 +489,7 @@ const PHASE_7_GUIDANCE = `## Phase 7 — Post-Review
 - specs/technical → final decisions, discarded algorithms and why
 - specs/references → references discovered during correction
 
-### Double-loop learning (Argyris):
+### Double-loop learning (Argyris) (⚠️ MUST DISPLAY both evaluations in chat):
 Single-loop: evaluate the PRODUCT (does the software work?).
 Double-loop: evaluate the PROCESS (did the methodology work? Where was there friction?).
 Phase 7 does BOTH.
@@ -475,7 +500,7 @@ Phase 7 does BOTH.
 
 **Step 2 — AI self-assessment (complementary):** Phase that lacked checklist, absent safeguard, inadequate template, valueless rule, recurring pattern.
 
-**Step 3 — Consolidate** in table (source [human/AI] | phase | proposal | justification).
+**Step 3 — Consolidate** in table (⚠️ MUST DISPLAY table in chat: source [human/AI] | phase | proposal | justification).
 
 **Step 4 — Apply** via AskUserQuestion: review one by one (recommended) / apply all / don't update. For each diff, show before/after and request approval. Proposals go through gate: operator approves or rejects.
 
@@ -483,14 +508,21 @@ Phase 7 does BOTH.
 
 Limits: AI has agreement bias about itself. Human detects friction → AI proposes → human approves. Never modify SKILL.md without approval.
 
-### Meta-iteration v1.0 → v2.0:
-If the project evolves to a new version:
-- specs/ from v1.0 is the BASELINE for v2.0 — knowledge is NOT lost between cycles
-- Phase 0 of v2.0 starts from existing specs/ (doesn't restart from zero)
-- Previous decisions (get_decisions) serve as context — what was discarded and why
-- Negative scope from v1.0 can become v2.0 scope (with operator approval)
-- Phase 7 lessons from v1.0 feed into v2.0's process
-Record version decision with record_decision(category='scope').`;
+### Meta-iteration v1.0 → v2.0 (⚠️ MUST DISPLAY offer in chat):
+After completing all Phase 7 steps, you MUST offer the user the option to start a new development cycle via AskUserQuestion:
+- Option 1: "Start v2.0 cycle" — calls start_new_cycle() to reset to Phase 0 while preserving all context
+- Option 2: "Project complete" — no further action, methodology concludes
+
+If the user chooses to start a new cycle:
+1. Call start_new_cycle() — this preserves decisions, projectSpec, history, and specs/
+2. specs/ from the previous cycle is the BASELINE — knowledge is NOT lost between cycles
+3. Phase 0 of the new cycle starts from existing specs/ (doesn't restart from zero)
+4. Previous decisions (get_decisions) serve as context — what was discarded and why
+5. Negative scope from the previous cycle can become new scope (with operator approval)
+6. Phase 7 lessons feed into the new cycle's process
+7. Call get_phase_guidance() to load Phase 0 instructions for the new cycle
+
+IMPORTANT: Do NOT use init_project() for meta-iteration — that wipes all previous context. Use start_new_cycle() which preserves the knowledge base.`;
 
 const FULL_GUIDANCE: Record<number, string> = {
   0: PHASE_0_GUIDANCE,
@@ -513,14 +545,11 @@ export function getFullGuidance(phase: number): string {
   // Global rules always applicable
   parts.push("## ACTIVE GLOBAL RULES");
   parts.push(GLOBAL_RULES.R2); // R2 always active
+  parts.push(GLOBAL_RULES.R5); // R5 always active — mandatory display
 
   if (phase < 5) {
     parts.push(GLOBAL_RULES.R1);
   }
-  if (phase === 5) {
-    parts.push(GLOBAL_RULES.R3);
-  }
-
   // R4 phase-specific timing
   const r4 = GLOBAL_RULES.R4_TIMING[phase as keyof typeof GLOBAL_RULES.R4_TIMING];
   if (r4) {
@@ -558,34 +587,35 @@ export function getCompactGuidance(phase: number): string[] {
     case 0:
       lines.push("INSTRUCTIONS P0: HSA 5-level exploration (1.Domain 2.Problem-5W1H 3.Elements 4.Processes 5.Product). AskUserQuestion per level. Mandatory teach-back. Technical+scientific research if specialized domain. Tier 1/2/3 feasibility. Score ≥90.");
       lines.push("R2: Every decision via AskUserQuestion. AP1: never ask for validation, ask for REFUTATION.");
+      lines.push("R5: MUST DISPLAY score breakdown table + teach-back synthesis + delivery target question. If you computed it, SHOW it.");
       break;
     case 1:
       lines.push("INSTRUCTIONS P1: 4 questions (Decomposition, Interfaces, Assumptions, Negative scope). 2 AskUserQuestion calls (patterns). Granularity: each module fits in 1 AI session.");
-      lines.push("R2+R4: specs/technical,models,examples. AP3: plan decoupled sessions for P5-P6.");
+      lines.push("R2+R4: specs/technical,models,examples. AP3: plan decoupled sessions for P5-P6. R5: MUST DISPLAY 4 architecture answers + pattern table + tech comparison.");
       break;
     case 2:
       lines.push("INSTRUCTIONS P2: 7 universal + conditional lenses on EACH module → 🔴🟡🟢. Activate conditional lenses from ProjectSpec. Matrix + concentration analysis (module×lenses). ASYMMETRY: multiple agents attack, unified responds in P3.");
-      lines.push("BOUNDARY: do NOT cut/add requirements. AP1: ask for refutation, not validation.");
+      lines.push("BOUNDARY: do NOT cut/add requirements. AP1: ask for refutation, not validation. R5: MUST DISPLAY full coverage matrix + concentration analysis + exit gate summary.");
       break;
     case 3:
       lines.push("INSTRUCTIONS P3: Simplify V(N)→V(N+1) with UNIFIED vision. <15%/0crit→P4, 15-25%→+1iter, >25%→multiple. Anti-scope-creep checklist.");
-      lines.push("ASYMMETRY: integrate all corrections into the whole. AP2: simplify, not complexify. AP8: don't seek perfection.");
+      lines.push("ASYMMETRY: integrate all corrections into the whole. AP2: simplify, not complexify. AP8: don't seek perfection. R5: MUST DISPLAY decision table + checklist ✅/❌.");
       break;
     case 4:
       lines.push("INSTRUCTIONS P4: Convergence gate. Exit criteria P2-P3 + safeguards S1-S5 + 4 P1 questions + specs/ complete. get_exit_criteria() + check_all_safeguards().");
-      lines.push("LLM SWITCH POINT: Inform user that from Phase 5 onward they can switch to a cheaper/faster model — architecture is validated, decisions persisted in state.json and specs/.");
+      lines.push("LLM SWITCH POINT: Inform user that from Phase 5 onward they can switch to a cheaper/faster model — architecture is validated, decisions persisted in state.json and specs/. R5: MUST DISPLAY convergence report ✅/❌ + LLM switch notification.");
       break;
     case 5:
-      lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module. S6: Tier 1(lib)→2(port)→3(new). S7: mark completed, announce X/N, start next.");
-      lines.push("R3: 1 file/response. AP7: never code without reference. STOP if trial-and-error or >2 iter.");
+      lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module. S6: Tier 1(lib)→2(port)→3(new). S7: mark completed, announce X/N, start next IMMEDIATELY.");
+      lines.push("Do NOT ask permission between files — implement autonomously. AP7: never code without reference. STOP only for blockers or >2 iter on same module.");
       break;
     case 6:
       lines.push("INSTRUCTIONS P6: Specs-based tests + S4 (execute and verify). AP5: human-AV irreplaceable for semantic adequacy.");
-      lines.push("MULTI-SESSION: record_decision(category='testing') BEFORE user leaves. On return: get_decisions(phase=6) to recover testing state. Both (automated+manual) are gates.");
+      lines.push("MULTI-SESSION: record_decision(category='testing') BEFORE user leaves. On return: get_decisions(phase=6) to recover testing state. Both (automated+manual) are gates. R5: MUST DISPLAY testing status summary.");
       break;
     case 7:
       lines.push("INSTRUCTIONS P7: Double-loop: evaluate PRODUCT and PROCESS. Update specs/. 5 steps: human first→AI→consolidate→apply→version.");
-      lines.push("Meta-iteration: specs/ from v1.0 is v2.0 baseline. NEVER modify SKILL.md without approval.");
+      lines.push("Meta-iteration: After completing P7, offer start_new_cycle() via AskUserQuestion. NEVER use init_project() for v2 — it wipes context. NEVER modify SKILL.md without approval. R5: MUST DISPLAY double-loop report + consolidation table + meta-iteration offer.");
       break;
   }
 

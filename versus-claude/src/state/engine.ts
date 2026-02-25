@@ -376,6 +376,57 @@ export class StateEngine {
     return trimmed.substring(0, 50);
   }
 
+  // --- Meta-iteration (v1.0 → v2.0) ---
+
+  startNewCycle(): Result<{ cycle: number }, string> {
+    if (!this.state) {
+      return { ok: false, error: "Project not initialized." };
+    }
+    if (this.state.currentPhase !== 7) {
+      return { ok: false, error: `Current phase is ${this.state.currentPhase}. New cycle can only start from Phase 7 (Post-Review).` };
+    }
+
+    // Check Phase 7 exit criteria
+    const p7Criteria = this.state.exitCriteria.filter((c) => c.phase === 7);
+    const unmet = p7Criteria.filter((c) => !c.met);
+    if (unmet.length > 0) {
+      return { ok: false, error: `Phase 7 exit criteria not met: ${unmet.map((c) => c.criterion).join(", ")}. Complete Post-Review before starting new cycle.` };
+    }
+
+    // Count completed cycles from history (how many times we've reached phase 7)
+    const cycleCount = this.state.history.filter((h) => h.to === 7).length + 1;
+
+    // Record cycle boundary in history
+    this.state.history.push({
+      from: 7,
+      to: 0,
+      timestamp: new Date().toISOString(),
+      criteriaMet: p7Criteria.map((c) => c.criterion),
+    });
+
+    // Preserve: decisions, projectSpec, history
+    // Reset: phase, iteration, score, exit criteria, safeguards, loop counter
+    this.state.currentPhase = 0;
+    this.state.currentIteration = 1;
+    this.state.phase0Score = null;
+    this.state.phase0Breakdown = null;
+    this.state.exitCriteria = [];
+    this.state.safeguards = [
+      { id: "S0", status: "ok" },
+      { id: "S1", status: "ok" },
+      { id: "S2", status: "ok" },
+      { id: "S3", status: "ok" },
+      { id: "S4", status: "ok" },
+      { id: "S5", status: "ok" },
+      { id: "S6", status: "ok" },
+      { id: "S7", status: "ok" },
+    ];
+    this.state.loopCounter = { pattern: "", count: 0, firstSeen: "", lastSeen: "" };
+
+    this.save();
+    return { ok: true, value: { cycle: cycleCount + 1 } };
+  }
+
   // --- Private helpers ---
 
   private getExpectedSpecsDirs(phase: number): string[] {

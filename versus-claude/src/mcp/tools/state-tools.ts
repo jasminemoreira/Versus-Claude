@@ -67,7 +67,17 @@ export function handleGetPhaseState(engine: StateEngine): string {
     content: d.content,
   }));
 
-  return JSON.stringify({
+  // Detect Phase 7 completion → hint to offer new cycle
+  let phase7Hint: string | undefined;
+  if (state.currentPhase === 7) {
+    const p7Criteria = state.exitCriteria.filter((c) => c.phase === 7);
+    const allMet = p7Criteria.length > 0 && p7Criteria.every((c) => c.met);
+    if (allMet) {
+      phase7Hint = "ACTION REQUIRED: Phase 7 exit criteria are ALL met. You MUST offer the user a new development cycle via AskUserQuestion: Option 1 'Start next cycle' (calls start_new_cycle()) / Option 2 'Project complete'. Do NOT skip this step.";
+    }
+  }
+
+  const result: Record<string, any> = {
     projectName: state.projectName,
     projectDescription: state.projectDescription,
     projectSpec: state.projectSpec ?? { stack: [], outOfScope: [], patterns: [], constraints: [] },
@@ -78,7 +88,13 @@ export function handleGetPhaseState(engine: StateEngine): string {
     recentDecisions,
     safeguards: state.safeguards.map((s) => ({ id: s.id, status: s.status })),
     updatedAt: state.updatedAt,
-  });
+  };
+
+  if (phase7Hint) {
+    result._phase7Action = phase7Hint;
+  }
+
+  return JSON.stringify(result);
 }
 
 export function handleGetDecisions(engine: StateEngine, args: { phase?: number }): string {

@@ -70,3 +70,33 @@ export function handleStartIteration(engine: StateEngine, args: { phase: number 
     return JSON.stringify({ success: false, error: result.error });
   }
 }
+
+export const startNewCycleTool: Tool = {
+  name: "start_new_cycle",
+  description:
+    "Starts a new development cycle (v1→v2) after Phase 7 completion. " +
+    "Resets phase to 0 while PRESERVING all decisions, projectSpec, and history from the previous cycle. " +
+    "specs/ directory is also preserved as baseline for the new cycle. " +
+    "Phase 7 exit criteria must all be met before calling this tool. " +
+    "Use at the end of Phase 7 when the user wants to evolve the project to the next version.",
+  inputSchema: {
+    type: "object" as const,
+    properties: {},
+    required: [],
+  },
+};
+
+export function handleStartNewCycle(engine: StateEngine): string {
+  const result = engine.startNewCycle();
+  if (result.ok) {
+    return JSON.stringify({
+      success: true,
+      message: `New cycle started (cycle ${result.value.cycle}). Phase reset to 0. Previous decisions and specs/ preserved as baseline.`,
+      cycle: result.value.cycle,
+      currentPhase: 0,
+      hint: "Phase 0 of the new cycle starts from existing specs/ — knowledge is NOT lost. Use get_decisions() to review previous cycle context. Negative scope from the previous cycle can become new scope (with operator approval).",
+    });
+  } else {
+    return JSON.stringify({ success: false, error: result.error });
+  }
+}

@@ -131,15 +131,24 @@ export function handleMarkExitCriterion(
   try {
     engine.markExitCriterion(args.phase, args.criterion, args.met, args.details);
     const criteria = engine.getExitCriteriaWithDefs(args.phase);
-    const met = criteria.filter((c) => c.met).length;
-    return JSON.stringify({
+    const metCount = criteria.filter((c) => c.met).length;
+    const allMet = metCount === criteria.length;
+
+    const result: Record<string, any> = {
       success: true,
       phase: args.phase,
       criterion: args.criterion,
       met: args.met,
-      totalMet: met,
+      totalMet: metCount,
       totalCriteria: criteria.length,
-    });
+    };
+
+    // When all Phase 7 criteria are met, hint to offer new cycle
+    if (args.phase === 7 && allMet) {
+      result._phase7Action = "ALL Phase 7 exit criteria are now met. You MUST offer the user a new development cycle via AskUserQuestion: Option 1 'Start next cycle' (calls start_new_cycle()) / Option 2 'Project complete'. Do NOT skip this step.";
+    }
+
+    return JSON.stringify(result);
   } catch (err) {
     return JSON.stringify({ success: false, error: String(err) });
   }

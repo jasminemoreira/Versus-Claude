@@ -26,7 +26,8 @@
     "code-quality"
   ],
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.85.0",
+    "node": ">=18.0.0"
   },
   "categories": [
     "Other",
@@ -74,7 +75,7 @@
     "bundle": "node scripts/bundle.mjs",
     "build": "npm run compile && npm run compile:mcp && npm run bundle",
     "lint": "eslint src",
-    "test": "node ./out/test/runTests.js"
+    "test": "node ./out/test/engine.test.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
