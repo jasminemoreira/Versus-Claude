@@ -375,7 +375,11 @@ Validate complete convergence — this gate decides if the design is ready for c
 6. Only advance to Phase 5 if EVERYTHING is OK
 7. If something failed → return to Phase 2 or 3 as needed
 
-**CAUTION AP6 (Skipping phases):** Don't advance with pending items. The cost of discovering problems in Phase 5-6 is 10× higher than solving them here.`;
+**CAUTION AP6 (Skipping phases):** Don't advance with pending items. The cost of discovering problems in Phase 5-6 is 10× higher than solving them here.
+
+### LLM Switch Point:
+Phase 4 is the natural boundary for switching LLMs to reduce cost. Phases 0-4 (design) require high reasoning capability — use the most capable model available. Phases 5-7 (implementation, tests, review) require code generation and execution — a cheaper/faster model is sufficient since the architecture is already validated and documented in specs/.
+Inform the user: "The architecture is fully validated. From Phase 5 onward, you can switch to a faster/cheaper model (e.g., Sonnet instead of Opus) — the design decisions are persisted in state.json and specs/, so no context is lost."`;
 
 // [G6] decoupled sessions + [G8] AV types
 const PHASE_5_GUIDANCE = `## Phase 5 — Code Implementation
@@ -569,6 +573,7 @@ export function getCompactGuidance(phase: number): string[] {
       break;
     case 4:
       lines.push("INSTRUCTIONS P4: Convergence gate. Exit criteria P2-P3 + safeguards S1-S5 + 4 P1 questions + specs/ complete. get_exit_criteria() + check_all_safeguards().");
+      lines.push("LLM SWITCH POINT: Inform user that from Phase 5 onward they can switch to a cheaper/faster model — architecture is validated, decisions persisted in state.json and specs/.");
       break;
     case 5:
       lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module. S6: Tier 1(lib)→2(port)→3(new). S7: mark completed, announce X/N, start next.");

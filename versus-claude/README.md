@@ -2,19 +2,28 @@
 
 **IACDM (Iterative Adversarial Convergence Development Methodology) orchestrator for Claude Code.**
 
-An original methodology created by [Jasmine Moreira](https://github.com/jasminemoreira) that transforms LLMs from reactive assistants into disciplined agents following a structured 8-phase process — from problem discovery to delivery with tests and post-review.
+An original methodology created by [Jasmine Moreira](https://github.com/jasminemoreira) that transforms LLMs from reactive code generators into disciplined agents following a structured 8-phase process — from problem discovery to delivery with tests and post-review.
+
+## Why?
+
+AI coding tools (Lovable, Cursor, Claude Code, ChatGPT) all share the same fundamental limitation: **zero internal verification capability**. They generate statistically plausible output without distinguishing correct code from incorrect code. The METR study (2025) showed experienced developers using AI tools were actually **19% slower** — despite believing they were 20% faster.
+
+**The real distinction isn't between tools — it's between process and no process.**
+
+Versus implements the AG/AV (Generative Agent / Verification Agent) model: the AI generates, external agents (automated tests + human operator) verify at discrete **gates**. Errors are caught at the earliest possible phase, not in production.
 
 ## Features
 
 - **8 sequential phases** with verifiable exit criteria — no skipping steps
 - **8 safeguards (S0-S7)** that prevent common AI agent errors (premature convergence, scope creep, reimplementation)
 - **Convergence score** (0-100) that gates advancement until the problem is truly understood
-- **15 MCP tools** for state management, decision recording, and phase transitions
+- **14 MCP tools** for state management, decision recording, and phase transitions
 - **3 Claude Code hooks** — context injection, edit blocking in early phases, loop detection
 - **Persistent decision registry** that survives context switches
 - **Gateway guard** that detects when models skip loading context
-- **Adversarial critique** with 7 universal + 8 conditional lenses
+- **Adversarial critique** with 7 universal + 8 conditional specialized lenses
 - **VS Code sidebar** showing methodology state in real time
+- **Multi-session testing protocol** for Phase 6 continuity across sessions
 
 ## How It Works
 
@@ -26,8 +35,24 @@ Phase 3: Simplification       → Address criticals, simplify (loops with Phase 
 Phase 4: Convergence Gate     → Validate all exit criteria + safeguards
 Phase 5: Implementation       → Code the final architecture
 Phase 6: Tests                → 100% passing + exploratory testing
-Phase 7: Post-Review          → Lessons learned, update specs
+Phase 7: Post-Review          → Double-loop learning: evaluate product AND process
 ```
+
+### Phase 0: Hierarchical Semantic Analysis (HSA)
+
+The most distinctive contribution. Structures problem exploration in 5 levels, each building on the previous:
+
+| Level | Focus | What is sought |
+|---|---|---|
+| 1. Domain | Universe where the problem exists | Vocabulary, theoretical/technical field, tools, state of the art |
+| 2. Problem | What needs to be solved | 5W1H: who, what, when, where, why, how solved today |
+| 3. Elements | Parts composing the problem | Components, entities, actors, constraints |
+| 4. Processes | How parts relate | Flows, transformations, dependencies, feedback cycles |
+| 5. Product | Expected outcome | Deliverables, acceptance criteria, success metrics |
+
+### Context Efficiency
+
+The methodology maximizes `E = I₀/C` (relevant information / total context consumed) through granularization: each session focuses on one module with just its interface signatures, keeping context efficiency near 1.0 instead of degrading to 0.3+ in monolithic sessions.
 
 ## Quick Start
 
@@ -58,6 +83,19 @@ Or ask Claude Code directly:
 | S5 | Scope Preservation | Scope creep during critique-simplification |
 | S6 | Do Not Reimplement | Recreating what already exists |
 | S7 | Sequence Discipline | Starting tangential discussions during implementation |
+
+## The AG/AV Model
+
+```
+F₀ → G₀ → F₁ → G₁ → ... → Fₙ → Gₙ → delivery
+      ↑              ↑                    ↑
+  AV evaluates   AV evaluates        AV evaluates
+```
+
+- **AG (Generative Agent):** The LLM. Produces artifacts without verification capability.
+- **AV-automatic:** Tests, linters, compilers — binary verdict on formalizable properties.
+- **AV-human:** The operator — evaluates semantic adequacy, usability, domain correctness.
+- **Gate (Gₖ):** Discrete point where progression requires AV approval. Rejection feeds concrete error information back to AG.
 
 ## Requirements
 

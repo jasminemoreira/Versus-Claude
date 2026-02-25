@@ -1,8 +1,8 @@
 {
   "name": "versus-claude",
   "displayName": "Versus for Claude",
-  "description": "IACDM (Iterative Adversarial Convergence Development Methodology) orchestrator for Claude Code",
-  "version": "0.2.0",
+  "description": "IACDM orchestrator for Claude Code — 8-phase structured development with adversarial critique, verification gates, and safeguards that close the AI verification gap",
+  "version": "0.3.0",
   "publisher": "jasminemoreira",
   "author": "Jasmine Moreira",
   "license": "MIT",

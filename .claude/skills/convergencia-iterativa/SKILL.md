@@ -445,6 +445,11 @@ Validate complete convergence:
 5. specs/ populated with technical and scientific references for Phase 5
 6. Only advance if EVERYTHING OK
 
+### LLM Switch Point:
+Phase 4 is the natural boundary for switching LLMs to reduce cost. Phases 0-4 (design) require high reasoning — use the most capable model. Phases 5-7 (implementation, tests, review) can use a cheaper/faster model since architecture is validated and all decisions are persisted in `state.json` and `specs/`.
+
+**Inform the user:** "The architecture is fully validated. From Phase 5 onward, you can switch to a faster/cheaper model — no context is lost."
+
 ---
 
 ## Phase 5 — Code Implementation
