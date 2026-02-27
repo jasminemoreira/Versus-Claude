@@ -76,6 +76,17 @@ function main() {
     lines.push(`⚠ Loop detector: pattern "${loop.pattern}" executed ${loop.count}x. Threshold: 3.`);
   }
 
+  // HLI alert
+  if (state.hli) {
+    lines.push(`HLI: ${state.hli.composite.toFixed(1)}/10 (${state.hli.phaseScores.length} phases evaluated)`);
+    if (state.hli.alerts.length > 0) {
+      const latest = state.hli.alerts[state.hli.alerts.length - 1];
+      if (latest.toPhase === phase - 1 || latest.toPhase === phase) {
+        lines.push(`⚠ HLI ALERT: Score dropped ${latest.drop} points (P${latest.fromPhase}: ${latest.previousScore} → P${latest.toPhase}: ${latest.currentScore}). Increase human-led decisions and exit criteria documentation.`);
+      }
+    }
+  }
+
   process.stdout.write(lines.join("\n") + "\n");
   process.exit(0);
 }

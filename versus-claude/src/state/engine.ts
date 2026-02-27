@@ -15,6 +15,7 @@ import {
   createDefaultState,
   SafeguardState,
 } from "./types";
+import { calculatePhaseHLI, calculateCompositeHLI, checkForDropAlert } from "../metrics/hli";
 import {
   validatePhaseTransition,
   checkSafeguard as ruleSafeguard,
@@ -171,6 +172,25 @@ export class StateEngine {
         .filter(([, met]) => met)
         .map(([criterion]) => criterion),
     });
+
+    // Calculate HLI for the completed phase
+    if (!this.state.hli) {
+      this.state.hli = { composite: 0, phaseScores: [], alerts: [], lastCalculated: new Date().toISOString() };
+    }
+    const phaseHLI = calculatePhaseHLI(this.state, from);
+    const existingIdx = this.state.hli.phaseScores.findIndex((ps) => ps.phase === from);
+    if (existingIdx >= 0) {
+      this.state.hli.phaseScores[existingIdx] = phaseHLI;
+    } else {
+      this.state.hli.phaseScores.push(phaseHLI);
+    }
+    this.state.hli.phaseScores.sort((a, b) => a.phase - b.phase);
+    this.state.hli.composite = calculateCompositeHLI(this.state.hli.phaseScores);
+    const hliAlert = checkForDropAlert(this.state.hli.phaseScores);
+    if (hliAlert) {
+      this.state.hli.alerts.push(hliAlert);
+    }
+    this.state.hli.lastCalculated = new Date().toISOString();
 
     this.state.currentPhase = targetPhase;
     this.state.currentIteration = 1;

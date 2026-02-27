@@ -136,6 +136,47 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
       ));
     }
 
+    // HLI (Human Lead Index)
+    if (this.state.hli && this.state.hli.phaseScores.length > 0) {
+      const hli = this.state.hli;
+      const latestAlert = hli.alerts.length > 0
+        ? hli.alerts[hli.alerts.length - 1]
+        : null;
+      const hasActiveAlert = latestAlert !== null &&
+        (latestAlert.toPhase === this.state.currentPhase - 1 || latestAlert.toPhase === this.state.currentPhase);
+
+      const hliIcon = hasActiveAlert ? "hli-alert"
+        : hli.composite >= 7.0 ? "hli-good"
+        : hli.composite >= 4.0 ? "hli-warning"
+        : "hli-poor";
+
+      const phaseChildren = hli.phaseScores.map((ps) => {
+        const pName = PHASE_NAMES[ps.phase] ?? "Unknown";
+        const scaled = Math.round(ps.score * 100) / 10;
+        const isAlerted = hli.alerts.some((a) => a.toPhase === ps.phase);
+
+        const components: StateItem[] = [
+          new StateItem(`Criteria: ${Math.round(ps.criteriaRatio * 100)}%`, "", "info"),
+          new StateItem(`Decisions: ${Math.round(ps.decisionDensity * 100)}%`, "", "info"),
+          new StateItem(`${ps.phaseSpecificLabel}: ${Math.round(ps.phaseSpecific * 100)}%`, "", "info"),
+        ];
+
+        return new StateItem(
+          `P${ps.phase} ${pName}: ${scaled.toFixed(1)}`,
+          isAlerted ? "DROP" : "",
+          isAlerted ? "warning" : "decision",
+          components
+        );
+      });
+
+      items.push(new StateItem(
+        `HLI: ${hli.composite.toFixed(1)}/10`,
+        hasActiveAlert ? "Score drop detected" : `${hli.phaseScores.length} phases evaluated`,
+        hliIcon,
+        phaseChildren
+      ));
+    }
+
     // Decisions
     const decisionsItem = new StateItem(
       `Decisions: ${this.state.decisions.length}`,
@@ -212,6 +253,10 @@ class StateItem extends vscode.TreeItem {
       case "decisions": return new vscode.ThemeIcon("checklist");
       case "decision": return new vscode.ThemeIcon("arrow-right");
       case "info": return new vscode.ThemeIcon("info");
+      case "hli-good": return new vscode.ThemeIcon("dashboard", new vscode.ThemeColor("testing.iconPassed"));
+      case "hli-warning": return new vscode.ThemeIcon("dashboard", new vscode.ThemeColor("testing.iconQueued"));
+      case "hli-poor": return new vscode.ThemeIcon("dashboard", new vscode.ThemeColor("testing.iconFailed"));
+      case "hli-alert": return new vscode.ThemeIcon("bell-dot", new vscode.ThemeColor("testing.iconFailed"));
       default: return new vscode.ThemeIcon("circle-outline");
     }
   }

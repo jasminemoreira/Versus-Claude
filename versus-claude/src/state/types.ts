@@ -16,6 +16,35 @@ export interface PhaseState {
   createdAt: string;             // ISO timestamp
   updatedAt: string;
   history: PhaseTransition[];    // transition log
+  hli?: HLIData;                 // Human Lead Index — anti-vibe-coding metric
+}
+
+// --- HLI (Human Lead Index) ---
+
+export interface PhaseHLI {
+  phase: number;
+  score: number;                 // 0.0 - 1.0 (internal), displayed as 0-10
+  criteriaRatio: number;         // 0.0 - 1.0
+  decisionDensity: number;       // 0.0 - 1.0
+  phaseSpecific: number;         // 0.0 - 1.0
+  phaseSpecificLabel: string;    // human-readable name of the phase-specific indicator
+  timestamp: string;             // ISO timestamp
+}
+
+export interface HLIAlert {
+  fromPhase: number;
+  toPhase: number;
+  drop: number;                  // magnitude of the drop (0-10 scale)
+  previousScore: number;         // 0-10 scale
+  currentScore: number;          // 0-10 scale
+  timestamp: string;
+}
+
+export interface HLIData {
+  composite: number;             // 0.0 - 10.0, the headline number
+  phaseScores: PhaseHLI[];       // one entry per completed phase
+  alerts: HLIAlert[];            // history of drop alerts
+  lastCalculated: string;        // ISO timestamp
 }
 
 /** Structured technical context — survives model switches */

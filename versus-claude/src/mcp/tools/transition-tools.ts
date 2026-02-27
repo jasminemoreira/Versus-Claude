@@ -42,11 +42,17 @@ export function handleAdvancePhase(engine: StateEngine, args: { target_phase: nu
   const result = engine.advancePhase(args.target_phase);
   if (result.ok) {
     const newState = engine.getPhaseState();
+    const hliData = newState?.hli;
     return JSON.stringify({
       success: true,
       message: `Advanced to Phase ${args.target_phase}.`,
       currentPhase: newState?.currentPhase,
       currentIteration: newState?.currentIteration,
+      hli: hliData ? {
+        composite: hliData.composite,
+        lastPhaseScore: hliData.phaseScores[hliData.phaseScores.length - 1],
+        alert: hliData.alerts.length > 0 ? hliData.alerts[hliData.alerts.length - 1] : null,
+      } : null,
     });
   } else {
     return JSON.stringify({
