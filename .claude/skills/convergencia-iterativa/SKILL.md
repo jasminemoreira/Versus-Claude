@@ -10,8 +10,6 @@ Created by Jasmine Moreira. Rigorous development methodology in 8 phases (0-7) w
 
 **R2 — Clickable menus.** Every user decision uses `AskUserQuestion`. ALWAYS provide suggested options (single or multi-select) — never send questions without options. Group up to 4 questions per call. `multiSelect: true` for non-exclusive choices. Recommended option first with "(Recommended)". "Other" is automatic. Never list options A/B/C in text.
 
-**R3 — One artifact per response.** Maximum 1 large file per response. Indicate progress "File X/N". Exception: files <30 LOC can be grouped if total <50% of limit.
-
 **R4 — `specs/` folder.** Domain knowledge and references deposited BEFORE coding. Structure:
 ```
 specs/
@@ -381,15 +379,32 @@ Trade-offs resolved by the HUMAN OPERATOR (S2: stopping criterion belongs to the
 
 **Distinction:** Adding Worker/cache/fallback = architecture (OK). Adding tutorial/button/animation = feature (prohibited).
 
-### Post-cycle 2-3 decision (via R2):
+### Post-cycle 2-3 decision (⚠️ MUST DISPLAY — the AI computes, the user confirms):
+**The user CANNOT know the structural change % — only the AI can compute it.** Do NOT ask the user to choose a percentage range. Instead:
 
+**Step 1 — Compute (AI does this):**
+- Compare V(N) architecture with V(N+1): count modules added, removed, or significantly restructured
+- Structural change % = (modules changed / total modules) × 100
+- Count remaining 🔴 criticals from Phase 2 matrix that were NOT resolved
+
+**Step 2 — Present (⚠️ MUST DISPLAY in chat):**
+Show computed values AND reference table:
+```
+Structural change: X% (Y of Z modules changed)
+Remaining criticals: N
+```
 | Structural change | Critical | Action |
 |---|---|---|
 | <15% | 0 | → Phase 4 |
 | 15-25% | 0-1 | 1 more iteration |
 | >25% | 2+ | Multiple iterations |
 
-### Anti-Scope-Creep Checklist (mandatory before advancing):
+**Recommended action: [action based on computed values]**
+
+**Step 3 — Confirm (via AskUserQuestion):**
+Present recommendation and ask: accept / override. The user validates the RECOMMENDATION, not the raw data.
+
+### Anti-Scope-Creep Checklist (mandatory before advancing — ⚠️ MUST DISPLAY ✅/❌):
 - ALL Phase 0 requirements covered
 - No unsolicited features added
 - What the system DOES hasn't changed (only HOW)
@@ -464,7 +479,7 @@ Phase 4 is the natural boundary for switching LLMs to reduce cost. Phases 0-4 (d
 
 ## Phase 5 — Code Implementation
 
-**Purpose:** Implement final architecture. One file per response (R3).
+**Purpose:** Implement final architecture.
 **Verification:** Auto-AV (compile, lint, type check). Dedicated session per module.
 
 ### Decoupled session:
@@ -474,21 +489,49 @@ Before each module, consult specs/technical (algorithm, formulas, params), specs
 
 Apply S6 (Tier 1/2/3) and S7 (sequence discipline) rigorously.
 
+### S7 — Sequence Discipline:
+After each file: mark completed, identify next, announce "X/N completed, next: Y", start immediately.
+Do NOT ask permission between files — implement sequentially and autonomously. Only stop for actual decisions (ambiguity, blocker, Tier choice).
+
 ---
 
 ## Phase 6 — Tests
 
-**Purpose:** 100% tests passing + manual test.
+**Purpose:** 100% tests passing + manual test + spec coverage verified.
 **Verification:** Auto-AV (tests) + Human-AV (manual exploratory testing).
-
-### Tests based on specs/:
-- specs/datasets → test against ground truth (if empty, generate synthetic data and deposit)
-- specs/validation → each criterion ≥ 1 test
-- specs/technical → outputs within documented ranges
 
 **S4 — Explicit Verification.** NEVER assume tests passed. Execute and verify. Human-AV is irreplaceable for semantic adequacy and UX.
 
-### Manual Exploratory Testing (mandatory before Phase 7):
+### Step 1 — Spec-Driven Test Protocol (MANDATORY before writing any test):
+Test against SPECS, not implementation. The code is suspect — specs are the source of truth.
+
+**1.1. Recover scope:**
+- `get_decisions(phase=0)` → list ALL use cases
+- Read `specs/validation` → list ALL validation criteria
+- Read `specs/technical` → list ALL technical constraints
+
+**1.2. Build the Test Map** (must display):
+For each spec item, declare which test verifies it, HOW it verifies, and type (positive/negative).
+- Every Phase 0 use case → ≥1 positive + ≥1 negative test
+- Every `specs/validation` criterion → ≥1 test verifying the EXACT criterion
+- Every `specs/technical` constraint → ≥1 test within documented ranges
+- Minimum ratio: 1 negative test for every 2 positive tests
+
+**1.3. Distinguish "test green" vs "spec met":**
+A test only validates a spec if it verifies the EXACT criterion. False coverage examples:
+- Spec "< 200ms" → test checks "returns results" (no timing) → NOT verified
+- Spec "100 concurrent users" → test checks single user → NOT verified
+
+### Step 2 — Write and Execute Tests:
+- `specs/datasets` → test against ground truth (if empty, generate synthetic data)
+- Execute ALL tests, verify output. Fix failures before proceeding.
+- Run actual application and verify end-to-end behavior.
+
+### Step 3 — Record Spec Coverage (MANDATORY):
+`record_decision(phase=6, category='spec-coverage', content='SPEC COVERAGE REPORT: ...')`
+Structure: COVERED (spec + test + result) / NOT COVERED (+ justification) / NEGATIVE TESTS (count + ratio) / GAPS (test exists but doesn't verify exact criterion).
+
+### Step 4 — Manual Exploratory Testing (mandatory before Phase 7):
 1. Start application
 2. Execute each Phase 0 use case as end user
 3. Test edge cases: rapid/double clicks, empty inputs, interruptions, timeouts

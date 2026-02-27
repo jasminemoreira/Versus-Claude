@@ -17,10 +17,10 @@ Per phase:
 - P0: Score breakdown table (all 10 criteria + weights + total). Teach-back synthesis (full 5-level template). Delivery Target question.
 - P1: 4 architecture answers. Pattern summary table. Progressive Scope decision (if applicable). Technology comparison table (if >1 option).
 - P2: Coverage matrix (modules × lenses with 🔴🟡🟢). Concentration analysis (by module + by lens). Activated conditional lenses list. Exit gate summary.
-- P3: Post-cycle decision table (<15%/15-25%/>25%). Anti-scope-creep checklist verification. LOC justification (if >10% increase).
+- P3: Post-cycle decision (AI computes structural change % and criticals, presents recommendation, user confirms). Anti-scope-creep checklist verification. LOC justification (if >10% increase).
 - P4: Convergence verification report (exit criteria + safeguards + specs status). LLM Switch Point notification.
 - P5: Progress announcements ("X/N completed, next: Y") after each file.
-- P6: Testing status record (TESTING STATUS / PASS / FAIL / NEXT). Manual testing report.
+- P6: Test Map (spec→test→type). Spec Coverage Report (COVERED/NOT COVERED/GAPS). Testing status record (TESTING STATUS / PASS / FAIL / NEXT). Manual testing report.
 - P7: Double-loop learning report. Consolidation table (source | phase | proposal | justification). Meta-iteration offer.
 Rule: If you computed it, SHOW it. The user cannot validate what they cannot see.`,
   R4_TIMING: {
@@ -370,12 +370,31 @@ Trade-offs resolved by the HUMAN OPERATOR (S2: stopping criterion is the user's)
 
 ### If LOC increased >10%: MANDATORY justification documented with record_decision().
 
-### Post-cycle 2-3 decision (via AskUserQuestion) (⚠️ MUST DISPLAY table in chat — show measured %, count, action):
+### Post-cycle 2-3 decision (⚠️ MUST DISPLAY — the AI computes, the user confirms):
+**The user CANNOT know the structural change % — only the AI can compute it.** Do NOT ask the user to choose a percentage range. Instead:
+
+**Step 1 — Compute (AI does this):**
+- Compare V(N) architecture with V(N+1): count modules added, removed, or significantly restructured
+- Structural change % = (modules changed / total modules) × 100
+- Count remaining 🔴 criticals from the Phase 2 matrix that were NOT resolved
+
+**Step 2 — Present (⚠️ MUST DISPLAY in chat):**
+Show the computed values AND the reference table:
+\`\`\`
+Structural change: X% (Y of Z modules changed)
+Remaining criticals: N
+\`\`\`
 | Structural change | Critical | Action |
 |---|---|---|
 | <15% | 0 | → Phase 4 |
 | 15-25% | 0-1 | 1 more iteration |
 | >25% | 2+ | Multiple iterations |
+
+**Recommended action: [action based on computed values]**
+
+**Step 3 — Confirm (via AskUserQuestion):**
+Present the recommendation and ask: accept recommendation / override (user chooses different action).
+The user validates the RECOMMENDATION, not the raw data.
 
 **CAUTION AP8 (Perfectionism):** The stopping criterion is honesty — we know what works, what we assume, and what we don't know.
 
@@ -439,15 +458,53 @@ If creating heuristics for problems with known solutions, debugging complex logi
 const PHASE_6_GUIDANCE = `## Phase 6 — Tests
 ### Verification: Automated-AV (unit tests, integration) + Human-AV (manual exploratory testing)
 
-### Specs-based tests:
-- specs/datasets → test against ground truth (if empty, generate synthetic data and deposit)
-- specs/validation → each criterion ≥ 1 test
-- specs/technical → outputs within documented ranges
-
 ### S4 — Explicit Verification: NEVER assume tests passed. Always execute and verify output.
 **CAUTION AP5 (Absence of human-AV):** Automated tests verify formalizable properties. Semantic adequacy, usability, and domain correctness REQUIRE human judgment.
 
-### Manual Exploratory Testing (MANDATORY before Phase 7):
+### Step 1 — Spec-Driven Test Protocol (MANDATORY before writing any test):
+Test against SPECS, not against implementation. The code you wrote is suspect — the specs are the source of truth.
+
+**1.1. Recover scope:**
+- Call get_decisions(phase=0) → list ALL use cases
+- Read specs/validation → list ALL validation criteria
+- Read specs/technical → list ALL technical constraints
+
+**1.2. Build the Test Map (⚠️ MUST DISPLAY):**
+For EACH spec item, declare:
+| Spec | Test | Verifies | Type |
+|------|------|----------|------|
+| UC-1: User login | test_login_valid_credentials | Correct redirect + session created | Positive |
+| UC-1: User login | test_login_invalid_password | Error message shown, no session | Negative |
+| VAL-3: Response < 200ms | test_search_response_time | Measures actual response time against 200ms threshold | Positive |
+
+Rules:
+- Every use case from Phase 0 → at least 1 positive + 1 negative test
+- Every criterion from specs/validation → at least 1 test that verifies the EXACT criterion (not a proxy)
+- Every constraint from specs/technical → at least 1 test within documented ranges
+- Minimum ratio: 1 negative test for every 2 positive tests
+
+**1.3. Distinguish "test green" from "spec met":**
+A passing test only validates a spec if it verifies the EXACT criterion. Examples of FALSE coverage:
+- Spec says "< 200ms" → test checks "returns results" (no timing) → spec NOT verified
+- Spec says "supports 100 concurrent users" → test checks single user → spec NOT verified
+- Spec says "error message is user-friendly" → test checks error is thrown → spec NOT verified
+
+### Step 2 — Write and Execute Tests:
+- specs/datasets → test against ground truth (if empty, generate synthetic data and deposit in specs/datasets)
+- Execute ALL tests. Read output carefully. Fix failures before proceeding.
+- After all automated tests pass, run the actual application/artifact and verify behavior end-to-end.
+
+### Step 3 — Record Spec Coverage (MANDATORY):
+Record the coverage checklist as a persistent, traceable decision:
+record_decision(phase=6, category='spec-coverage', content='SPEC COVERAGE REPORT: ...')
+
+The content MUST follow this structure:
+- COVERED: [list of spec items with their test names and result]
+- NOT COVERED: [list of spec items not testable automatically + justification]
+- NEGATIVE TESTS: [count positive / count negative / ratio]
+- GAPS: [any spec where test exists but does NOT verify the exact criterion]
+
+### Step 4 — Manual Exploratory Testing (MANDATORY before Phase 7):
 1. Start the application
 2. Execute each Phase 0 use case as an end user
 3. Test edge cases: rapid/double clicks, empty inputs, interruptions, timeouts
@@ -598,8 +655,8 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("BOUNDARY: do NOT cut/add requirements. AP1: ask for refutation, not validation. R5: MUST DISPLAY full coverage matrix + concentration analysis + exit gate summary.");
       break;
     case 3:
-      lines.push("INSTRUCTIONS P3: Simplify V(N)→V(N+1) with UNIFIED vision. <15%/0crit→P4, 15-25%→+1iter, >25%→multiple. Anti-scope-creep checklist.");
-      lines.push("ASYMMETRY: integrate all corrections into the whole. AP2: simplify, not complexify. AP8: don't seek perfection. R5: MUST DISPLAY decision table + checklist ✅/❌.");
+      lines.push("INSTRUCTIONS P3: Simplify V(N)→V(N+1) with UNIFIED vision. AI COMPUTES structural change % and critical count, then presents recommendation. User confirms or overrides. Anti-scope-creep checklist.");
+      lines.push("ASYMMETRY: integrate all corrections into the whole. AP2: simplify, not complexify. AP8: don't seek perfection. R5: MUST DISPLAY computed % + criticals + recommendation + checklist ✅/❌. Do NOT ask user to choose percentage range.");
       break;
     case 4:
       lines.push("INSTRUCTIONS P4: Convergence gate. Exit criteria P2-P3 + safeguards S1-S5 + 4 P1 questions + specs/ complete. get_exit_criteria() + check_all_safeguards().");
@@ -610,8 +667,8 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("Do NOT ask permission between files — implement autonomously. AP7: never code without reference. STOP only for blockers or >2 iter on same module.");
       break;
     case 6:
-      lines.push("INSTRUCTIONS P6: Specs-based tests + S4 (execute and verify). AP5: human-AV irreplaceable for semantic adequacy.");
-      lines.push("MULTI-SESSION: record_decision(category='testing') BEFORE user leaves. On return: get_decisions(phase=6) to recover testing state. Both (automated+manual) are gates. R5: MUST DISPLAY testing status summary.");
+      lines.push("INSTRUCTIONS P6: SPEC-DRIVEN testing — test against SPECS, not implementation. Step 1: recover scope (get_decisions(phase=0) + specs/validation + specs/technical). Step 2: build Test Map (⚠️ MUST DISPLAY) mapping every spec→test with Type(positive/negative). Every use case: ≥1 positive + ≥1 negative. Ratio: 1 negative per 2 positives minimum.");
+      lines.push("DISTINGUISH 'test green' vs 'spec met': test must verify EXACT criterion (not proxy). Step 3: record_decision(category='spec-coverage') with COVERED/NOT COVERED/NEGATIVE TESTS/GAPS. Step 4: Manual exploratory testing (MANDATORY). MULTI-SESSION: record_decision(category='testing') BEFORE user leaves. On return: get_decisions(phase=6). Both gates mandatory. R5: MUST DISPLAY testing status + spec coverage.");
       break;
     case 7:
       lines.push("INSTRUCTIONS P7: Double-loop: evaluate PRODUCT and PROCESS. Update specs/. 5 steps: human first→AI→consolidate→apply→version.");

@@ -2,18 +2,18 @@
   "name": "versus-claude",
   "displayName": "Versus for Claude",
   "description": "IACDM orchestrator for Claude Code — 8-phase structured development with adversarial critique, verification gates, and safeguards that close the AI verification gap",
-  "version": "0.3.1",
-  "publisher": "jasminemoreira",
+  "version": "0.3.2",
+  "publisher": "JasmineMoreira",
   "author": "Jasmine Moreira",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jasminemoreira/Versus-Claude"
+    "url": "https://github.com/jasminemoreira/Versus"
   },
   "bugs": {
-    "url": "https://github.com/jasminemoreira/Versus-Claude/issues"
+    "url": "https://github.com/jasminemoreira/Versus/issues"
   },
-  "homepage": "https://github.com/jasminemoreira/Versus-Claude#readme",
+  "homepage": "https://github.com/jasminemoreira/Versus#readme",
   "keywords": [
     "ai",
     "agent",

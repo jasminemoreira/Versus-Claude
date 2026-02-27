@@ -98,6 +98,49 @@ F₀ → G₀ → F₁ → G₁ → ... → Fₙ → Gₙ → delivery
 - **AV-human:** The operator — evaluates semantic adequacy, usability, domain correctness.
 - **Gate (Gₖ):** Discrete point where progression requires AV approval. Rejection feeds concrete error information back to AG.
 
+## LLM Compatibility
+
+The IACDM methodology demands strict instruction following, reliable MCP tool calling, and sustained reasoning across long contexts. Not all models meet these requirements equally.
+
+### Selection Criteria
+
+| Criterion | Why it matters |
+|---|---|
+| Instruction following | Each phase has detailed behavioral rules (~2-4k tokens). Models that summarize or skip steps break the methodology |
+| MCP tool reliability | The methodology relies on 15 tools being called consistently. Models that "narrate" tool calls instead of executing them are incompatible |
+| Context window | Phases 0-2 accumulate significant context. Minimum 32k tokens, recommended 128k+ |
+| Reasoning depth | Phases 0-4 (design) require architectural analysis, not code generation. Shallow reasoning produces shallow designs |
+
+### Model Tier Classification
+
+| Tier | Model | Phases 0-4 (Design) | Phases 5-7 (Code) | Notes |
+|---|---|---|---|---|
+| S | Claude Opus | Excellent | Excellent | Best instruction following. Highest cost |
+| A | Claude Sonnet | Very good | Very good | Best cost/quality balance. Occasionally simplifies Phase 2 critique |
+| C | Claude Haiku | Not recommended | Acceptable | Skips safeguards, simplifies critique, ignores R5. Only for Phases 5-7 with validated architecture |
+
+### Recommended Strategy (LLM Switch Point)
+
+The methodology includes a natural **LLM Switch Point at Phase 4**. The architecture is fully validated and persisted in `state.json` + `specs/`, so no context is lost when switching models.
+
+| Strategy | Phases 0-4 | Phases 5-7 | Best for |
+|---|---|---|---|
+| Maximum quality | Opus | Opus | Critical/high-complexity projects |
+| Optimal cost/quality | Opus | Sonnet | Most projects — leverages the LLM Switch Point |
+| Budget | Sonnet | Sonnet | Medium-complexity projects |
+
+> **Rule of thumb:** The cost of architectural error (detected in Phase 5-6) is 10-100x the cost of using a more capable model in Phases 0-4. Invest in reasoning where reasoning matters.
+
+### Built-in Protections for Weaker Models
+
+| Mechanism | Protects against |
+|---|---|
+| Gateway Guard | Model forgetting to load context (>30min without `get_phase_state`) |
+| Phase Gate hook | Code editing in Phases 0-4 (blocked regardless of model) |
+| Loop Detector | Repetitive patterns (>3x same action) — safeguard S7 |
+| Compact Guidance | Summarized instructions injected into every prompt via hook |
+| Phase 7 Engine Hint | Forces meta-iteration offer even if model didn't read guidance |
+
 ## Requirements
 
 | Requirement | Minimum | Why |
