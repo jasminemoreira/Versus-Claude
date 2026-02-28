@@ -27,7 +27,17 @@
 - HLI (Human Lead Index) — anti-vibe-coding metric (0-10) calculated at each phase transition measuring human leadership via criteria ratio (30%), decision density (30%), and phase-specific indicator (40%)
 - HLI sidebar display with per-phase breakdown, drop alerts (>2 points), context hook injection, and MCP tool response integration
 
+## [0.3.4] - 2026-02-27
+
+### Changed
+- Version bump and rebuild to sync with Copilot extension versioning
+
 ## [0.3.3] - 2026-02-27
+
+### Changed
+- Stability release — version bump only (no code changes)
+
+## [0.3.2] - 2026-02-27
 
 ### Added
 - Phase 6: Spec-Driven Test Protocol — tests against specs not implementation, Test Map with mandatory display, negative tests (1:2 ratio), false coverage detection, spec coverage report as traceable decision
