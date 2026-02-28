@@ -466,7 +466,7 @@ Each phase has explicit DO/DON'T boundaries injected into the AI's context via c
 |-------|-----|-------|
 | P0 | Ask questions, explore, populate specs/ | Write code (even via terminal), jump to solutions |
 | P1 | Define modules, interfaces, patterns | Write implementation code, create source files |
-| P2 | Apply all lenses, challenge every module | Cut/add requirements, skip lenses |
+| P2 | Record activated/non-activated lenses first, apply every lens to every module | Cut/add requirements, skip any lens (even when no findings expected) |
 | P3 | Simplify, address criticals, compute change % | Add features, increase complexity |
 | P4 | Verify exit criteria, safeguards, specs/ | Skip verification, advance without confirming |
 | P5 | Implement sequentially, consult specs/ | Run the application or tests — that is Phase 6 |

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.8] - 2026-02-28
+
+### Changed
+- Phase 2 exit criteria: added `activated_lenses_recorded` (required) — AI must call `record_decision(category='architecture')` declaring which conditional lenses were activated and why each non-activated lens was skipped, **before** starting the critique
+- Strengthened `lenses_applied` description: "no lens skipped — absence of findings is a valid result"
+- Strengthened `coverage_matrix` description: "all applied lenses as columns"
+- P2 compact guidance now has explicit Step 1 (record activation) before Step 2 (apply lenses)
+- SKILL.md Phase Guardrails P2: updated DO to "Record activated/non-activated lenses first"
+
 ## [0.3.7] - 2026-02-27
 
 ### Removed

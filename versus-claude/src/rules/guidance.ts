@@ -653,9 +653,9 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("DO: Define modules, interfaces, patterns via AskUserQuestion. | DON'T: Write implementation code, create source files, start coding.");
       break;
     case 2:
-      lines.push("INSTRUCTIONS P2: 7 universal + conditional lenses on EACH module → 🔴🟡🟢. Activate conditional lenses from ProjectSpec. Matrix + concentration analysis (module×lenses). ASYMMETRY: multiple agents attack, unified responds in P3.");
+      lines.push("INSTRUCTIONS P2: STEP 1 — Record activated lenses FIRST: call record_decision(category='architecture', content='ACTIVATED LENSES: [list]. NOT ACTIVATED: [lens — reason]') before starting critique. STEP 2 — Apply all 7 universal + all activated conditional lenses on EACH module → 🔴🟡🟢. Absence of findings is a valid result — do NOT skip a lens. Matrix + concentration analysis (module×lenses). ASYMMETRY: multiple agents attack, unified responds in P3.");
       lines.push("BOUNDARY: do NOT cut/add requirements. AP1: ask for refutation, not validation. R5: MUST DISPLAY full coverage matrix + concentration analysis + exit gate summary.");
-      lines.push("DO: Apply all lenses systematically, challenge every module. | DON'T: Cut or add requirements, skip lenses, accept without refutation.");
+      lines.push("DO: Record activated/non-activated lenses first, apply every lens to every module. | DON'T: Cut or add requirements, skip any lens (even when no findings expected), accept without refutation.");
       break;
     case 3:
       lines.push("INSTRUCTIONS P3: Simplify V(N)→V(N+1) with UNIFIED vision. AI COMPUTES structural change % and critical count, then presents recommendation. User confirms or overrides. Anti-scope-creep checklist.");
