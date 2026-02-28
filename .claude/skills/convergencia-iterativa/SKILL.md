@@ -309,7 +309,7 @@ When maturity/risk is uneven across requirements: present maturity map (req | ma
 ## Phase 2 — Adversarial Critique
 
 **Purpose:** Attack architecture with specialized lenses, generating auditable coverage matrix.
-**Verification:** Human-AV + AG (7 lenses as operationally distinct AVs).
+**Verification:** Human-AV + AG (7 universal + up to 12 conditional lenses as operationally distinct AVs).
 
 ### Critical-response asymmetry principle:
 **Phase 2 = MULTIPLE agents to ATTACK** (lens diversity is value).
@@ -327,6 +327,32 @@ When maturity/risk is uneven across requirements: present maturity map (req | ma
 | Security | How would an attacker exploit with minimum effort? | Unanalyzed attack surface |
 | Performance | Where are the bottlenecks? Asymptotic behavior? | Hidden bottlenecks, degradation at scale |
 | Regulatory | Does each regulatory requirement have traceability to a module? | Regulatory non-compliance |
+
+Selection principle: if removing this lens, is there a failure class that NO other detects? If yes → legitimate.
+
+### Conditional Lenses (activate based on project context — 12 available):
+
+**Situational lenses (8):**
+
+| Lens | Activate when... | Exclusive failure class |
+|------|-----------------|------------------------|
+| Resilience | External dependencies (APIs, DBs, queues) | Cascading failures, retry storms |
+| UI/UX | User-facing interface | Confusing flows, dead-end states, accessibility failures |
+| Migration / Coexistence | Replacing or modifying existing production system | Data loss, regression vs. legacy, impossible rollback |
+| Sustainability / Proportionality | Significant computational costs (AI/ML, data, cloud) | GPU where CPU suffices, infinite retention |
+| Ethical / Human Impact | Automated decisions about people (scoring, moderation) | Algorithmic bias, no human recourse |
+| Process / Workflow | Multi-actor flows, state machines, business processes | Orphaned states, missing actors, happy-path bias |
+| Governance / Accountability | Multiple teams, data domains, compliance (SOC2, LGPD) | No data ownership, shadow data flows |
+| Observability / Operability | Production systems with operational requirements | Opaque systems — nobody can diagnose failures |
+
+**Domain Transfer Lenses (4) — activated by signal detection in problem/architecture:**
+
+| Lens | Central Question | Exclusive Failure Class | Signal |
+|------|-----------------|------------------------|--------|
+| Control Engineering | Where does the system generate an error signal and correct it? Risk of oscillation or state drift? | Systems that react to events but don't regulate state — oscillation, drift, runaway feedback | State synchronization, runtime configuration affecting behavior, self-correcting or feedback-driven systems |
+| Game Theory | Do system actors have aligned incentives? Where does the design assume cooperation and may encounter strategic defection? | Architectures that work under cooperation assumptions but collapse under adversarial or strategic behavior | Multiple independent actors, public API, external integrations, marketplace or platform design |
+| Linguistics / Grammar | Is the interface contract unambiguous? Can two correct implementations of the same contract produce incompatible behaviors? | Protocol ambiguity — two correct implementations that are mutually incompatible | Inter-component communication, protocol definitions, message formats, interface contracts between independent teams |
+| Mechanical Engineering | Where are the tolerances? Does the system tolerate variation or only work at exact specification? | Rigid coupling disguised as tolerance — failure from small deviations in dependency versions, environment, or load | Module maintenance, system evolution, long-lived systems with technical debt accumulation |
 
 Selection principle: if removing this lens, is there a failure class that NO other detects? If yes → legitimate.
 

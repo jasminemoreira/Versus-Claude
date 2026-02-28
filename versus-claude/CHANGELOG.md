@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.9] - 2026-02-28
+
+### Added
+- 4 Domain Transfer Lenses integrated into Phase 2 as additional conditional lenses (same activation mechanism, unified coverage matrix):
+  - **Control Engineering** — detects systems that react to events but don't regulate state (oscillation, drift, runaway feedback). Signal: state synchronization, runtime configuration, feedback-driven systems.
+  - **Game Theory** — detects architectures that assume cooperation but collapse under adversarial/strategic behavior. Signal: multiple independent actors, public API, marketplace or platform design.
+  - **Linguistics / Grammar** — detects protocol ambiguity where two correct implementations produce incompatible behaviors. Signal: inter-component communication, protocol definitions, interface contracts between independent teams.
+  - **Mechanical Engineering** — detects rigid coupling disguised as tolerance; failure from small deviations in dependencies, environment, or load. Signal: module maintenance, system evolution, long-lived systems with technical debt.
+- Phase 2 conditional lens count updated from 8 to 12 in guidance header and SKILL.md
+- `activated_lenses_recorded` exit criterion description updated to explicitly name all 4 DTLs
+
 ## [0.3.8] - 2026-02-28
 
 ### Changed
