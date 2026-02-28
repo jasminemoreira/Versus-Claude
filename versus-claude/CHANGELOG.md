@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.7] - 2026-02-27
+
+### Removed
+- HLI (Human Lead Index) metric — removed entirely. The metric measured AI bookkeeping (decision recording, safeguard checks) rather than actual human engagement. The methodology's structural mechanisms (phase gates, exit criteria, safeguards, DO/DON'T guardrails) already prevent vibe-coding by design, making a numeric overlay redundant and misleading.
+  - Removed: `PhaseHLI`, `HLIAlert`, `HLIData` types, `metrics/hli.ts`, HLI calculation in `advancePhase()`, sidebar HLI section, context hook HLI injection, MCP tool HLI responses, SKILL.md HLI documentation
+
+## [0.3.6] - 2026-02-27
+
+### Added
+- Exit criteria progress in sidebar — shows "[3/8] Exit Criteria" with per-criterion status (met/required/optional), expanded by default
+- Phase DO/DON'T guardrails in compact guidance — each phase has explicit boundaries injected into AI context (e.g., P5: "DON'T: Run the application or tests — that is Phase 6")
+- Phase hint in sidebar — userHint child item under phase (e.g., "Implement code. Testing happens in Phase 6.") with tooltip
+- VS Code notification on phase transition — `showInformationMessage()` with phase name and hint
+- HLI explanation tooltip — hover explains the metric, scoring, and how to improve
+- Phase Guardrails section in SKILL.md documenting DO/DON'T per phase
+
+### Changed
+- All exit criterion IDs translated from Portuguese to English (e.g., `usuario_confirmou` → `user_confirmed`, `viabilidade_tech` → `tech_feasibility`)
+- Auto-migration of old Portuguese IDs on state load — existing projects seamlessly upgraded
+- Sidebar now imports phase definitions from `phases.ts` instead of hardcoded `PHASE_NAMES` map
+
 ## [0.3.5] - 2026-02-27
 
 ### Added

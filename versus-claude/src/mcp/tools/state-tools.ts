@@ -94,14 +94,6 @@ export function handleGetPhaseState(engine: StateEngine): string {
     result._phase7Action = phase7Hint;
   }
 
-  if (state.hli) {
-    result.hli = {
-      composite: state.hli.composite,
-      phasesEvaluated: state.hli.phaseScores.length,
-      hasAlert: state.hli.alerts.length > 0,
-    };
-  }
-
   return JSON.stringify(result);
 }
 

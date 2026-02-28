@@ -77,7 +77,7 @@ export const markExitCriterionTool: Tool = {
       },
       criterion: {
         type: "string",
-        description: "Criterion ID (e.g., 'score_90', 'usuario_confirmou').",
+        description: "Criterion ID (e.g., 'score_90', 'user_confirmed', 'tech_feasibility').",
       },
       met: {
         type: "boolean",

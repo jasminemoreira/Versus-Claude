@@ -155,28 +155,6 @@ Three key properties:
 | TDD (Beck, 2003) | Tests drive design | Adversarial critique functions as "design test" before code |
 | ADR (Nygard, 2011) | Decision documentation with context | Documented assumptions and limitations serve equivalent role |
 
-## HLI (Human Lead Index)
-
-An anti-vibe-coding metric that measures how much the human is actually leading the AI-assisted development process. Calculated automatically at each phase transition.
-
-**Formula:** `HLI(phase) = 0.3 × criteriaRatio + 0.3 × decisionDensity + 0.4 × phaseSpecific`
-
-| Phase | Phase-Specific Indicator | Measures |
-|-------|--------------------------|----------|
-| 0 | Phase 0 Score | Problem understanding depth |
-| 1 | Category Diversity | Breadth of architectural decisions |
-| 2-3 | Iteration Depth | Adversarial critique engagement |
-| 4 | Safeguard Health | Process integrity at convergence |
-| 5 | Loop Efficiency | Implementation without excessive retries |
-| 6 | Spec Coverage | Tests mapped to specs (not implementation) |
-| 7 | Lessons Quality | Post-review completeness |
-
-- **Composite score (0-10)** displayed in the VS Code sidebar with per-phase breakdown
-- **Drop alerts** triggered when score falls > 2 points between consecutive phases
-- **Injected into context** so the LLM is aware of process quality in real time
-
-> The market measures AI coding **productivity** (lines/hour, PRs/day). HLI measures **rigor** — whether the human is leading or just accepting output.
-
 ## LLM Compatibility
 
 The IACDM methodology demands strict instruction following, reliable MCP tool calling, and sustained reasoning across long contexts. Not all models meet these requirements equally.

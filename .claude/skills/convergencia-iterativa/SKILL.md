@@ -458,28 +458,22 @@ Checklist per module: mature lib? → if not, why? → documented algorithm? →
 
 ---
 
-## HLI (Human Lead Index)
+## Phase Guardrails (DO/DON'T)
 
-Anti-vibe-coding metric (0-10) calculated automatically at each `advance_phase()`. Measures how much the human is leading the process.
+Each phase has explicit DO/DON'T boundaries injected into the AI's context via compact guidance. These prevent common flow deviations and are visible in the sidebar as phase hints.
 
-**Formula:** `HLI(phase) = 0.3 × criteriaRatio + 0.3 × decisionDensity + 0.4 × phaseSpecific`
+| Phase | DO | DON'T |
+|-------|-----|-------|
+| P0 | Ask questions, explore, populate specs/ | Write code (even via terminal), jump to solutions |
+| P1 | Define modules, interfaces, patterns | Write implementation code, create source files |
+| P2 | Apply all lenses, challenge every module | Cut/add requirements, skip lenses |
+| P3 | Simplify, address criticals, compute change % | Add features, increase complexity |
+| P4 | Verify exit criteria, safeguards, specs/ | Skip verification, advance without confirming |
+| P5 | Implement sequentially, consult specs/ | Run the application or tests — that is Phase 6 |
+| P6 | Write spec-driven tests, manual testing | Skip manual testing, mark criteria without testing |
+| P7 | Collect human feedback, update specs/ | Use init_project() instead of start_new_cycle() |
 
-| Phase | Phase-Specific Indicator | Full score when |
-|-------|--------------------------|----------------|
-| 0 | Phase 0 Score | phase0Score = 100 |
-| 1 | Category Diversity | 4 decision categories used |
-| 2-3 | Iteration Depth | ≥2 critique/simplification cycles |
-| 4 | Safeguard Health | all safeguards OK |
-| 5 | Loop Efficiency | 0 loop counter repetitions |
-| 6 | Spec Coverage | spec-coverage decision recorded |
-| 7 | Lessons Quality | all exit criteria met |
-
-**Expected minimum decisions:** P0: 5, P1: 4, P2: 3, P3: 2, P4: 1, P5: 3, P6: 2, P7: 2
-
-- Displayed in sidebar with per-phase breakdown (green ≥7, yellow ≥4, red <4)
-- Drop alert (bell icon) when score falls > 2 points between consecutive phases
-- Included in `advance_phase` response and `get_phase_state` response
-- Injected into context hook so the LLM is aware of process quality
+When a DON'T action is requested, the AI should inform the user which phase handles that activity and offer to advance if appropriate.
 
 ---
 

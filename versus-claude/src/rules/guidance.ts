@@ -530,7 +530,7 @@ The content MUST use this structure:
 1. Call get_decisions(phase=6) to recover ALL Phase 6 testing decisions
 2. Read the most recent testing-category decisions to reconstruct context
 3. Record the user's feedback as a new testing decision
-4. Update exit criteria based on feedback (mark_exit_criterion for teste_manual, edge_cases)
+4. Update exit criteria based on feedback (mark_exit_criterion for manual_testing, edge_cases)
 5. If issues found: fix them, then record updated status
 
 **WHEN fixing issues from manual testing:**
@@ -645,34 +645,42 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("INSTRUCTIONS P0: HSA 5-level exploration (1.Domain 2.Problem-5W1H 3.Elements 4.Processes 5.Product). AskUserQuestion per level. Mandatory teach-back. Technical+scientific research if specialized domain. Tier 1/2/3 feasibility. Score ≥90.");
       lines.push("R2: Every decision via AskUserQuestion. AP1: never ask for validation, ask for REFUTATION.");
       lines.push("R5: MUST DISPLAY score breakdown table + teach-back synthesis + delivery target question. If you computed it, SHOW it.");
+      lines.push("DO: Ask questions, explore the problem, populate specs/. | DON'T: Write source code (even via terminal), jump to solutions, skip HSA levels.");
       break;
     case 1:
       lines.push("INSTRUCTIONS P1: 4 questions (Decomposition, Interfaces, Assumptions, Negative scope). 2 AskUserQuestion calls (patterns). Granularity: each module fits in 1 AI session.");
       lines.push("R2+R4: specs/technical,models,examples. AP3: plan decoupled sessions for P5-P6. R5: MUST DISPLAY 4 architecture answers + pattern table + tech comparison.");
+      lines.push("DO: Define modules, interfaces, patterns via AskUserQuestion. | DON'T: Write implementation code, create source files, start coding.");
       break;
     case 2:
       lines.push("INSTRUCTIONS P2: 7 universal + conditional lenses on EACH module → 🔴🟡🟢. Activate conditional lenses from ProjectSpec. Matrix + concentration analysis (module×lenses). ASYMMETRY: multiple agents attack, unified responds in P3.");
       lines.push("BOUNDARY: do NOT cut/add requirements. AP1: ask for refutation, not validation. R5: MUST DISPLAY full coverage matrix + concentration analysis + exit gate summary.");
+      lines.push("DO: Apply all lenses systematically, challenge every module. | DON'T: Cut or add requirements, skip lenses, accept without refutation.");
       break;
     case 3:
       lines.push("INSTRUCTIONS P3: Simplify V(N)→V(N+1) with UNIFIED vision. AI COMPUTES structural change % and critical count, then presents recommendation. User confirms or overrides. Anti-scope-creep checklist.");
       lines.push("ASYMMETRY: integrate all corrections into the whole. AP2: simplify, not complexify. AP8: don't seek perfection. R5: MUST DISPLAY computed % + criticals + recommendation + checklist ✅/❌. Do NOT ask user to choose percentage range.");
+      lines.push("DO: Simplify architecture, address criticals, compute change %. | DON'T: Add features, increase complexity, skip the anti-scope-creep checklist.");
       break;
     case 4:
       lines.push("INSTRUCTIONS P4: Convergence gate. Exit criteria P2-P3 + safeguards S1-S5 + 4 P1 questions + specs/ complete. get_exit_criteria() + check_all_safeguards().");
       lines.push("LLM SWITCH POINT: Inform user that from Phase 5 onward they can switch to a cheaper/faster model — architecture is validated, decisions persisted in state.json and specs/. R5: MUST DISPLAY convergence report ✅/❌ + LLM switch notification.");
+      lines.push("DO: Verify all exit criteria, run safeguard checks, check specs/. | DON'T: Skip verification steps, advance without confirming convergence.");
       break;
     case 5:
       lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module. S6: Tier 1(lib)→2(port)→3(new). S7: mark completed, announce X/N, start next IMMEDIATELY.");
       lines.push("Do NOT ask permission between files — implement autonomously. AP7: never code without reference. STOP only for blockers or >2 iter on same module.");
+      lines.push("DO: Implement modules sequentially, consult specs/ before each. | DON'T: Run the application, execute tests, start manual testing — that is Phase 6. If the user asks to test, inform them and offer to advance.");
       break;
     case 6:
       lines.push("INSTRUCTIONS P6: SPEC-DRIVEN testing — test against SPECS, not implementation. Step 1: recover scope (get_decisions(phase=0) + specs/validation + specs/technical). Step 2: build Test Map (⚠️ MUST DISPLAY) mapping every spec→test with Type(positive/negative). Every use case: ≥1 positive + ≥1 negative. Ratio: 1 negative per 2 positives minimum.");
       lines.push("DISTINGUISH 'test green' vs 'spec met': test must verify EXACT criterion (not proxy). Step 3: record_decision(category='spec-coverage') with COVERED/NOT COVERED/NEGATIVE TESTS/GAPS. Step 4: Manual exploratory testing (MANDATORY). MULTI-SESSION: record_decision(category='testing') BEFORE user leaves. On return: get_decisions(phase=6). Both gates mandatory. R5: MUST DISPLAY testing status + spec coverage.");
+      lines.push("DO: Write spec-driven tests, execute them, perform manual testing. | DON'T: Skip manual testing, mark criteria without actually running tests.");
       break;
     case 7:
       lines.push("INSTRUCTIONS P7: Double-loop: evaluate PRODUCT and PROCESS. Update specs/. 5 steps: human first→AI→consolidate→apply→version.");
       lines.push("Meta-iteration: After completing P7, offer start_new_cycle() via AskUserQuestion. NEVER use init_project() for v2 — it wipes context. NEVER modify SKILL.md without approval. R5: MUST DISPLAY double-loop report + consolidation table + meta-iteration offer.");
+      lines.push("DO: Collect human feedback first, update specs/, offer meta-iteration. | DON'T: Use init_project() instead of start_new_cycle(), modify SKILL.md without approval.");
       break;
   }
 

@@ -167,7 +167,7 @@ test("getExitCriteriaWithDefs shows defs and state", () => {
   assert.ok(score);
   assert.strictEqual(score!.met, true);
 
-  const other = criteria.find((c) => c.criterion === "usuario_confirmou");
+  const other = criteria.find((c) => c.criterion === "user_confirmed");
   assert.ok(other);
   assert.strictEqual(other!.met, false);
 });

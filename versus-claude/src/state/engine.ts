@@ -15,7 +15,6 @@ import {
   createDefaultState,
   SafeguardState,
 } from "./types";
-import { calculatePhaseHLI, calculateCompositeHLI, checkForDropAlert } from "../metrics/hli";
 import {
   validatePhaseTransition,
   checkSafeguard as ruleSafeguard,
@@ -23,6 +22,7 @@ import {
   getExitCriteria,
   SafeguardResult,
 } from "../rules/methodology";
+import { CRITERION_ID_MIGRATION } from "../rules/phases";
 
 export class StateEngine {
   private state: PhaseState | null = null;
@@ -48,12 +48,34 @@ export class StateEngine {
       if (fs.existsSync(this.statePath)) {
         const raw = fs.readFileSync(this.statePath, "utf-8");
         this.state = JSON.parse(raw) as PhaseState;
+        this.migrateCriterionIds();
         return this.state;
       }
     } catch (err) {
       // state.json corrupted — returns null
     }
     return null;
+  }
+
+  /** Migrate Portuguese criterion IDs to English (v0.3.5 → v0.3.6) */
+  private migrateCriterionIds(): void {
+    if (!this.state) return;
+    let changed = false;
+    for (const c of this.state.exitCriteria) {
+      const newId = CRITERION_ID_MIGRATION[c.criterion];
+      if (newId) {
+        c.criterion = newId;
+        changed = true;
+      }
+    }
+    for (const h of this.state.history) {
+      if (h.criteriaMet) {
+        h.criteriaMet = h.criteriaMet.map((id) => CRITERION_ID_MIGRATION[id] || id);
+      }
+    }
+    if (changed) {
+      this.save();
+    }
   }
 
   private save(): void {
@@ -172,25 +194,6 @@ export class StateEngine {
         .filter(([, met]) => met)
         .map(([criterion]) => criterion),
     });
-
-    // Calculate HLI for the completed phase
-    if (!this.state.hli) {
-      this.state.hli = { composite: 0, phaseScores: [], alerts: [], lastCalculated: new Date().toISOString() };
-    }
-    const phaseHLI = calculatePhaseHLI(this.state, from);
-    const existingIdx = this.state.hli.phaseScores.findIndex((ps) => ps.phase === from);
-    if (existingIdx >= 0) {
-      this.state.hli.phaseScores[existingIdx] = phaseHLI;
-    } else {
-      this.state.hli.phaseScores.push(phaseHLI);
-    }
-    this.state.hli.phaseScores.sort((a, b) => a.phase - b.phase);
-    this.state.hli.composite = calculateCompositeHLI(this.state.hli.phaseScores);
-    const hliAlert = checkForDropAlert(this.state.hli.phaseScores);
-    if (hliAlert) {
-      this.state.hli.alerts.push(hliAlert);
-    }
-    this.state.hli.lastCalculated = new Date().toISOString();
 
     this.state.currentPhase = targetPhase;
     this.state.currentIteration = 1;
