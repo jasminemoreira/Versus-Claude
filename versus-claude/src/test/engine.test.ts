@@ -371,7 +371,10 @@ test("P5 compact: implementation + exit chain", () => {
   assertContains(5, "get_decisions",     "context recovery tool — available when starting fresh (LLM Switch / resumed project)");
   assertContains(5, "NEXT TOOL CALL",    "imperative tool-call language prevents model from stopping between modules");
   assertContains(5, "text between modules", "writing text between modules ends the turn — must be explicitly forbidden");
-  assertContains(5, "WHEN ALL MODULES DONE", "trigger point for exit to P6");
+  assertContains(5, "ADVERSARIAL MICRO-CHECK", "per-module divergence check — adversarial framing prevents AP1 rubber-stamp");
+  assertContains(5, "DIVERGE",           "micro-check must seek divergence, not validate — prevents self-assessment bias");
+  assertContains(5, "SCOPE INVENTORY",   "final presence/absence check before advance — catches unimplemented modules");
+  assertContains(5, "WHEN ALL MODULES DONE", "trigger point for scope inventory before exit to P6");
   assertContains(5, "advance_phase",     "exit action to P6");
   assertContains(5, "get_phase_guidance","must chain to P6 guidance after advancing");
 });

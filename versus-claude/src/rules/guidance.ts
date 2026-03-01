@@ -487,14 +487,22 @@ If unsure, check get_decisions(phase=1) — never assume or default to a familia
 ### Checklist per module: mature lib? → if not, why? → documented algorithm? → portable implementation? → decision with record_decision().
 
 ### Apply S7 (Discipline):
-After each file: mark completed, identify next, announce "X/N completed, next: Y", start immediately.
-Do NOT ask permission between files — implement sequentially and autonomously. Only stop for actual decisions (ambiguity, blocker, Tier choice). Don't start tangential discussions.
+After each module: run adversarial micro-check — ask "Where does this implementation DIVERGE from specs/?" Find differences, do NOT validate (AP1 risk: the agent wrote the code and is biased toward ✅). Fix any divergence before starting the next module.
+Do NOT write text between modules — the next tool call must be the first tool call of module X+1. Do NOT ask permission between modules. Only stop for actual decisions (ambiguity, blocker, Tier choice).
 
 ### S6 alarm signal (immediate STOP):
 If creating heuristics for problems with known solutions, debugging complex logic written from scratch, doing trial-and-error on something deterministic, or spending >2 iterations on the same module → STOP, communicate, seek reference implementation (Tier 2).
 
-### Next Step (MANDATORY when all modules are implemented):
-Call advance_phase() to move to Phase 6. Then call get_phase_guidance() and begin Phase 6 testing immediately: recover scope from specs/ and build the Test Map.`;
+### Scope Inventory (MANDATORY before advance_phase — ⚠️ MUST DISPLAY):
+After all modules are implemented, before calling advance_phase():
+1. **P1 modules present?** List every module defined in the P1 decomposition — ✅ if present in codebase, ❌ if missing.
+2. **specs/validation covered?** List every requirement in specs/validation — ✅ if covered by at least one module, ❌ if not.
+Scope inventory = **presence/absence check only** (not quality — that is Phase 6's job).
+If any ❌: implement the missing module/requirement before advancing.
+**CAUTION AP1:** do NOT mark ✅ without checking — the goal is to find ❌s, not to confirm ✅s.
+
+### Next Step (MANDATORY — do NOT stop after scope inventory):
+When scope inventory is all ✅: call advance_phase() to move to Phase 6. Then call get_phase_guidance() and begin Phase 6 testing immediately.`;
 
 // [G8] AV types
 const PHASE_6_GUIDANCE = `## Phase 6 — Tests
@@ -738,13 +746,13 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("DO: Verify all exit criteria, run safeguard checks, check specs/. | DON'T: Skip verification steps, advance without confirming convergence, display LLM Switch notification twice."); // ← [Steps 1-6]
       break;
     case 5: // ← full: PHASE_5_GUIDANCE — implementation, S6 tiers, S7 progress, decoupled sessions
-      lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module (specs/technical, specs/examples, specs/models). S6: Tier 1(lib)→2(port)→3(new). S7: Do NOT write text between modules — YOUR NEXT TOOL CALL after finishing module X must be the first tool call of module X+1. Progress is visible from tool calls."); // ← [BEFORE each module, S6, S7]
-      lines.push("FLOW: [per module: consult specs/ → implement → immediately start next] → advance when all done. NEVER write text between modules ('X/N completed', 'I will now implement X', 'Next:') — just execute the next tool call."); // ← [P5 intra-phase flow — text output ends turn]
+      lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module (specs/technical, specs/examples, specs/models). S6: Tier 1(lib)→2(port)→3(new). S7: After each module, run ADVERSARIAL MICRO-CHECK: 'Where does this implementation DIVERGE from spec?' — find differences, do NOT validate. Fix any divergence before the next module. Do NOT write text between modules — YOUR NEXT TOOL CALL must be the first tool call of module X+1."); // ← [BEFORE each module, S6, S7 + adversarial micro-check]
+      lines.push("FLOW: [per module: consult specs/ → implement → micro-check divergence → fix if needed → next] → scope inventory → advance. NEVER write text between modules ('X/N completed', 'I will now implement X', 'Next:') — just execute the next tool call."); // ← [P5 intra-phase flow — text output ends turn, micro-check + scope inventory]
       lines.push("IF STARTING IN A NEW SESSION (LLM Switch or resumed project): call get_decisions() + check_specs_status() FIRST to recover context. In a continuous session, proceed directly to implementation."); // ← [context recovery — conditional, not mandatory]
       lines.push("BINDING CONSTRAINTS: The tech stack, patterns, and out-of-scope items decided in P1/P3 are HARD CONSTRAINTS — visible in the 'Recent decisions' above. DO NOT introduce any library, framework, runtime, or technology not explicitly selected in P1. If the decision says 'vanilla JS', do not use Node.js. If it says 'no framework', do not use one."); // ← [P1 decision enforcement]
       lines.push("Do NOT ask permission between files — implement autonomously. AP7: never code without reference. STOP only for blockers or >2 iter on same module."); // ← [AP7]
-      lines.push("WHEN ALL MODULES DONE: YOUR NEXT TOOL CALL is advance_phase() to Phase 6, then get_phase_guidance() and begin Phase 6 immediately."); // ← [Exit: P5→P6]
-      lines.push("DO: Implement modules sequentially, consult specs/ before each, respect P1 binding constraints. | DON'T: Introduce unapproved tech, run tests, start manual testing — that is Phase 6."); // ← [Validation Session, AP3]
+      lines.push("WHEN ALL MODULES DONE: run SCOPE INVENTORY (⚠️ MUST DISPLAY ✅/❌): 1. All P1 modules present in codebase? 2. All specs/validation requirements covered? Fix any ❌ before advancing. WHEN SCOPE INVENTORY ALL ✅: YOUR NEXT TOOL CALL is advance_phase() to Phase 6, then get_phase_guidance() and begin Phase 6 immediately."); // ← [Scope inventory — presence/absence check — P5 exit gate]
+      lines.push("DO: Implement modules sequentially, micro-check divergence after each, run scope inventory before advancing. | DON'T: Validate instead of seeking divergence, introduce unapproved tech, run tests — that is Phase 6."); // ← [Validation Session, AP3, anti-AP1]
       break;
     case 6: // ← full: PHASE_6_GUIDANCE — spec-driven testing, test map, manual testing handoff
       lines.push("INSTRUCTIONS P6: SPEC-DRIVEN testing — test against SPECS, not implementation. Step 1: recover scope: get_decisions(phase=0) for use cases + get_decisions(phase=3) for any scope revisions from P3 + specs/validation + specs/technical. Merge P0 and P3 scope — P3 may have revised boundaries. Step 2: build Test Map (⚠️ MUST DISPLAY) mapping every spec→test with Type(positive/negative). Every use case: ≥1 positive + ≥1 negative. Ratio: 1 negative per 2 positives minimum."); // ← [Step 1, Step 2 — Test Map, P3 scope merge]
