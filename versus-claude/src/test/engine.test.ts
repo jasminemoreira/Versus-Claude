@@ -333,6 +333,7 @@ test("P2 compact: all 7 universal lens names + exit chain", () => {
     assertContains(2, lens, `universal lens "${lens}" must be named explicitly — prevents AI invention`);
   }
   assertContains(2, "invent",            "prohibition against inventing lens names");
+  assertContains(2, "FLOW",              "intra-phase flow instruction — prevents stopping after recording lenses");
   assertContains(2, "AFTER GATE",        "trigger point for exit to P3");
   assertContains(2, "NEXT TOOL CALL",    "imperative tool-call language prevents model from writing transition as text");
   assertContains(2, "advance_phase",     "exit action after gate");
@@ -340,6 +341,7 @@ test("P2 compact: all 7 universal lens names + exit chain", () => {
 });
 
 test("P3 compact: simplification + exit chain (both paths)", () => {
+  assertContains(3, "FLOW",              "intra-phase flow instruction — prevents stopping before computing %");
   assertContains(3, "AFTER CONFIRMATION","trigger point for post-cycle decision");
   assertContains(3, "NEXT TOOL CALL",    "imperative tool-call language prevents model from writing transition as text");
   assertContains(3, "advance_phase",     "exit action to P4");
@@ -348,6 +350,7 @@ test("P3 compact: simplification + exit chain (both paths)", () => {
 });
 
 test("P4 compact: convergence gate + LLM switch + exit chain", () => {
+  assertContains(4, "FLOW",              "intra-phase flow instruction — prevents stopping between get_exit_criteria and check_all_safeguards");
   assertContains(4, "LLM Switch",        "mandatory notification — full: LLM Switch Point section");
   assertContains(4, "WHEN ALL",          "trigger point for gate passage");
   assertContains(4, "advance_phase",     "exit action to P5");
@@ -355,6 +358,7 @@ test("P4 compact: convergence gate + LLM switch + exit chain", () => {
 });
 
 test("P5 compact: implementation + exit chain", () => {
+  assertContains(5, "FLOW",              "intra-phase flow instruction — prevents stopping between modules");
   assertContains(5, "specs/",            "R4: must consult specs before each module");
   assertContains(5, "Tier 1",            "S6 tiers must be named");
   assertContains(5, "NEXT TOOL CALL",    "imperative tool-call language prevents model from stopping between modules");
@@ -364,6 +368,7 @@ test("P5 compact: implementation + exit chain", () => {
 });
 
 test("P6 compact: spec-driven testing + manual handoff + exit chain", () => {
+  assertContains(6, "FLOW",              "intra-phase flow instruction — prevents stopping between test steps");
   assertContains(6, "HUMAN USER",        "manual testing must be restricted to human — full: Step 4");
   assertContains(6, "WAIT",              "must require waiting for user return");
   assertContains(6, "WHEN TESTING COMPLETE", "trigger point for exit to P7");
