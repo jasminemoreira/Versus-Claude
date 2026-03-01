@@ -232,6 +232,8 @@ This decision conditions Phase 1's Progressive Scope: "Complete product" blocks 
 | AI Confident (can answer "why?" for everything) | 5 | Cross-cutting |
 
 ≥90 → Phase 1 | 70-89 → 1 more iteration | <70 → multiple iterations.
+**If score < 90:** call start_iteration() and continue HSA focusing on the lowest-scoring criteria. Do NOT offer to advance to Phase 1.
+**If score ≥ 90:** call advance_phase() to advance to Phase 1. Inform the user.
 
 ### Exit Criteria Phase 0:
 - Score ≥90/100 + user confirmed
@@ -371,14 +373,16 @@ Table modules × lenses with severities.
 - Document patterns with record_decision().
 
 ### Phase 2 Exit Gate:
-- Zero 🔴 to advance → all addressed in Phase 3
-- Each 🟡 requires EXPLICIT decision: treat OR accept risk WITH JUSTIFICATION (record_decision)
-- 🟢 can be deferred to v2.0
+- 🔴 Criticals → will be addressed in Phase 3. Do NOT block advancement — Phase 3 exists precisely to resolve criticals.
+- 🟡 Important → Phase 3 addresses them or records explicit acceptance (record_decision with justification)
+- 🟢 Suggestions → can be deferred to v2.0 (record_decision)
+- Zero findings → offer via R2: advance to Phase 3 (optional refinement) OR skip to Phase 4
 
 ### Next Step (MANDATORY after displaying gate summary):
-Do NOT stop and wait for the user to ask what to do next. After displaying the gate summary, proactively offer via R2:
-- Option 1: "Advance to Phase 3" — begin addressing the criticals (available if zero 🔴 or user accepts risk)
-- Option 2: "Iterate" — revise architecture before Phase 3 (return to Phase 2 loop)
+Phase 3 always follows Phase 2 when findings exist. Do NOT stop and wait.
+- If any findings (🔴/🟡/🟢): call advance_phase() → Phase 3. Inform: "Advancing to Phase 3 to address [N 🔴, N 🟡]."
+- If zero findings: offer via R2: "Advance to Phase 3 (optional)" or "Advance to Phase 4 directly".
+Do NOT block on 🔴 count — criticals are addressed IN Phase 3, not before entering it.
 
 ### Boundary Rule: Scope vs Architecture
 
@@ -434,6 +438,10 @@ Remaining criticals: N
 
 **Step 3 — Confirm (via AskUserQuestion):**
 Present recommendation and ask: accept / override. The user validates the RECOMMENDATION, not the raw data.
+
+**Step 4 — Execute the agreed action (do NOT stop after confirmation):**
+- "→ Phase 4": call advance_phase(). Inform: "Advancing to Phase 4 — Convergence Gate."
+- "1 more iteration" or "Multiple iterations": call start_iteration(), then return to Phase 2 critique with V(N+1). Announce: "Starting iteration N of the 2-3 loop. Returning to Phase 2 critique."
 
 ### Anti-Scope-Creep Checklist (mandatory before advancing — ⚠️ MUST DISPLAY ✅/❌):
 - ALL Phase 0 requirements covered

@@ -228,6 +228,8 @@ This decision conditions Phase 1's Progressive Scope: if the user chose "Complet
 | AI Confident | 5 |
 
 ≥90 → Phase 1 | 70-89 → +1 iteration | <70 → multiple iterations
+**If score < 90:** call start_iteration() to open the next iteration, then continue HSA focusing on the criteria with lowest scores. Do NOT offer to advance to Phase 1 — iterate until score ≥ 90.
+**If score ≥ 90:** call advance_phase() to advance to Phase 1. Inform the user.
 **CAUTION AP8 (Perfectionism):** Score ≥90 is sufficient. Don't aim for 100.
 
 ### Implementation Feasibility — evaluate per component:
@@ -344,16 +346,17 @@ Table of modules × lenses (universal + activated conditional) with severities.
 - **Concentration by lens:** Lens with findings across ALL modules → SYSTEMIC failure (e.g.: no parameter has a reference, no module testable in isolation).
 - Document concentration patterns with record_decision().
 
-### Exit Gate (⚠️ MUST DISPLAY gate summary in chat — show total 🔴/🟡/🟢 counts and verdict):
-- Zero 🔴 to advance → all must be addressed in Phase 3
-- Each 🟡 requires EXPLICIT decision: treat OR accept risk WITH DOCUMENTED justification (record_decision)
-- 🟢 can be deferred to v2.0 (record in record_decision)
+### Exit Gate (⚠️ MUST DISPLAY gate summary in chat — show total 🔴/🟡/🟢 counts):
+- 🔴 Criticals → will be addressed in Phase 3. Do NOT block advancement — Phase 3 exists precisely to resolve criticals.
+- 🟡 Important → Phase 3 addresses them or records explicit acceptance with justification (record_decision)
+- 🟢 Suggestions → can be deferred to v2.0 (record_decision)
+- Zero findings → offer via AskUserQuestion: advance to Phase 3 (optional refinement) OR skip to Phase 4
 
 ### Next Step (MANDATORY after displaying gate summary):
-After displaying the gate summary, offer next step via AskUserQuestion:
-- Option 1: "Advance to Phase 3 — begin addressing the criticals" (available only if zero 🔴, or user accepts risk)
-- Option 2: "Iterate — revise architecture before Phase 3" (return to Phase 2 loop)
-Do NOT wait for the user to ask what to do next. The AI must proactively offer the transition.
+Phase 3 always follows Phase 2 when findings exist. After displaying the gate:
+- If any findings (🔴/🟡/🟢): call advance_phase() → Phase 3. Inform: "Advancing to Phase 3 to address [N 🔴 criticals, N 🟡 important]."
+- If zero findings: offer via AskUserQuestion: "Advance to Phase 3 (optional refinement)" or "Advance to Phase 4 directly".
+Do NOT stop and wait. Do NOT block on 🔴 count — criticals are addressed IN Phase 3, not before entering it.
 
 ### BOUNDARY RULE (Scope vs Architecture):
 Phase 2-3 CAN: change libs/patterns/communication, simplify modules, add technical mechanisms.
@@ -405,6 +408,10 @@ Remaining criticals: N
 **Step 3 — Confirm (via AskUserQuestion):**
 Present the recommendation and ask: accept recommendation / override (user chooses different action).
 The user validates the RECOMMENDATION, not the raw data.
+
+**Step 4 — Execute the agreed action (do NOT stop after confirmation):**
+- "→ Phase 4": call advance_phase(). Inform: "Advancing to Phase 4 — Convergence Gate."
+- "1 more iteration" or "Multiple iterations": call start_iteration(), then return to Phase 2 critique with the updated architecture V(N+1). Announce: "Starting iteration N of the 2-3 loop. Returning to Phase 2 critique — apply all lenses to V(N+1)."
 
 **CAUTION AP8 (Perfectionism):** The stopping criterion is honesty — we know what works, what we assume, and what we don't know.
 
@@ -655,7 +662,8 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("INSTRUCTIONS P0: HSA 5-level exploration (1.Domain 2.Problem-5W1H 3.Elements 4.Processes 5.Product). AskUserQuestion per level. Mandatory teach-back. Technical+scientific research if specialized domain. Tier 1/2/3 feasibility. Score ≥90.");
       lines.push("R2: Every decision via AskUserQuestion. AP1: never ask for validation, ask for REFUTATION.");
       lines.push("R5: MUST DISPLAY score breakdown table + teach-back synthesis + delivery target question. If you computed it, SHOW it.");
-      lines.push("DO: Ask questions, explore the problem, populate specs/. | DON'T: Write source code (even via terminal), jump to solutions, skip HSA levels.");
+      lines.push("AFTER SCORE: if score < 90 → call start_iteration() and continue HSA focusing on lowest-scoring criteria. Do NOT offer to advance. If score ≥ 90 → call advance_phase() to Phase 1.");
+      lines.push("DO: Ask questions, explore the problem, populate specs/. | DON'T: Write source code (even via terminal), jump to solutions, skip HSA levels, stop after displaying score.");
       break;
     case 1:
       lines.push("INSTRUCTIONS P1: 4 questions (Decomposition, Interfaces, Assumptions, Negative scope). 2 AskUserQuestion calls (patterns). Granularity: each module fits in 1 AI session.");
@@ -665,13 +673,14 @@ export function getCompactGuidance(phase: number): string[] {
     case 2:
       lines.push("INSTRUCTIONS P2: STEP 1 — Record activated lenses FIRST: call record_decision(category='architecture', content='ACTIVATED LENSES: [list]. NOT ACTIVATED: [lens — reason]') before starting critique. STEP 2 — Apply all 7 universal + all activated conditional lenses on EACH module → 🔴🟡🟢. Absence of findings is a valid result — do NOT skip a lens. Matrix + concentration analysis (module×lenses). ASYMMETRY: multiple agents attack, unified responds in P3.");
       lines.push("BOUNDARY: do NOT cut/add requirements. AP1: ask for refutation, not validation. R5: MUST DISPLAY full coverage matrix + concentration analysis + exit gate summary.");
-      lines.push("AFTER GATE: do NOT stop and wait — proactively offer next step via AskUserQuestion: 'Advance to Phase 3' (address criticals) or 'Iterate' (revise architecture). The user must not have to ask what to do next.");
-      lines.push("DO: Record activated/non-activated lenses first, apply every lens to every module, offer next step after gate. | DON'T: Cut or add requirements, skip any lens (even when no findings expected), stop silently after gate summary.");
+      lines.push("AFTER GATE: Phase 3 always follows Phase 2 when findings exist. If findings → call advance_phase() directly. If zero findings → offer Phase 3 (optional) or Phase 4 via AskUserQuestion. Do NOT block on 🔴 count — criticals are addressed IN Phase 3.");
+      lines.push("DO: Record lenses, apply all, advance to Phase 3 after gate. | DON'T: Block advancement because of 🔴 criticals, stop silently after gate summary, skip any lens.");
       break;
     case 3:
       lines.push("INSTRUCTIONS P3: Simplify V(N)→V(N+1) with UNIFIED vision. AI COMPUTES structural change % and critical count, then presents recommendation. User confirms or overrides. Anti-scope-creep checklist.");
       lines.push("ASYMMETRY: integrate all corrections into the whole. AP2: simplify, not complexify. AP8: don't seek perfection. R5: MUST DISPLAY computed % + criticals + recommendation + checklist ✅/❌. Do NOT ask user to choose percentage range.");
-      lines.push("DO: Simplify architecture, address criticals, compute change %. | DON'T: Add features, increase complexity, skip the anti-scope-creep checklist.");
+      lines.push("AFTER CONFIRMATION: execute the agreed action immediately — '→ Phase 4': call advance_phase(). 'More iterations': call start_iteration() and announce return to Phase 2 critique with V(N+1). Do NOT stop after displaying the recommendation.");
+      lines.push("DO: Simplify architecture, address criticals, compute change %, execute transition. | DON'T: Add features, increase complexity, stop after confirmation without executing the action.");
       break;
     case 4:
       lines.push("INSTRUCTIONS P4: Convergence gate. Exit criteria P2-P3 + safeguards S1-S5 + 4 P1 questions + specs/ complete. get_exit_criteria() + check_all_safeguards().");
