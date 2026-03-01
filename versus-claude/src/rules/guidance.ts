@@ -695,6 +695,7 @@ export function getCompactGuidance(phase: number): string[] {
       break;
     case 1: // ← full: PHASE_1_GUIDANCE — 4 architecture questions, patterns, granularity
       lines.push("INSTRUCTIONS P1: 4 questions (Decomposition, Interfaces, Assumptions, Negative scope). 2 AskUserQuestion calls (patterns). Granularity: each module fits in 1 AI session."); // ← [4 architecture questions, Granularity]
+      lines.push("FLOW: After recording user answers → proceed IMMEDIATELY to draft the 4 architecture answers (decomposition, interfaces, assumptions, negative scope) and present the pattern summary table. NEVER write 'I will draft X next' as text and stop — just do it."); // ← [P1 intra-phase flow]
       lines.push("R2+R4: specs/technical,models,examples. AP3: plan decoupled sessions for P5-P6. R5: MUST DISPLAY 4 architecture answers + pattern table + tech comparison."); // ← [R2, R4, AP3, R5]
       lines.push("WHEN DONE: After user confirms architecture → call advance_phase(), then get_phase_guidance() and begin Phase 2 critique immediately."); // ← [Exit criteria / transition to P2]
       lines.push("DO: Define modules, interfaces, patterns via AskUserQuestion. | DON'T: Write implementation code, create source files, start coding."); // ← [AP3, Decoupled session principle]

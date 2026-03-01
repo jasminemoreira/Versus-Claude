@@ -321,6 +321,7 @@ test("P0 compact: HSA levels + score chain", () => {
 
 test("P1 compact: architecture questions + exit chain", () => {
   assertContains(1, "Decomposition",     "first of the 4 mandatory architecture questions");
+  assertContains(1, "FLOW",              "intra-phase flow instruction — prevents stopping after recording architecture answers");
   assertContains(1, "WHEN DONE",         "trigger point for exit to P2");
   assertContains(1, "advance_phase",     "exit action after architecture confirmed");
   assertContains(1, "get_phase_guidance","must chain to P2 guidance after advancing");
