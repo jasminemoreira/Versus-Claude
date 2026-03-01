@@ -533,11 +533,18 @@ The content MUST follow this structure:
 - GAPS: [any spec where test exists but does NOT verify the exact criterion]
 
 ### Step 4 — Manual Exploratory Testing (MANDATORY before Phase 7):
-1. Start the application
-2. Execute each Phase 0 use case as an end user
-3. Test edge cases: rapid/double clicks, empty inputs, interruptions, timeouts
-4. Evaluate feedback: are messages understandable? Non-technical errors? Actionable results?
-5. Document and fix issues
+**Important: manual testing MUST be performed by the human user, not simulated by the AI.**
+The AI cannot replicate real user interactions. After automated tests pass:
+1. Present the test plan to the user: list the Phase 0 use cases they must execute and the edge cases to test.
+2. Record the testing status with record_decision(phase=6, category='testing') BEFORE the user leaves.
+3. Wait for the user to return with their test results. Do NOT mark manual_testing as met or advance to Phase 7 before the user reports results.
+
+What the user must test:
+- Start the application
+- Execute each Phase 0 use case as an end user
+- Test edge cases: rapid/double clicks, empty inputs, interruptions, timeouts
+- Evaluate feedback: are messages understandable? Non-technical errors? Actionable results?
+- Document and report issues back to this session
 
 Both (automated + manual) are mandatory gates. Neither replaces the other.
 
@@ -711,7 +718,7 @@ export function getCompactGuidance(phase: number): string[] {
       break;
     case 6:
       lines.push("INSTRUCTIONS P6: SPEC-DRIVEN testing — test against SPECS, not implementation. Step 1: recover scope (get_decisions(phase=0) + specs/validation + specs/technical). Step 2: build Test Map (⚠️ MUST DISPLAY) mapping every spec→test with Type(positive/negative). Every use case: ≥1 positive + ≥1 negative. Ratio: 1 negative per 2 positives minimum.");
-      lines.push("DISTINGUISH 'test green' vs 'spec met': test must verify EXACT criterion (not proxy). Step 3: record_decision(category='spec-coverage') with COVERED/NOT COVERED/NEGATIVE TESTS/GAPS. Step 4: Manual exploratory testing (MANDATORY). MULTI-SESSION: record_decision(category='testing') BEFORE user leaves. On return: get_decisions(phase=6). Both gates mandatory. R5: MUST DISPLAY testing status + spec coverage.");
+      lines.push("DISTINGUISH 'test green' vs 'spec met': test must verify EXACT criterion (not proxy). Step 3: record_decision(category='spec-coverage') with COVERED/NOT COVERED/NEGATIVE TESTS/GAPS. Step 4: MANUAL TESTING IS DONE BY THE HUMAN USER, NOT THE AI. Present test plan to user (Phase 0 use cases + edge cases), record_decision(category='testing') BEFORE user leaves, WAIT for user to return with results before marking manual_testing met or advancing. On return: get_decisions(phase=6). Both gates mandatory. R5: MUST DISPLAY testing status + spec coverage.");
       lines.push("WHEN TESTING COMPLETE: call advance_phase(), then get_phase_guidance() and begin Phase 7 post-review immediately.");
       lines.push("DO: Write spec-driven tests, execute them, perform manual testing. | DON'T: Skip manual testing, mark criteria without actually running tests.");
       break;

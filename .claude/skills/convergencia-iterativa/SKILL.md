@@ -603,20 +603,29 @@ A test only validates a spec if it verifies the EXACT criterion. False coverage 
 Structure: COVERED (spec + test + result) / NOT COVERED (+ justification) / NEGATIVE TESTS (count + ratio) / GAPS (test exists but doesn't verify exact criterion).
 
 ### Step 4 — Manual Exploratory Testing (mandatory before Phase 7):
-1. Start application
-2. Execute each Phase 0 use case as end user
-3. Test edge cases: rapid/double clicks, empty inputs, interruptions, timeouts
-4. Evaluate feedback: understandable messages? Non-technical errors? Actionable result?
-5. Document and fix issues
+**Manual testing must be performed by the human user, not the AI.** After automated tests pass:
+1. Present the test plan to the user: list Phase 0 use cases and edge cases to execute.
+2. Record testing status with record_decision(category='testing') BEFORE the user leaves.
+3. Wait for the user to return with results. Do NOT mark manual_testing met or advance before feedback.
+
+What the user must test: start application, execute Phase 0 use cases as end user, test edge cases (rapid/double clicks, empty inputs, interruptions, timeouts), evaluate feedback quality, report issues.
 
 Both (automated + manual) are mandatory gates. Neither replaces the other.
 
 ### Multi-session testing:
-Manual testing spans sessions. Use `record_decision(category='testing')` to persist testing state with structured format:
-- Line 1: `TESTING STATUS: [automated-pending | automated-done | manual-in-progress | manual-done]`
-- Line 2: `PASS: [what passed]`
-- Line 3: `FAIL: [known issues]`
-- Line 4: `NEXT: [what to test next]`
+**BEFORE the user leaves to test (⚠️ MUST DISPLAY testing status in chat):**
+`record_decision(phase=6, category='testing', content='TESTING STATUS: ...')`
+Structure: TESTING STATUS / PASS / FAIL / NEXT
+
+**WHEN the user returns with test feedback:**
+1. Call get_decisions(phase=6) to recover all Phase 6 testing decisions
+2. Read most recent testing-category decisions to reconstruct context
+3. Record user's feedback as a new testing decision
+4. Update exit criteria (mark_exit_criterion for manual_testing, edge_cases)
+5. If issues found: fix them, then record updated status
+
+**WHEN fixing issues from manual testing:**
+After each fix, record a testing decision noting: what was fixed, what still needs retesting.
 
 On return: `get_decisions(phase=6)` recovers full testing history.
 
