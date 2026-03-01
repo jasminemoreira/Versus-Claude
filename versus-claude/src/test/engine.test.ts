@@ -6,6 +6,7 @@ import * as path from "path";
 import * as os from "os";
 import { StateEngine } from "../state/engine";
 import { ScoreBreakdown } from "../state/types";
+import { getCompactGuidance } from "../rules/guidance";
 
 function createTempWorkspace(): string {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "versus-test-"));
@@ -288,6 +289,86 @@ test("checkSpecsStatus detects empty and populated dirs", () => {
   status = engine.checkSpecsStatus();
   assert.strictEqual(status["domain"].populated, true);
   assert.strictEqual(status["domain"].fileCount, 1);
+});
+
+// --- Compact Guidance Content (sync guard) ---
+// These tests enforce that compact guidance contains key terms from the full guidance.
+// If a full guidance change breaks a compact line, these tests will catch it.
+// RULE: whenever you update full guidance, run `npm test` to detect sync drift.
+
+console.log("\n=== Compact Guidance Sync Tests ===\n");
+
+function compact(phase: number): string {
+  return getCompactGuidance(phase).join(" ");
+}
+
+function assertContains(phase: number, term: string, reason: string) {
+  assert.ok(
+    compact(phase).includes(term),
+    `P${phase} compact missing "${term}" — ${reason}`
+  );
+}
+
+test("P0 compact: HSA levels + score chain", () => {
+  assertContains(0, "HSA",               "core exploration method must be named");
+  assertContains(0, "teach-back",        "mandatory display — full: VALIDATION section");
+  assertContains(0, "AFTER SCORE",       "trigger point for phase transition");
+  assertContains(0, "advance_phase",     "exit action for score ≥90");
+  assertContains(0, "get_phase_guidance","must chain to P1 guidance after advancing");
+  assertContains(0, "start_iteration",   "retry action for score <90");
+});
+
+test("P1 compact: architecture questions + exit chain", () => {
+  assertContains(1, "Decomposition",     "first of the 4 mandatory architecture questions");
+  assertContains(1, "WHEN DONE",         "trigger point for exit to P2");
+  assertContains(1, "advance_phase",     "exit action after architecture confirmed");
+  assertContains(1, "get_phase_guidance","must chain to P2 guidance after advancing");
+});
+
+test("P2 compact: all 7 universal lens names + exit chain", () => {
+  // Full guidance: Universal Lenses table (PHASE_2_GUIDANCE)
+  for (const lens of ["Assumptions", "Architectural", "Implementability", "Scientific", "Security", "Performance", "Regulatory"]) {
+    assertContains(2, lens, `universal lens "${lens}" must be named explicitly — prevents AI invention`);
+  }
+  assertContains(2, "invent",            "prohibition against inventing lens names");
+  assertContains(2, "AFTER GATE",        "trigger point for exit to P3");
+  assertContains(2, "advance_phase",     "exit action after gate");
+  assertContains(2, "get_phase_guidance","must chain to P3 guidance after advancing");
+});
+
+test("P3 compact: simplification + exit chain (both paths)", () => {
+  assertContains(3, "AFTER CONFIRMATION","trigger point for post-cycle decision");
+  assertContains(3, "advance_phase",     "exit action to P4");
+  assertContains(3, "get_phase_guidance","must chain to guidance after advancing");
+  assertContains(3, "start_iteration",   "loop action for more iterations");
+});
+
+test("P4 compact: convergence gate + LLM switch + exit chain", () => {
+  assertContains(4, "LLM Switch",        "mandatory notification — full: LLM Switch Point section");
+  assertContains(4, "WHEN ALL",          "trigger point for gate passage");
+  assertContains(4, "advance_phase",     "exit action to P5");
+  assertContains(4, "get_phase_guidance","must chain to P5 guidance after advancing");
+});
+
+test("P5 compact: implementation + exit chain", () => {
+  assertContains(5, "specs/",            "R4: must consult specs before each module");
+  assertContains(5, "Tier 1",            "S6 tiers must be named");
+  assertContains(5, "WHEN ALL MODULES DONE", "trigger point for exit to P6");
+  assertContains(5, "advance_phase",     "exit action to P6");
+  assertContains(5, "get_phase_guidance","must chain to P6 guidance after advancing");
+});
+
+test("P6 compact: spec-driven testing + manual handoff + exit chain", () => {
+  assertContains(6, "HUMAN USER",        "manual testing must be restricted to human — full: Step 4");
+  assertContains(6, "WAIT",              "must require waiting for user return");
+  assertContains(6, "WHEN TESTING COMPLETE", "trigger point for exit to P7");
+  assertContains(6, "advance_phase",     "exit action to P7");
+  assertContains(6, "get_phase_guidance","must chain to P7 guidance after advancing");
+});
+
+test("P7 compact: double-loop + meta-iteration safety", () => {
+  assertContains(7, "start_new_cycle",   "meta-iteration tool must be named");
+  assertContains(7, "init_project",      "prohibition against init_project for v2 must be present");
 });
 
 console.log("\n=== All tests completed ===\n");

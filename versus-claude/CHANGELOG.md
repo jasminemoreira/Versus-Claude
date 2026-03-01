@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.20] - 2026-03-01
+
+### Added
+- **Compact guidance sync guard: content regression tests (P0-P7).** 8 new test cases in `engine.test.ts` assert key terms per phase. Replicated from Versus-Copilot v0.3.17.
+- **Anchor comments in `getCompactGuidance()`.** Each `lines.push()` references its full guidance section.
+- **Maintenance checklist in JSDoc of `getCompactGuidance()`.** 5-item checklist.
+
+### Fixed
+- **P0 compact: added get_phase_guidance() chain** after advance_phase() in AFTER SCORE (score ≥90 path).
+- **P2 compact: added get_phase_guidance() chain** after advance_phase() in AFTER GATE.
+- **P3 compact: added get_phase_guidance() chain** for 'More iterations' path after advance_phase() to P2.
+- **P4 compact: normalized "LLM Switch Point"** wording (was "LLM SWITCH POINT" — inconsistent with test assertions).
+
 ## [0.3.19] - 2026-03-01
 
 ### Fixed
