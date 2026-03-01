@@ -717,9 +717,8 @@ export function getCompactGuidance(phase: number): string[] {
     case 4: // ← full: PHASE_4_GUIDANCE — convergence verification, safeguards, LLM switch
       lines.push("INSTRUCTIONS P4: Convergence gate. Exit criteria P2-P3 + safeguards S1-S5 + 4 P1 questions + specs/ complete. get_exit_criteria() + check_all_safeguards()."); // ← [Convergence verification report]
       lines.push("FLOW: Call get_exit_criteria() then check_all_safeguards() then display convergence report — all in one continuous turn. NEVER write 'I will now call X' as text and stop — just call it."); // ← [P4 intra-phase flow]
-      lines.push("LLM Switch Point: Inform user that from Phase 5 onward they can switch to a cheaper/faster model — architecture is validated, decisions persisted in state.json and specs/. R5: MUST DISPLAY convergence report ✅/❌ + LLM Switch Point notification."); // ← [LLM Switch Point]
-      lines.push("WHEN ALL ✅: FIRST display the LLM Switch Point notification to the user — THEN call advance_phase(), then get_phase_guidance() and begin Phase 5 implementation immediately."); // ← [Exit Gate P4→P5]
-      lines.push("DO: Verify all exit criteria, run safeguard checks, check specs/. | DON'T: Skip verification steps, advance without confirming convergence."); // ← [Steps 1-6]
+      lines.push("WHEN ALL ✅: call advance_phase() to Phase 5, then get_phase_guidance() and begin Phase 5 immediately. R5: MUST DISPLAY convergence report ✅/❌. LLM Switch notification is in full guidance (get_phase_guidance()) — do NOT display it again in this turn."); // ← [LLM Switch dedup, Exit Gate P4→P5]
+      lines.push("DO: Verify all exit criteria, run safeguard checks, check specs/. | DON'T: Skip verification steps, advance without confirming convergence, display LLM Switch notification twice."); // ← [Steps 1-6]
       break;
     case 5: // ← full: PHASE_5_GUIDANCE — implementation, S6 tiers, S7 progress, decoupled sessions
       lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module. S6: Tier 1(lib)→2(port)→3(new). S7: announce X/N completed — YOUR NEXT TOOL CALL must be the first step of module X+1. Do NOT end your turn between modules."); // ← [BEFORE each module, S6, S7]
