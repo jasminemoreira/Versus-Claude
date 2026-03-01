@@ -359,7 +359,8 @@ test("P4 compact: convergence gate + LLM switch + exit chain", () => {
 
 test("P5 compact: implementation + exit chain", () => {
   assertContains(5, "FLOW",              "intra-phase flow instruction — prevents stopping between modules");
-  assertContains(5, "specs/",            "R4: must consult specs before each module");
+  assertContains(5, "get_decisions",     "Step 0: must recover ALL user decisions before implementing (decoupled session)");
+  assertContains(5, "check_specs_status","Step 0: must check which specs are populated before implementing");
   assertContains(5, "Tier 1",            "S6 tiers must be named");
   assertContains(5, "NEXT TOOL CALL",    "imperative tool-call language prevents model from stopping between modules");
   assertContains(5, "WHEN ALL MODULES DONE", "trigger point for exit to P6");

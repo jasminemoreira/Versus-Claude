@@ -457,6 +457,13 @@ const PHASE_5_GUIDANCE = `## Phase 5 — Code Implementation
 Each module must be implementable in an independent session. Required context: architecture document (~2k tokens) + module interface + relevant specs/. If more is needed → insufficient granularity (return to P1).
 **CAUTION AP3 (Monolithic session).**
 
+### Step 0: Recover accumulated context (MANDATORY — do before first module)
+This is a decoupled session. Recover everything the user decided in the design phases:
+1. Call get_decisions() — recover ALL decisions: architecture, patterns, scope, negative scope, critiques addressed in P3.
+2. Call check_specs_status() — see which spec directories are populated.
+3. Read populated specs/ directories (specs/technical, specs/models, specs/design) to load algorithms, interfaces, and constraints.
+Only after this context recovery proceed to implement modules.
+
 ### BEFORE each module, consult:
 - specs/technical (algorithm, formulas, params)
 - specs/examples (reference code)
@@ -721,8 +728,9 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("DO: Verify all exit criteria, run safeguard checks, check specs/. | DON'T: Skip verification steps, advance without confirming convergence, display LLM Switch notification twice."); // ← [Steps 1-6]
       break;
     case 5: // ← full: PHASE_5_GUIDANCE — implementation, S6 tiers, S7 progress, decoupled sessions
-      lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module. S6: Tier 1(lib)→2(port)→3(new). S7: announce X/N completed — YOUR NEXT TOOL CALL must be the first step of module X+1. Do NOT end your turn between modules."); // ← [BEFORE each module, S6, S7]
-      lines.push("FLOW: Consult specs/ → implement → mark done → start next module — all continuously without stopping. NEVER write 'I will now implement module X' as text and stop — just start implementing it."); // ← [P5 intra-phase flow]
+      lines.push("INSTRUCTIONS P5: FIRST (decoupled session — recover context): call get_decisions() to load ALL user decisions (architecture, patterns, scope, negative scope), then check_specs_status() + read populated specs/. THEN implement modules."); // ← [Step 0: context recovery]
+      lines.push("S6: Tier 1(lib)→2(port)→3(new). S7: announce X/N completed — YOUR NEXT TOOL CALL must be the first step of module X+1. Do NOT end your turn between modules."); // ← [S6, S7]
+      lines.push("FLOW: get_decisions() → check_specs_status() → [per module: consult specs/ → implement → mark done] → advance. NEVER write 'I will now implement module X' as text and stop — just start implementing it."); // ← [P5 intra-phase flow]
       lines.push("Do NOT ask permission between files — implement autonomously. AP7: never code without reference. STOP only for blockers or >2 iter on same module."); // ← [Decoupled session principle, AP7]
       lines.push("WHEN ALL MODULES DONE: YOUR NEXT TOOL CALL is advance_phase() to Phase 6, then get_phase_guidance() and begin Phase 6 immediately."); // ← [Exit: P5→P6]
       lines.push("DO: Implement modules sequentially, consult specs/ before each. | DON'T: Run the application, execute tests, start manual testing — that is Phase 6. If the user asks to test, inform them and offer to advance."); // ← [Validation Session, AP3]
