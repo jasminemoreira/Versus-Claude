@@ -15,7 +15,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
   private watcher: vscode.FileSystemWatcher | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private lastMtime: number = 0;
-  private lastPhase: number = -1;  // for transition detection
+  private lastPhase: number = -1;        // for transition detection
+  private lastNotifiedPhase: number = -1; // deduplicates notifications
 
   constructor(private workspacePath: string) {
     this.loadState();
@@ -59,8 +60,10 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
     }
   }
 
-  /** Show VS Code notification when phase changes */
+  /** Show VS Code notification when phase changes (deduplicated) */
   private notifyPhaseTransition(phase: number): void {
+    if (phase === this.lastNotifiedPhase) return;
+    this.lastNotifiedPhase = phase;
     const def = getPhaseDefinition(phase);
     if (!def) return;
     vscode.window.showInformationMessage(
