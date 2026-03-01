@@ -375,6 +375,11 @@ Table modules × lenses with severities.
 - Each 🟡 requires EXPLICIT decision: treat OR accept risk WITH JUSTIFICATION (record_decision)
 - 🟢 can be deferred to v2.0
 
+### Next Step (MANDATORY after displaying gate summary):
+Do NOT stop and wait for the user to ask what to do next. After displaying the gate summary, proactively offer via R2:
+- Option 1: "Advance to Phase 3" — begin addressing the criticals (available if zero 🔴 or user accepts risk)
+- Option 2: "Iterate" — revise architecture before Phase 3 (return to Phase 2 loop)
+
 ### Boundary Rule: Scope vs Architecture
 
 Phase 2-3 **CAN:** change libs/patterns/communication, simplify modules, add technical mechanisms.

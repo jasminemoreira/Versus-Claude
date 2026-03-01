@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.10] - 2026-03-01
+
+### Fixed
+- Phase 2 Exit Gate: AI now proactively offers next step after displaying gate summary (advance to Phase 3 / iterate), instead of stopping silently and waiting for the user to ask what to do next.
+
+### Changed
+- `PHASE_2_GUIDANCE`: added "Next Step" section after Exit Gate with mandatory AskUserQuestion transition offer
+- Compact guidance P2: added explicit "AFTER GATE" instruction and updated DON'T to include "stop silently after gate summary"
+- `SKILL.md`: added "Next Step" section after Phase 2 Exit Gate
+
 ## [0.3.9] - 2026-02-28
 
 ### Added

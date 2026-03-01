@@ -349,6 +349,12 @@ Table of modules × lenses (universal + activated conditional) with severities.
 - Each 🟡 requires EXPLICIT decision: treat OR accept risk WITH DOCUMENTED justification (record_decision)
 - 🟢 can be deferred to v2.0 (record in record_decision)
 
+### Next Step (MANDATORY after displaying gate summary):
+After displaying the gate summary, offer next step via AskUserQuestion:
+- Option 1: "Advance to Phase 3 — begin addressing the criticals" (available only if zero 🔴, or user accepts risk)
+- Option 2: "Iterate — revise architecture before Phase 3" (return to Phase 2 loop)
+Do NOT wait for the user to ask what to do next. The AI must proactively offer the transition.
+
 ### BOUNDARY RULE (Scope vs Architecture):
 Phase 2-3 CAN: change libs/patterns/communication, simplify modules, add technical mechanisms.
 Phase 2-3 CANNOT: cut requirements, add features, change target audience/use cases.
@@ -659,7 +665,8 @@ export function getCompactGuidance(phase: number): string[] {
     case 2:
       lines.push("INSTRUCTIONS P2: STEP 1 — Record activated lenses FIRST: call record_decision(category='architecture', content='ACTIVATED LENSES: [list]. NOT ACTIVATED: [lens — reason]') before starting critique. STEP 2 — Apply all 7 universal + all activated conditional lenses on EACH module → 🔴🟡🟢. Absence of findings is a valid result — do NOT skip a lens. Matrix + concentration analysis (module×lenses). ASYMMETRY: multiple agents attack, unified responds in P3.");
       lines.push("BOUNDARY: do NOT cut/add requirements. AP1: ask for refutation, not validation. R5: MUST DISPLAY full coverage matrix + concentration analysis + exit gate summary.");
-      lines.push("DO: Record activated/non-activated lenses first, apply every lens to every module. | DON'T: Cut or add requirements, skip any lens (even when no findings expected), accept without refutation.");
+      lines.push("AFTER GATE: do NOT stop and wait — proactively offer next step via AskUserQuestion: 'Advance to Phase 3' (address criticals) or 'Iterate' (revise architecture). The user must not have to ask what to do next.");
+      lines.push("DO: Record activated/non-activated lenses first, apply every lens to every module, offer next step after gate. | DON'T: Cut or add requirements, skip any lens (even when no findings expected), stop silently after gate summary.");
       break;
     case 3:
       lines.push("INSTRUCTIONS P3: Simplify V(N)→V(N+1) with UNIFIED vision. AI COMPUTES structural change % and critical count, then presents recommendation. User confirms or overrides. Anti-scope-creep checklist.");
