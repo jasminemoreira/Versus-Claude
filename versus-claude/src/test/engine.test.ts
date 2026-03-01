@@ -370,6 +370,7 @@ test("P5 compact: implementation + exit chain", () => {
   assertContains(5, "NEW SESSION",       "context recovery is conditional on new session, not mandatory overhead");
   assertContains(5, "get_decisions",     "context recovery tool — available when starting fresh (LLM Switch / resumed project)");
   assertContains(5, "NEXT TOOL CALL",    "imperative tool-call language prevents model from stopping between modules");
+  assertContains(5, "text between modules", "writing text between modules ends the turn — must be explicitly forbidden");
   assertContains(5, "WHEN ALL MODULES DONE", "trigger point for exit to P6");
   assertContains(5, "advance_phase",     "exit action to P6");
   assertContains(5, "get_phase_guidance","must chain to P6 guidance after advancing");
