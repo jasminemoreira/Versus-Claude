@@ -231,7 +231,7 @@ This decision conditions Phase 1's Progressive Scope: "Complete product" blocks 
 | Validated Assumptions | 10 | Level 3 (Elements) |
 | Research (technical+scientific) + specs/ populated | 5 | Cross-cutting |
 | User Confirmed | 10 | Cross-cutting |
-| AI Confident (can answer "why?" for everything) | 5 | Cross-cutting |
+| AI Confident (can answer "why?" for every scope, assumption, and decision) | 5 | Cross-cutting |
 
 ≥90 → Phase 1 | 70-89 → 1 more iteration | <70 → multiple iterations.
 **If score < 90:** call start_iteration() and continue HSA focusing on the lowest-scoring criteria. Do NOT offer to advance to Phase 1.

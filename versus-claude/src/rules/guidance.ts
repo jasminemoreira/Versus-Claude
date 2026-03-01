@@ -225,7 +225,7 @@ This decision conditions Phase 1's Progressive Scope: if the user chose "Complet
 | Validated Assumptions | 10 |
 | Documentation/Research (technical+scientific) + specs/ | 5 |
 | User Confirmed | 10 |
-| AI Confident | 5 |
+| AI Confident (can answer "why?" for every scope, assumption, and decision) | 5 |
 
 ≥90 → Phase 1 | 70-89 → +1 iteration | <70 → multiple iterations
 **If score < 90:** call start_iteration() to open the next iteration, then continue HSA focusing on the criteria with lowest scores. Do NOT offer to advance to Phase 1 — iterate until score ≥ 90.

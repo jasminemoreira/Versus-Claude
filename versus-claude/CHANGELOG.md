@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.21] - 2026-03-01
+
+### Fixed
+- **AI Confident criterion: added explicit description.** Both `guidance.ts` (full guidance) and `SKILL.md` now show `AI Confident (can answer "why?" for every scope, assumption, and decision)` — previously the criterion was opaque with no explanation of what the AI evaluates. Replicated to Versus-Copilot v0.3.18.
+
 ## [0.3.20] - 2026-03-01
 
 ### Added
