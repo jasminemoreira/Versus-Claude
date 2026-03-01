@@ -1,4 +1,4 @@
-# IACDM — Iterative Adversarial Convergence Development Methodology v3.8
+# IACDM — Iterative Adversarial Convergence Development Methodology v3.9
 
 Created by Jasmine Moreira. Rigorous development methodology in 8 phases (0-7) with meta-iteration and scope preservation. Do not advance phases without meeting all exit criteria.
 
@@ -391,6 +391,10 @@ Phase 3 always follows Phase 2 when findings exist. Do NOT stop and wait.
 - If zero findings: offer via R2: "Advance to Phase 3 (optional)" or "Advance to Phase 4 directly".
 Do NOT block on 🔴 count — criticals are addressed IN Phase 3, not before entering it.
 
+### Module Boundary Rule (during critique):
+Apply lenses to ONLY the modules defined in P1 — do NOT propose new module boundaries or restructure decomposition during Phase 2. If module granularity is insufficient, flag it as a finding (🟡 or 🔴) for Phase 3 to resolve.
+P1 negative scope items CANNOT become implementation proposals — if they appear during critique, flag as out-of-scope.
+
 ### Boundary Rule: Scope vs Architecture
 
 Phase 2-3 **CAN:** change libs/patterns/communication, simplify modules, add technical mechanisms.
@@ -451,10 +455,10 @@ Present recommendation and ask: accept / override. The user validates the RECOMM
 - "1 more iteration" or "Multiple iterations": call start_iteration(), then return to Phase 2 critique with V(N+1). Announce: "Starting iteration N of the 2-3 loop. Returning to Phase 2 critique."
 
 ### Anti-Scope-Creep Checklist (mandatory before advancing — ⚠️ MUST DISPLAY ✅/❌):
-- ALL Phase 0 requirements covered
-- No unsolicited features added
-- What the system DOES hasn't changed (only HOW)
-- Phase 0 use cases remain valid
+1. ALL Phase 0 requirements covered
+2. No unsolicited features added
+3. What the system DOES hasn't changed (only HOW)
+4. P1 negative scope is still negative — no item from P1 'NOT do' list was silently promoted
 
 ---
 
@@ -555,6 +559,19 @@ Phase 4 is the natural boundary for switching LLMs to reduce cost. Phases 0-4 (d
 ### Decoupled session:
 Each module implementable in independent session. Context: architecture (~2k tokens) + interface + specs/. If needs more → insufficient granularity (return to P1).
 
+**If starting in a NEW SESSION** (LLM Switch or resumed project): the methodology is context-safe — all decisions persist in state.json, all specs in specs/. To recover context:
+1. Call get_decisions() — all architecture, patterns, scope, and P3 decisions
+2. Call check_specs_status() — which spec directories are populated
+3. Read populated specs/ (specs/technical, specs/models, specs/design)
+In a CONTINUOUS session (P0→P5 without interruption), conversation context already holds all decisions — proceed directly to modules.
+
+### Binding Constraints from P1/P3 (MUST be respected before writing any code):
+The technology stack, patterns, and negative scope decided in P1 (and revised in P3) are HARD CONSTRAINTS. Before coding any module, confirm:
+- **Tech stack:** use ONLY the languages, runtimes, and frameworks explicitly selected in P1. If decision says "vanilla JS" → no Node.js. If "no framework" → none.
+- **Patterns:** apply ONLY the architectural patterns chosen. Do not import new patterns.
+- **Negative scope:** do NOT implement anything listed as out-of-scope.
+If unsure, check get_decisions(phase=1) — never assume or default to a familiar tech.
+
 Before each module, consult specs/technical (algorithm, formulas, params), specs/examples (ref code), specs/references (original paper), specs/datasets (test data). If numerical parameters without values in specs/ → STOP and research. Reference source in code.
 
 Apply S6 (Tier 1/2/3) and S7 (sequence discipline) rigorously.
@@ -580,6 +597,7 @@ Test against SPECS, not implementation. The code is suspect — specs are the so
 
 **1.1. Recover scope:**
 - `get_decisions(phase=0)` → list ALL use cases
+- `get_decisions(phase=3)` → check for any scope revisions from Phase 3 simplification. Merge P0 and P3 scope — Phase 3 may have revised boundaries.
 - Read `specs/validation` → list ALL validation criteria
 - Read `specs/technical` → list ALL technical constraints
 
@@ -596,6 +614,7 @@ A test only validates a spec if it verifies the EXACT criterion. False coverage 
 - Spec "100 concurrent users" → test checks single user → NOT verified
 
 ### Step 2 — Write and Execute Tests:
+**Binding Constraints:** Use ONLY the tech stack approved in P1 in test code (check get_decisions(phase=1) if unsure). Do NOT introduce test frameworks or runtimes not approved in P1.
 - `specs/datasets` → test against ground truth (if empty, generate synthetic data)
 - Execute ALL tests, verify output. Fix failures before proceeding.
 - Run actual application and verify end-to-end behavior.
