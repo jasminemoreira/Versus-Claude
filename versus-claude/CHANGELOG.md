@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.19] - 2026-03-01
+
+### Fixed
+- **P2 compact guidance: enumerate the 7 universal lenses by name.** The AI was inventing lens names instead of applying the 7 mandatory universal lenses. Fixed by listing them explicitly: `(1)Assumptions (2)Architectural (3)Implementability (4)Scientific (5)Security (6)Performance (7)Regulatory`. Added `Do NOT invent lens names.` constraint. (Replicated from Versus-Copilot v0.3.15.)
+
 ## [0.3.14] - 2026-03-01
 
 ### Fixed
