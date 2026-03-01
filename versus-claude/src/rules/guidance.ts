@@ -288,7 +288,10 @@ Future work will follow independent sessions:
 - Code Session (Phase 5): context = architecture + module interface → 100% dedicated
 - Test Session (Phase 6): context = interface + contract → no need for internal code
 - Validation Session: CI/CD runs tests → AI only invoked for corrections
-**CAUTION AP3 (Monolithic session):** Separating phases into distinct sessions preserves context efficiency.`;
+**CAUTION AP3 (Monolithic session):** Separating phases into distinct sessions preserves context efficiency.
+
+### Next Step (MANDATORY after user confirms architecture):
+Call advance_phase() to move to Phase 2. Then call get_phase_guidance() and begin Phase 2 immediately: record activated lenses and start the adversarial critique.`;
 
 // [G2] Critique-response asymmetry + [G3] Concentration analysis + [G8] AV types + [G10] Gate criteria
 const PHASE_2_GUIDANCE = `## Phase 2 — Adversarial Critique

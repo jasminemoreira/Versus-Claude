@@ -308,6 +308,9 @@ When maturity/risk is uneven across requirements: present maturity map (req | ma
 - Tech supports 100% of scope, tech assumptions verified
 - Modules adherent to chosen patterns
 
+### Next Step (MANDATORY after user confirms architecture):
+Call advance_phase() to move to Phase 2. Then call get_phase_guidance() and begin Phase 2 immediately: record activated lenses and start the adversarial critique.
+
 ---
 
 ## Phase 2 — Adversarial Critique
