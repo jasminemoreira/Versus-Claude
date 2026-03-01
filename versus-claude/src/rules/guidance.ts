@@ -472,8 +472,15 @@ In a CONTINUOUS session (P0→P5 without interruption), the conversation context
 If numerical parameters without values in specs/ → STOP and research. Reference source in code.
 **CAUTION AP7 (Coding without reference).**
 
+### Binding Constraints from P1/P3 (MUST be respected before writing any code):
+The technology stack, patterns, and negative scope decided in P1 (and revised in P3) are HARD CONSTRAINTS. Before coding any module, confirm:
+- Tech stack: use ONLY the languages, runtimes, and frameworks explicitly selected in P1.
+- Patterns: apply ONLY the architectural patterns chosen. Do not import new patterns.
+- Negative scope: do NOT implement anything listed as out-of-scope.
+If unsure, check get_decisions(phase=1) — never assume or default to a familiar tech.
+
 ### Apply S6 (Tier 1/2/3) per module:
-- Tier 1: Does a mature lib exist? → USE IT. New code = UI + integration + glue.
+- Tier 1: Does a mature lib exist AND was it approved in P1? → USE IT. New code = UI + integration + glue.
 - Tier 2: Documented algorithm with ref? → PORT literally (same structure, same names, test against same inputs).
 - Tier 3: Neither of the above. If complex domain → deposit logic in specs/technical before coding.
 
@@ -731,9 +738,10 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module (specs/technical, specs/examples, specs/models). S6: Tier 1(lib)→2(port)→3(new). S7: announce X/N completed — YOUR NEXT TOOL CALL must be the first step of module X+1. Do NOT end your turn between modules."); // ← [BEFORE each module, S6, S7]
       lines.push("FLOW: [per module: consult specs/ → implement → mark done → start next] → advance when all done. NEVER write 'I will now implement module X' as text and stop — just start implementing it."); // ← [P5 intra-phase flow]
       lines.push("IF STARTING IN A NEW SESSION (LLM Switch or resumed project): call get_decisions() + check_specs_status() FIRST to recover context. In a continuous session, proceed directly to implementation."); // ← [context recovery — conditional, not mandatory]
+      lines.push("BINDING CONSTRAINTS: The tech stack, patterns, and out-of-scope items decided in P1/P3 are HARD CONSTRAINTS — visible in the 'Recent decisions' above. DO NOT introduce any library, framework, runtime, or technology not explicitly selected in P1. If the decision says 'vanilla JS', do not use Node.js. If it says 'no framework', do not use one."); // ← [P1 decision enforcement]
       lines.push("Do NOT ask permission between files — implement autonomously. AP7: never code without reference. STOP only for blockers or >2 iter on same module."); // ← [AP7]
       lines.push("WHEN ALL MODULES DONE: YOUR NEXT TOOL CALL is advance_phase() to Phase 6, then get_phase_guidance() and begin Phase 6 immediately."); // ← [Exit: P5→P6]
-      lines.push("DO: Implement modules sequentially, consult specs/ before each. | DON'T: Run the application, execute tests, start manual testing — that is Phase 6. If the user asks to test, inform them and offer to advance."); // ← [Validation Session, AP3]
+      lines.push("DO: Implement modules sequentially, consult specs/ before each, respect P1 binding constraints. | DON'T: Introduce unapproved tech, run tests, start manual testing — that is Phase 6."); // ← [Validation Session, AP3]
       break;
     case 6: // ← full: PHASE_6_GUIDANCE — spec-driven testing, test map, manual testing handoff
       lines.push("INSTRUCTIONS P6: SPEC-DRIVEN testing — test against SPECS, not implementation. Step 1: recover scope (get_decisions(phase=0) + specs/validation + specs/technical). Step 2: build Test Map (⚠️ MUST DISPLAY) mapping every spec→test with Type(positive/negative). Every use case: ≥1 positive + ≥1 negative. Ratio: 1 negative per 2 positives minimum."); // ← [Step 1, Step 2 — Test Map]

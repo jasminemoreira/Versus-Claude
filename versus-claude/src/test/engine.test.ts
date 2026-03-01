@@ -361,6 +361,7 @@ test("P5 compact: implementation + exit chain", () => {
   assertContains(5, "FLOW",              "intra-phase flow instruction — prevents stopping between modules");
   assertContains(5, "specs/",            "R4: must consult specs before each module");
   assertContains(5, "Tier 1",            "S6 tiers must be named");
+  assertContains(5, "BINDING",           "P1 tech/pattern decisions are hard constraints — prevents framework drift");
   assertContains(5, "NEW SESSION",       "context recovery is conditional on new session, not mandatory overhead");
   assertContains(5, "get_decisions",     "context recovery tool — available when starting fresh (LLM Switch / resumed project)");
   assertContains(5, "NEXT TOOL CALL",    "imperative tool-call language prevents model from stopping between modules");
