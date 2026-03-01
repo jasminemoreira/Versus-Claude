@@ -413,7 +413,7 @@ Present the recommendation and ask: accept recommendation / override (user choos
 The user validates the RECOMMENDATION, not the raw data.
 
 **Step 4 — Execute the agreed action (do NOT stop after confirmation):**
-- "→ Phase 4": call advance_phase(). Inform: "Advancing to Phase 4 — Convergence Gate."
+- "→ Phase 4": call advance_phase(), then call get_phase_guidance() and begin Phase 4 convergence verification immediately.
 - "1 more iteration" or "Multiple iterations": call start_iteration(), then return to Phase 2 critique with the updated architecture V(N+1). Announce: "Starting iteration N of the 2-3 loop. Returning to Phase 2 critique — apply all lenses to V(N+1)."
 
 **CAUTION AP8 (Perfectionism):** The stopping criterion is honesty — we know what works, what we assume, and what we don't know.
@@ -442,7 +442,10 @@ Validate complete convergence — this gate decides if the design is ready for c
 
 ### LLM Switch Point (⚠️ MUST DISPLAY this notification to the user):
 Phase 4 is the natural boundary for switching LLMs to reduce cost. Phases 0-4 (design) require high reasoning capability — use the most capable model available. Phases 5-7 (implementation, tests, review) require code generation and execution — a cheaper/faster model is sufficient since the architecture is already validated and documented in specs/.
-Inform the user: "The architecture is fully validated. From Phase 5 onward, you can switch to a faster/cheaper model (e.g., Sonnet instead of Opus) — the design decisions are persisted in state.json and specs/, so no context is lost."`;
+Inform the user: "The architecture is fully validated. From Phase 5 onward, you can switch to a faster/cheaper model (e.g., Sonnet instead of Opus) — the design decisions are persisted in state.json and specs/, so no context is lost."
+
+### Next Step (MANDATORY when all items are ✅):
+Call advance_phase() to move to Phase 5. Then call get_phase_guidance() and begin Phase 5 implementation immediately: consult specs/ for the first module and start coding.`;
 
 // [G6] decoupled sessions + [G8] AV types
 const PHASE_5_GUIDANCE = `## Phase 5 — Code Implementation
@@ -472,7 +475,10 @@ After each file: mark completed, identify next, announce "X/N completed, next: Y
 Do NOT ask permission between files — implement sequentially and autonomously. Only stop for actual decisions (ambiguity, blocker, Tier choice). Don't start tangential discussions.
 
 ### S6 alarm signal (immediate STOP):
-If creating heuristics for problems with known solutions, debugging complex logic written from scratch, doing trial-and-error on something deterministic, or spending >2 iterations on the same module → STOP, communicate, seek reference implementation (Tier 2).`;
+If creating heuristics for problems with known solutions, debugging complex logic written from scratch, doing trial-and-error on something deterministic, or spending >2 iterations on the same module → STOP, communicate, seek reference implementation (Tier 2).
+
+### Next Step (MANDATORY when all modules are implemented):
+Call advance_phase() to move to Phase 6. Then call get_phase_guidance() and begin Phase 6 testing immediately: recover scope from specs/ and build the Test Map.`;
 
 // [G8] AV types
 const PHASE_6_GUIDANCE = `## Phase 6 — Tests
@@ -555,7 +561,10 @@ The content MUST use this structure:
 
 **WHEN fixing issues from manual testing:**
 After each fix, record a testing decision noting: what was fixed, what still needs retesting.
-This ensures the NEXT session knows exactly what changed since the last test round.`;
+This ensures the NEXT session knows exactly what changed since the last test round.
+
+### Next Step (MANDATORY when all testing is complete):
+Both automated and manual testing must be done before advancing. When both gates are ✅: call advance_phase() to move to Phase 7. Then call get_phase_guidance() and begin Phase 7 post-review immediately.`;
 
 // [G5] Meta-iteration v1→v2 + [G11] double-loop + [G8] AV type
 const PHASE_7_GUIDANCE = `## Phase 7 — Post-Review

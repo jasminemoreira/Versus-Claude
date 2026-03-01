@@ -445,7 +445,7 @@ Remaining criticals: N
 Present recommendation and ask: accept / override. The user validates the RECOMMENDATION, not the raw data.
 
 **Step 4 — Execute the agreed action (do NOT stop after confirmation):**
-- "→ Phase 4": call advance_phase(). Inform: "Advancing to Phase 4 — Convergence Gate."
+- "→ Phase 4": call advance_phase(), then call get_phase_guidance() and begin Phase 4 convergence verification immediately.
 - "1 more iteration" or "Multiple iterations": call start_iteration(), then return to Phase 2 critique with V(N+1). Announce: "Starting iteration N of the 2-3 loop. Returning to Phase 2 critique."
 
 ### Anti-Scope-Creep Checklist (mandatory before advancing — ⚠️ MUST DISPLAY ✅/❌):
@@ -538,6 +538,9 @@ Phase 4 is the natural boundary for switching LLMs to reduce cost. Phases 0-4 (d
 
 **Inform the user:** "The architecture is fully validated. From Phase 5 onward, you can switch to a faster/cheaper model — no context is lost."
 
+### Next Step (MANDATORY when all items are ✅):
+Call advance_phase() to move to Phase 5. Then call get_phase_guidance() and begin Phase 5 implementation immediately: consult specs/ for the first module and start coding.
+
 ---
 
 ## Phase 5 — Code Implementation
@@ -555,6 +558,9 @@ Apply S6 (Tier 1/2/3) and S7 (sequence discipline) rigorously.
 ### S7 — Sequence Discipline:
 After each file: mark completed, identify next, announce "X/N completed, next: Y", start immediately.
 Do NOT ask permission between files — implement sequentially and autonomously. Only stop for actual decisions (ambiguity, blocker, Tier choice).
+
+### Next Step (MANDATORY when all modules are implemented):
+Call advance_phase() to move to Phase 6. Then call get_phase_guidance() and begin Phase 6 testing immediately: recover scope from specs/ and build the Test Map.
 
 ---
 
@@ -611,6 +617,9 @@ Manual testing spans sessions. Use `record_decision(category='testing')` to pers
 - Line 4: `NEXT: [what to test next]`
 
 On return: `get_decisions(phase=6)` recovers full testing history.
+
+### Next Step (MANDATORY when all testing is complete):
+Both automated and manual testing must be done before advancing. When both gates are ✅: call advance_phase() to move to Phase 7. Then call get_phase_guidance() and begin Phase 7 post-review immediately.
 
 ---
 

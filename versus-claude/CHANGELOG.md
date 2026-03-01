@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.14] - 2026-03-01
+
+### Fixed
+- Systematic inconsistency: `PHASE_4_GUIDANCE`, `PHASE_5_GUIDANCE`, and `PHASE_6_GUIDANCE` full constants had no "Next Step" section — no advance_phase(), no get_phase_guidance(). Only compact guidance had the transition instructions.
+- `PHASE_3_GUIDANCE` Step 4: Phase 4 path had advance_phase() but no get_phase_guidance() — compact was ahead of full guidance.
+- Same fixes applied to SKILL.md Phase 3, 4, 5, 6 sections.
+
+### Changed
+- `guidance.ts` PHASE_3_GUIDANCE: Step 4 "→ Phase 4" now includes get_phase_guidance() after advance_phase()
+- `guidance.ts` PHASE_4_GUIDANCE: added "Next Step (MANDATORY when all items are ✅)" section
+- `guidance.ts` PHASE_5_GUIDANCE: added "Next Step (MANDATORY when all modules are implemented)" section
+- `guidance.ts` PHASE_6_GUIDANCE: added "Next Step (MANDATORY when all testing is complete)" section
+- SKILL.md Phase 3, 4, 5, 6: same "Next Step" additions mirroring guidance.ts
+
 ## [0.3.13] - 2026-03-01
 
 ### Fixed
