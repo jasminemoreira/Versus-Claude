@@ -668,6 +668,7 @@ export function getCompactGuidance(phase: number): string[] {
     case 1:
       lines.push("INSTRUCTIONS P1: 4 questions (Decomposition, Interfaces, Assumptions, Negative scope). 2 AskUserQuestion calls (patterns). Granularity: each module fits in 1 AI session.");
       lines.push("R2+R4: specs/technical,models,examples. AP3: plan decoupled sessions for P5-P6. R5: MUST DISPLAY 4 architecture answers + pattern table + tech comparison.");
+      lines.push("WHEN DONE: After user confirms architecture → call advance_phase(), then get_phase_guidance() and begin Phase 2 critique immediately.");
       lines.push("DO: Define modules, interfaces, patterns via AskUserQuestion. | DON'T: Write implementation code, create source files, start coding.");
       break;
     case 2:
@@ -679,22 +680,25 @@ export function getCompactGuidance(phase: number): string[] {
     case 3:
       lines.push("INSTRUCTIONS P3: Simplify V(N)→V(N+1) with UNIFIED vision. AI COMPUTES structural change % and critical count, then presents recommendation. User confirms or overrides. Anti-scope-creep checklist.");
       lines.push("ASYMMETRY: integrate all corrections into the whole. AP2: simplify, not complexify. AP8: don't seek perfection. R5: MUST DISPLAY computed % + criticals + recommendation + checklist ✅/❌. Do NOT ask user to choose percentage range.");
-      lines.push("AFTER CONFIRMATION: execute the agreed action immediately — '→ Phase 4': call advance_phase(). 'More iterations': call start_iteration() and announce return to Phase 2 critique with V(N+1). Do NOT stop after displaying the recommendation.");
+      lines.push("AFTER CONFIRMATION: execute the agreed action immediately — '→ Phase 4': call advance_phase() then get_phase_guidance() and begin P4 verification. 'More iterations': call start_iteration() and announce return to Phase 2 critique with V(N+1). Do NOT stop after displaying the recommendation.");
       lines.push("DO: Simplify architecture, address criticals, compute change %, execute transition. | DON'T: Add features, increase complexity, stop after confirmation without executing the action.");
       break;
     case 4:
       lines.push("INSTRUCTIONS P4: Convergence gate. Exit criteria P2-P3 + safeguards S1-S5 + 4 P1 questions + specs/ complete. get_exit_criteria() + check_all_safeguards().");
       lines.push("LLM SWITCH POINT: Inform user that from Phase 5 onward they can switch to a cheaper/faster model — architecture is validated, decisions persisted in state.json and specs/. R5: MUST DISPLAY convergence report ✅/❌ + LLM switch notification.");
+      lines.push("WHEN ALL ✅: call advance_phase(), then get_phase_guidance() and begin Phase 5 implementation immediately.");
       lines.push("DO: Verify all exit criteria, run safeguard checks, check specs/. | DON'T: Skip verification steps, advance without confirming convergence.");
       break;
     case 5:
       lines.push("INSTRUCTIONS P5: Consult specs/ BEFORE each module. S6: Tier 1(lib)→2(port)→3(new). S7: mark completed, announce X/N, start next IMMEDIATELY.");
       lines.push("Do NOT ask permission between files — implement autonomously. AP7: never code without reference. STOP only for blockers or >2 iter on same module.");
+      lines.push("WHEN ALL MODULES DONE: call advance_phase(), then get_phase_guidance() and begin Phase 6 testing immediately.");
       lines.push("DO: Implement modules sequentially, consult specs/ before each. | DON'T: Run the application, execute tests, start manual testing — that is Phase 6. If the user asks to test, inform them and offer to advance.");
       break;
     case 6:
       lines.push("INSTRUCTIONS P6: SPEC-DRIVEN testing — test against SPECS, not implementation. Step 1: recover scope (get_decisions(phase=0) + specs/validation + specs/technical). Step 2: build Test Map (⚠️ MUST DISPLAY) mapping every spec→test with Type(positive/negative). Every use case: ≥1 positive + ≥1 negative. Ratio: 1 negative per 2 positives minimum.");
       lines.push("DISTINGUISH 'test green' vs 'spec met': test must verify EXACT criterion (not proxy). Step 3: record_decision(category='spec-coverage') with COVERED/NOT COVERED/NEGATIVE TESTS/GAPS. Step 4: Manual exploratory testing (MANDATORY). MULTI-SESSION: record_decision(category='testing') BEFORE user leaves. On return: get_decisions(phase=6). Both gates mandatory. R5: MUST DISPLAY testing status + spec coverage.");
+      lines.push("WHEN TESTING COMPLETE: call advance_phase(), then get_phase_guidance() and begin Phase 7 post-review immediately.");
       lines.push("DO: Write spec-driven tests, execute them, perform manual testing. | DON'T: Skip manual testing, mark criteria without actually running tests.");
       break;
     case 7:

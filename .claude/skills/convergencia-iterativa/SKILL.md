@@ -8,6 +8,8 @@ Created by Jasmine Moreira. Rigorous development methodology in 8 phases (0-7) w
 
 **R1 — Consult before coding.** If user requested code/feature: evaluate triggers → if triggered, start Phase 0. Never skip to implementation.
 
+**R6 — Phase transition.** After any advance_phase() that succeeds → immediately call get_phase_guidance() for the new phase and begin its first step. Do NOT stop and wait for user input after a phase transition.
+
 **R2 — Clickable menus.** Every user decision uses `AskUserQuestion`. ALWAYS provide suggested options (single or multi-select) — never send questions without options. Group up to 4 questions per call. `multiSelect: true` for non-exclusive choices. Recommended option first with "(Recommended)". "Other" is automatic. Never list options A/B/C in text.
 
 **R4 — `specs/` folder.** Domain knowledge and references deposited BEFORE coding. Structure:

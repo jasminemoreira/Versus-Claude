@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.12] - 2026-03-01
+
+### Fixed
+- Global transition rule: after `advance_phase()` succeeds, AI now immediately calls `get_phase_guidance()` and begins the new phase's first step. Fixes the AI stopping silently after phase transitions (reported at P3→P4).
+
+### Changed
+- `inject-context.ts`: added global `TRANSITION RULE` line injected on every message
+- `guidance.ts` P3 compact: `AFTER CONFIRMATION` now includes `get_phase_guidance()` after `advance_phase()`
+- `guidance.ts` P1, P4, P5, P6 compact: added `WHEN DONE` / `WHEN ALL ✅` / `WHEN TESTING COMPLETE` transition instructions (phases that had no transition instruction at all)
+- `SKILL.md`: added R6 (Phase transition) to Global Rules
+
 ## [0.3.11] - 2026-03-01
 
 ### Fixed
