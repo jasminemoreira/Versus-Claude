@@ -689,6 +689,7 @@ export function getCompactGuidance(phase: number): string[] {
       lines.push("INSTRUCTIONS P0: HSA 5-level exploration (1.Domain 2.Problem-5W1H 3.Elements 4.Processes 5.Product). AskUserQuestion per level. Mandatory teach-back. Technical+scientific research if specialized domain. Tier 1/2/3 feasibility. Score ≥90."); // ← [HIERARCHICAL SEMANTIC ANALYSIS]
       lines.push("R2: Every decision via AskUserQuestion. AP1: never ask for validation, ask for REFUTATION."); // ← [R2, AP1]
       lines.push("R5: MUST DISPLAY score breakdown table + teach-back synthesis + delivery target question. If you computed it, SHOW it."); // ← [CONVERGENCE ASSESSMENT, VALIDATION, TEACH-BACK]
+      lines.push("FLOW: After recording user answers → proceed IMMEDIATELY to next HSA level or to synthesis. NEVER write 'I will proceed with X' as text and stop — just do X."); // ← [HSA flow, Synthesis timing]
       lines.push("AFTER SCORE: score ≥90 → advance_phase() to Phase 1, then IMMEDIATELY call get_phase_guidance() and begin Phase 1 work — do NOT stop. Score <90 → call start_iteration() and continue HSA focusing on lowest-scoring criteria. Do NOT offer to advance."); // ← [CONVERGENCE ASSESSMENT → ≥90 / <90]
       lines.push("DO: Ask questions, explore the problem, populate specs/. | DON'T: Write source code (even via terminal), jump to solutions, skip HSA levels, stop after displaying score."); // ← [Step 0, Implementation Feasibility]
       break;

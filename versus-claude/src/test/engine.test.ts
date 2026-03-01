@@ -312,6 +312,7 @@ function assertContains(phase: number, term: string, reason: string) {
 test("P0 compact: HSA levels + score chain", () => {
   assertContains(0, "HSA",               "core exploration method must be named");
   assertContains(0, "teach-back",        "mandatory display — full: VALIDATION section");
+  assertContains(0, "FLOW",              "intra-phase flow instruction — prevents stopping between recording answers and presenting synthesis");
   assertContains(0, "AFTER SCORE",       "trigger point for phase transition");
   assertContains(0, "advance_phase",     "exit action for score ≥90");
   assertContains(0, "get_phase_guidance","must chain to P1 guidance after advancing");
