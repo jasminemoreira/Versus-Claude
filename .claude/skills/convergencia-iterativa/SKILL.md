@@ -1,4 +1,4 @@
-# IACDM — Iterative Adversarial Convergence Development Methodology v3.7
+# IACDM — Iterative Adversarial Convergence Development Methodology v3.8
 
 Created by Jasmine Moreira. Rigorous development methodology in 8 phases (0-7) with meta-iteration and scope preservation. Do not advance phases without meeting all exit criteria.
 
@@ -8,7 +8,9 @@ Created by Jasmine Moreira. Rigorous development methodology in 8 phases (0-7) w
 
 **R1 — Consult before coding.** If user requested code/feature: evaluate triggers → if triggered, start Phase 0. Never skip to implementation.
 
-**R6 — Phase transition.** After any advance_phase() that succeeds → immediately call get_phase_guidance() for the new phase and begin its first step. Do NOT stop and wait for user input after a phase transition.
+**R6 — Phase transition.** After any advance_phase() that succeeds → YOUR NEXT TOOL CALL is get_phase_guidance() for the new phase. Do NOT write "advancing to phase X" as text — execute the tool call immediately and begin the first step.
+
+**R7 — FLOW (continuous execution).** Within each phase, proceed step-by-step without announcing what you're about to do. Do NOT write "I will now do X" as text and stop — just do X. Only stop for: actual decisions requiring user input (AskUserQuestion), blockers, or phase gates.
 
 **R2 — Clickable menus.** Every user decision uses `AskUserQuestion`. ALWAYS provide suggested options (single or multi-select) — never send questions without options. Group up to 4 questions per call. `multiSelect: true` for non-exclusive choices. Recommended option first with "(Recommended)". "Other" is automatic. Never list options A/B/C in text.
 
@@ -512,7 +514,7 @@ Each phase has explicit DO/DON'T boundaries injected into the AI's context via c
 | P1 | Define modules, interfaces, patterns | Write implementation code, create source files |
 | P2 | Record activated/non-activated lenses first, apply every lens to every module | Cut/add requirements, skip any lens (even when no findings expected) |
 | P3 | Simplify, address criticals, compute change % | Add features, increase complexity |
-| P4 | Verify exit criteria, safeguards, specs/ | Skip verification, advance without confirming |
+| P4 | Verify exit criteria, safeguards, specs/ | Skip verification, advance without confirming, display LLM Switch notification twice |
 | P5 | Implement sequentially, consult specs/ | Run the application or tests — that is Phase 6 |
 | P6 | Write spec-driven tests, manual testing | Skip manual testing, mark criteria without testing |
 | P7 | Collect human feedback, update specs/ | Use init_project() instead of start_new_cycle() |
