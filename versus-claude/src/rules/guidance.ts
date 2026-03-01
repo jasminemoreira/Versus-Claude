@@ -445,7 +445,9 @@ Phase 4 is the natural boundary for switching LLMs to reduce cost. Phases 0-4 (d
 Inform the user: "The architecture is fully validated. From Phase 5 onward, you can switch to a faster/cheaper model (e.g., Sonnet instead of Opus) — the design decisions are persisted in state.json and specs/, so no context is lost."
 
 ### Next Step (MANDATORY when all items are ✅):
-Call advance_phase() to move to Phase 5. Then call get_phase_guidance() and begin Phase 5 implementation immediately: consult specs/ for the first module and start coding.`;
+1. Display the LLM Switch Point notification to the user (mandatory before advancing — see above).
+2. Call advance_phase() to move to Phase 5.
+3. Call get_phase_guidance() and begin Phase 5 implementation immediately: consult specs/ for the first module and start coding.`;
 
 // [G6] decoupled sessions + [G8] AV types
 const PHASE_5_GUIDANCE = `## Phase 5 — Code Implementation
@@ -698,7 +700,7 @@ export function getCompactGuidance(phase: number): string[] {
     case 4:
       lines.push("INSTRUCTIONS P4: Convergence gate. Exit criteria P2-P3 + safeguards S1-S5 + 4 P1 questions + specs/ complete. get_exit_criteria() + check_all_safeguards().");
       lines.push("LLM SWITCH POINT: Inform user that from Phase 5 onward they can switch to a cheaper/faster model — architecture is validated, decisions persisted in state.json and specs/. R5: MUST DISPLAY convergence report ✅/❌ + LLM switch notification.");
-      lines.push("WHEN ALL ✅: call advance_phase(), then get_phase_guidance() and begin Phase 5 implementation immediately.");
+      lines.push("WHEN ALL ✅: FIRST display the LLM Switch Point notification to the user — THEN call advance_phase(), then get_phase_guidance() and begin Phase 5 implementation immediately.");
       lines.push("DO: Verify all exit criteria, run safeguard checks, check specs/. | DON'T: Skip verification steps, advance without confirming convergence.");
       break;
     case 5:

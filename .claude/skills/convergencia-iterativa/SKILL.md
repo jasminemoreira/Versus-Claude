@@ -539,7 +539,9 @@ Phase 4 is the natural boundary for switching LLMs to reduce cost. Phases 0-4 (d
 **Inform the user:** "The architecture is fully validated. From Phase 5 onward, you can switch to a faster/cheaper model — no context is lost."
 
 ### Next Step (MANDATORY when all items are ✅):
-Call advance_phase() to move to Phase 5. Then call get_phase_guidance() and begin Phase 5 implementation immediately: consult specs/ for the first module and start coding.
+1. Display the LLM Switch Point notification to the user (mandatory before advancing).
+2. Call advance_phase() to move to Phase 5.
+3. Call get_phase_guidance() and begin Phase 5 implementation immediately: consult specs/ for the first module and start coding.
 
 ---
 
