@@ -333,6 +333,8 @@ test("P2 compact: all 7 universal lens names + exit chain", () => {
     assertContains(2, lens, `universal lens "${lens}" must be named explicitly — prevents AI invention`);
   }
   assertContains(2, "invent",            "prohibition against inventing lens names");
+  assertContains(2, "MODULE BOUNDARY",   "prevents AI from inventing new module boundaries outside P1 decomposition");
+  assertContains(2, "negative scope",    "P1 negative scope items must be flagged OOB in P2 — not silently promoted");
   assertContains(2, "FLOW",              "intra-phase flow instruction — prevents stopping after recording lenses");
   assertContains(2, "AFTER GATE",        "trigger point for exit to P3");
   assertContains(2, "NEXT TOOL CALL",    "imperative tool-call language prevents model from writing transition as text");
@@ -341,6 +343,7 @@ test("P2 compact: all 7 universal lens names + exit chain", () => {
 });
 
 test("P3 compact: simplification + exit chain (both paths)", () => {
+  assertContains(3, "ANTI-SCOPE-CREEP", "must display checklist to prevent scope drift, including P1 negative scope guard");
   assertContains(3, "FLOW",              "intra-phase flow instruction — prevents stopping before computing %");
   assertContains(3, "AFTER CONFIRMATION","trigger point for post-cycle decision");
   assertContains(3, "NEXT TOOL CALL",    "imperative tool-call language prevents model from writing transition as text");
@@ -372,6 +375,8 @@ test("P5 compact: implementation + exit chain", () => {
 
 test("P6 compact: spec-driven testing + manual handoff + exit chain", () => {
   assertContains(6, "FLOW",              "intra-phase flow instruction — prevents stopping between test steps");
+  assertContains(6, "get_decisions(phase=3)", "P3 scope revisions must be merged into P6 scope recovery — prevents testing against stale P0 scope");
+  assertContains(6, "BINDING CONSTRAINTS", "P1 tech stack must be enforced in test code — prevents unapproved test frameworks");
   assertContains(6, "HUMAN USER",        "manual testing must be restricted to human — full: Step 4");
   assertContains(6, "WAIT",              "must require waiting for user return");
   assertContains(6, "WHEN TESTING COMPLETE", "trigger point for exit to P7");
