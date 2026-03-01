@@ -332,7 +332,9 @@ test("P2 compact: all 7 universal lens names + exit chain", () => {
   for (const lens of ["Assumptions", "Architectural", "Implementability", "Scientific", "Security", "Performance", "Regulatory"]) {
     assertContains(2, lens, `universal lens "${lens}" must be named explicitly — prevents AI invention`);
   }
-  assertContains(2, "invent",            "prohibition against inventing lens names");
+  assertContains(2, "VALID LENS NAMES",  "all conditional+DTL lens names must be enumerated — agent must know exact allowed set");
+  assertContains(2, "Resilience",        "conditional lens must be named in compact — prevents invention of unlisted alternatives");
+  assertContains(2, "Control Engineering","DTL must be named in compact — prevents invention of unlisted domain lenses");
   assertContains(2, "MODULE BOUNDARY",   "prevents AI from inventing new module boundaries outside P1 decomposition");
   assertContains(2, "negative scope",    "P1 negative scope items must be flagged OOB in P2 — not silently promoted");
   assertContains(2, "FLOW",              "intra-phase flow instruction — prevents stopping after recording lenses");
