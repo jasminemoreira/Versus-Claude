@@ -47,6 +47,7 @@ export function handleAdvancePhase(engine: StateEngine, args: { target_phase: nu
       message: `Advanced to Phase ${args.target_phase}.`,
       currentPhase: newState?.currentPhase,
       currentIteration: newState?.currentIteration,
+      nextStep: `IMMEDIATELY call get_phase_guidance() NOW to load Phase ${args.target_phase} instructions and present them to the user. Do NOT wait for user input before calling get_phase_guidance().`,
     });
   } else {
     return JSON.stringify({
