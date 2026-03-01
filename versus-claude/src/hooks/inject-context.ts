@@ -68,7 +68,7 @@ function main() {
   }
 
   // Global transition rule — applies to every phase
-  lines.push("TRANSITION RULE: After any advance_phase() that succeeds → immediately call get_phase_guidance() for the new phase and begin its first step. Do NOT stop and wait for user input.");
+  lines.push("TRANSITION RULE: After advance_phase() succeeds → YOUR NEXT TOOL CALL is get_phase_guidance() for the new phase. Do NOT write 'advancing to phase X' as text — execute the tool call immediately.");
 
   // Reminder to use get_phase_guidance for full instructions
   lines.push("For detailed phase instructions: call get_phase_guidance().");

@@ -332,12 +332,14 @@ test("P2 compact: all 7 universal lens names + exit chain", () => {
   }
   assertContains(2, "invent",            "prohibition against inventing lens names");
   assertContains(2, "AFTER GATE",        "trigger point for exit to P3");
+  assertContains(2, "NEXT TOOL CALL",    "imperative tool-call language prevents model from writing transition as text");
   assertContains(2, "advance_phase",     "exit action after gate");
   assertContains(2, "get_phase_guidance","must chain to P3 guidance after advancing");
 });
 
 test("P3 compact: simplification + exit chain (both paths)", () => {
   assertContains(3, "AFTER CONFIRMATION","trigger point for post-cycle decision");
+  assertContains(3, "NEXT TOOL CALL",    "imperative tool-call language prevents model from writing transition as text");
   assertContains(3, "advance_phase",     "exit action to P4");
   assertContains(3, "get_phase_guidance","must chain to guidance after advancing");
   assertContains(3, "start_iteration",   "loop action for more iterations");
@@ -353,6 +355,7 @@ test("P4 compact: convergence gate + LLM switch + exit chain", () => {
 test("P5 compact: implementation + exit chain", () => {
   assertContains(5, "specs/",            "R4: must consult specs before each module");
   assertContains(5, "Tier 1",            "S6 tiers must be named");
+  assertContains(5, "NEXT TOOL CALL",    "imperative tool-call language prevents model from stopping between modules");
   assertContains(5, "WHEN ALL MODULES DONE", "trigger point for exit to P6");
   assertContains(5, "advance_phase",     "exit action to P6");
   assertContains(5, "get_phase_guidance","must chain to P6 guidance after advancing");
@@ -362,6 +365,7 @@ test("P6 compact: spec-driven testing + manual handoff + exit chain", () => {
   assertContains(6, "HUMAN USER",        "manual testing must be restricted to human — full: Step 4");
   assertContains(6, "WAIT",              "must require waiting for user return");
   assertContains(6, "WHEN TESTING COMPLETE", "trigger point for exit to P7");
+  assertContains(6, "NEXT TOOL CALL",    "imperative tool-call language prevents model from writing transition as text");
   assertContains(6, "advance_phase",     "exit action to P7");
   assertContains(6, "get_phase_guidance","must chain to P7 guidance after advancing");
 });
