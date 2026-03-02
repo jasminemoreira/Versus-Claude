@@ -1,4 +1,4 @@
-# IACDM — Iterative Adversarial Convergence Development Methodology v3.9
+# IACDM — Iterative Adversarial Convergence Development Methodology v3.10
 
 Created by Jasmine Moreira. Rigorous development methodology in 8 phases (0-7) with meta-iteration and scope preservation. Do not advance phases without meeting all exit criteria.
 
@@ -364,6 +364,7 @@ Selection principle: if removing this lens, is there a failure class that NO oth
 | Mechanical Engineering | Where are the tolerances? Does the system tolerate variation or only work at exact specification? | Rigid coupling disguised as tolerance — failure from small deviations in dependency versions, environment, or load | Module maintenance, system evolution, long-lived systems with technical debt accumulation |
 
 Selection principle: if removing this lens, is there a failure class that NO other detects? If yes → legitimate.
+**Do NOT invent lens names** — only the 7 universal + 12 conditional listed above are valid. Use exact names from the tables.
 
 ### Protocol per lens:
 1. Apply central question to EACH module
@@ -576,12 +577,20 @@ Before each module, consult specs/technical (algorithm, formulas, params), specs
 
 Apply S6 (Tier 1/2/3) and S7 (sequence discipline) rigorously.
 
-### S7 — Sequence Discipline:
-After each file: mark completed, identify next, announce "X/N completed, next: Y", start immediately.
-Do NOT ask permission between files — implement sequentially and autonomously. Only stop for actual decisions (ambiguity, blocker, Tier choice).
+### S7 — Sequence Discipline (Adversarial Micro-Check):
+After each module: run adversarial micro-check — ask "Where does this implementation DIVERGE from specs/?" Find differences, do NOT validate (AP1 risk: the agent wrote the code and is biased toward ✅). Fix any divergence before starting the next module.
+Do NOT write text between modules — the next tool call must be the first tool call of module X+1. Do NOT ask permission between modules. Only stop for actual decisions (ambiguity, blocker, Tier choice).
 
-### Next Step (MANDATORY when all modules are implemented):
-Call advance_phase() to move to Phase 6. Then call get_phase_guidance() and begin Phase 6 testing immediately: recover scope from specs/ and build the Test Map.
+### Scope Inventory (MANDATORY before advance_phase — ⚠️ MUST DISPLAY ✅/❌):
+After all modules are implemented, before calling advance_phase():
+1. **P1 modules present?** List every module defined in the P1 decomposition — ✅ if present in codebase, ❌ if missing.
+2. **specs/validation covered?** List every requirement in specs/validation — ✅ if covered by at least one module, ❌ if not.
+Scope inventory = **presence/absence check only** (not quality — that is Phase 6's job).
+If any ❌: implement the missing module/requirement before advancing.
+**CAUTION AP1:** do NOT mark ✅ without checking — the goal is to find ❌s, not to confirm ✅s.
+
+### Next Step (MANDATORY — do NOT stop after scope inventory):
+When scope inventory is all ✅: call advance_phase() to move to Phase 6. Then call get_phase_guidance() and begin Phase 6 testing immediately.
 
 ---
 
