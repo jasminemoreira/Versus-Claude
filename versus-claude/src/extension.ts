@@ -84,6 +84,17 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showInformationMessage(
             `Project '${name}' initialized. Phase 0 — Problem Discovery.`
           );
+          vscode.window.showWarningMessage(
+            `⚠️ Populate ./specs/ before starting Phase 0 — the AI reads from there. Key dirs: domain, references, technical, examples.`,
+            "Open specs/"
+          ).then((action) => {
+            if (action === "Open specs/") {
+              vscode.commands.executeCommand(
+                "revealInExplorer",
+                vscode.Uri.file(path.join(workspacePath, "specs"))
+              );
+            }
+          });
           log("initProject: completed successfully.");
         } catch (err) {
           log(`initProject ERROR: ${String(err)}`);
