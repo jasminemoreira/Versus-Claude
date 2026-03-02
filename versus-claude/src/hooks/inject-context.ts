@@ -4,18 +4,8 @@
 // Injects methodology state before EVERY user message.
 
 import { StateEngine } from "../state/engine";
-import { getCompactGuidance } from "../rules/guidance";
-
-const PHASE_NAMES: Record<number, string> = {
-  0: "Problem Discovery",
-  1: "Architecture",
-  2: "Adversarial Critique",
-  3: "Simplification",
-  4: "Convergence Gate",
-  5: "Code Implementation",
-  6: "Tests",
-  7: "Post-Review",
-};
+import { getCompactGuidance } from "../rules/compact-guidance";
+import { getPhaseDefinition } from "../rules/phases";
 
 function main() {
   const workspacePath = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -28,7 +18,7 @@ function main() {
   }
 
   const phase = state.currentPhase;
-  const phaseName = PHASE_NAMES[phase] ?? "Unknown";
+  const phaseName = getPhaseDefinition(phase)?.name ?? "Unknown";
 
   // Compact summary (avoid spending too many tokens)
   const lines: string[] = [
@@ -39,13 +29,23 @@ function main() {
     lines.push(`Score Phase 0: ${state.phase0Score}/100`);
   }
 
-  // Last 3 relevant decisions (Phase-6-aware: prioritize testing decisions)
+  // Last 3 relevant decisions (phase-aware: P6 prioritizes testing, P2+P3 pin ACTIVATED LENSES)
   let recentDecisions;
   if (phase === 6) {
     const testingDecisions = state.decisions
-      .filter((d: any) => d.phase === 6 && d.category === "testing")
+      .filter((d) => d.phase === 6 && d.category === "testing")
       .slice(-3);
     recentDecisions = testingDecisions.length > 0 ? testingDecisions : state.decisions.slice(-3);
+  } else if (phase === 2 || phase === 3) {
+    const lensDecision = [...state.decisions]
+      .reverse()
+      .find((d) => d.phase === 2 && d.category === "architecture" && d.content.includes("ACTIVATED LENSES"));
+    const last3 = state.decisions.slice(-3);
+    if (lensDecision && !last3.find((d) => d.id === lensDecision.id)) {
+      recentDecisions = [lensDecision, ...state.decisions.slice(-2)];
+    } else {
+      recentDecisions = last3;
+    }
   } else {
     recentDecisions = state.decisions.slice(-3);
   }
@@ -53,6 +53,14 @@ function main() {
     lines.push(phase === 6 ? "Testing progress:" : "Recent decisions:");
     for (const d of recentDecisions) {
       lines.push(`  [P${d.phase}/${d.category}] ${d.content.substring(0, 100)}`);
+    }
+  }
+
+  // P2: warn if ACTIVATED LENSES decision is missing (Step 1 not yet executed)
+  if (phase === 2) {
+    const hasLensDecision = recentDecisions.some((d) => d.content.includes("ACTIVATED LENSES"));
+    if (!hasLensDecision) {
+      lines.push("⚠ P2 STEP 1 MISSING: No lens activation decision found. Call record_decision(category='architecture', content='ACTIVATED LENSES: [list]. NOT ACTIVATED: [lens — reason]') BEFORE applying any lens.");
     }
   }
 
@@ -66,12 +74,6 @@ function main() {
   for (const line of compactGuidance) {
     lines.push(line);
   }
-
-  // Global transition rule — applies to every phase
-  lines.push("TRANSITION RULE: After advance_phase() succeeds → YOUR NEXT TOOL CALL is get_phase_guidance() for the new phase. Do NOT write 'advancing to phase X' as text — execute the tool call immediately.");
-
-  // Reminder to use get_phase_guidance for full instructions
-  lines.push("For detailed phase instructions: call get_phase_guidance().");
 
   // Loop counter warning
   const loop = engine.getLoopCounter();

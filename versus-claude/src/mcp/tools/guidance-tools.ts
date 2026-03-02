@@ -2,7 +2,7 @@
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
-import { getFullGuidance } from "../../rules/guidance";
+import { getFullGuidance } from "../../rules/full-guidance";
 
 export const getPhaseGuidanceTool: Tool = {
   name: "get_phase_guidance",

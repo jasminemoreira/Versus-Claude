@@ -16,13 +16,74 @@ import {
   SafeguardState,
 } from "./types";
 import {
-  validatePhaseTransition,
-  checkSafeguard as ruleSafeguard,
-  checkAllSafeguards as ruleAllSafeguards,
-  getExitCriteria,
+  isValidTransition,
+  getExitCriteriaForPhase,
+  CRITERION_ID_MIGRATION,
+} from "../rules/phases";
+import {
   SafeguardResult,
-} from "../rules/methodology";
-import { CRITERION_ID_MIGRATION } from "../rules/phases";
+  validateSafeguard,
+  getSafeguardsForPhase,
+} from "../rules/safeguards";
+
+interface ValidationResult {
+  valid: boolean;
+  missingCriteria: string[];
+  safeguardViolations: string[];
+}
+
+function validatePhaseTransition(
+  from: number,
+  to: number,
+  state: PhaseState,
+  exitCriteriaMet: Map<string, boolean>
+): ValidationResult {
+  const result: ValidationResult = {
+    valid: true,
+    missingCriteria: [],
+    safeguardViolations: [],
+  };
+
+  if (!isValidTransition(from, to)) {
+    result.valid = false;
+    result.missingCriteria.push(
+      `Transition from Phase ${from} to Phase ${to} is not allowed. Valid transitions: sequential or loop 2↔3.`
+    );
+    return result;
+  }
+
+  if (to > from) {
+    const criteria = getExitCriteriaForPhase(from);
+    for (const criterion of criteria) {
+      if (criterion.required && !exitCriteriaMet.get(criterion.criterion)) {
+        result.valid = false;
+        result.missingCriteria.push(
+          `[Phase ${from}] ${criterion.criterion}: ${criterion.description}`
+        );
+      }
+    }
+  }
+
+  if (from === 0 && to === 1) {
+    if (state.phase0Score === null || state.phase0Score < 90) {
+      result.valid = false;
+      result.missingCriteria.push(
+        `Phase 0 score = ${state.phase0Score ?? "null"}. Required >= 90.`
+      );
+    }
+  }
+
+  const safeguards = getSafeguardsForPhase(from);
+  for (const safeguard of safeguards) {
+    const check = validateSafeguard(safeguard.id, state);
+    if (check.status === "violated") {
+      result.valid = false;
+      result.safeguardViolations.push(`${safeguard.id}: ${check.details}`);
+    }
+  }
+
+  return result;
+}
 
 export class StateEngine {
   private state: PhaseState | null = null;
@@ -132,7 +193,7 @@ export class StateEngine {
   }
 
   getExitCriteriaWithDefs(phase: number): Array<{ criterion: string; description: string; met: boolean; details?: string }> {
-    const defs = getExitCriteria(phase);
+    const defs = getExitCriteriaForPhase(phase);
     const states = this.getExitCriteriaState(phase);
     return defs.map((def) => {
       const state = states.find((s) => s.criterion === def.criterion);
@@ -284,13 +345,29 @@ export class StateEngine {
     this.save();
   }
 
+  markExitCriteria(entries: Array<{ phase: number; criterion: string; met: boolean; details?: string }>): void {
+    if (!this.state) throw new Error("Project not initialized.");
+    for (const e of entries) {
+      const existing = this.state.exitCriteria.find(
+        (c) => c.phase === e.phase && c.criterion === e.criterion
+      );
+      if (existing) {
+        existing.met = e.met;
+        existing.details = e.details;
+      } else {
+        this.state.exitCriteria.push({ phase: e.phase, criterion: e.criterion, met: e.met, details: e.details });
+      }
+    }
+    this.save();
+  }
+
   // --- Safeguards ---
 
   checkSafeguard(id: string): SafeguardResult {
     if (!this.state) {
       return { id, status: "ok", details: "Project not initialized." };
     }
-    const result = ruleSafeguard(id, this.state);
+    const result = validateSafeguard(id, this.state);
 
     // Update internal safeguard state
     const sg = this.state.safeguards.find((s) => s.id === id);
@@ -306,7 +383,8 @@ export class StateEngine {
 
   checkAllSafeguards(): SafeguardResult[] {
     if (!this.state) return [];
-    const results = ruleAllSafeguards(this.state);
+    const results = getSafeguardsForPhase(this.state.currentPhase)
+      .map((s) => validateSafeguard(s.id, this.state!));
 
     for (const result of results) {
       const sg = this.state.safeguards.find((s) => s.id === result.id);

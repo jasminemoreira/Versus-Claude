@@ -13,15 +13,13 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
 
   private state: PhaseState | null = null;
   private watcher: vscode.FileSystemWatcher | null = null;
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
-  private lastMtime: number = 0;
   private lastPhase: number = -1;        // for transition detection
   private lastNotifiedPhase: number = -1; // deduplicates notifications
+  private refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private workspacePath: string) {
     this.loadState();
     this.setupWatcher();
-    this.setupPolling();
   }
 
   refresh(): void {
@@ -30,8 +28,8 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
   }
 
   dispose(): void {
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
     this.watcher?.dispose();
-    if (this.pollTimer) clearInterval(this.pollTimer);
     this._onDidChangeTreeData.dispose();
   }
 
@@ -67,8 +65,16 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
     const def = getPhaseDefinition(phase);
     if (!def) return;
     vscode.window.showInformationMessage(
-      `Versus: Phase ${phase} — ${def.name} started. ${def.userHint}`
+      `Versus Claude: Phase ${phase} — ${def.name} started. ${def.userHint}`
     );
+  }
+
+  private debouncedRefresh(): void {
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
+    this.refreshTimer = setTimeout(() => {
+      this.refreshTimer = null;
+      this.refresh();
+    }, 300);
   }
 
   private setupWatcher(): void {
@@ -77,31 +83,9 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
       ".versus/state.json"
     );
     this.watcher = vscode.workspace.createFileSystemWatcher(pattern);
-    this.watcher.onDidChange(() => this.refresh());
-    this.watcher.onDidCreate(() => this.refresh());
-    this.watcher.onDidDelete(() => this.refresh());
-  }
-
-  /** Polling: checks every 3s if state.json changed (creation, removal, or content) */
-  private setupPolling(): void {
-    this.pollTimer = setInterval(() => {
-      const statePath = path.join(this.workspacePath, ".versus", "state.json");
-      try {
-        const stat = fs.statSync(statePath);
-        const mtime = stat.mtimeMs;
-        if (mtime !== this.lastMtime) {
-          // File created or modified since last check
-          this.lastMtime = mtime;
-          this.refresh();
-        }
-      } catch {
-        // File does not exist
-        if (this.state) {
-          this.lastMtime = 0;
-          this.refresh();
-        }
-      }
-    }, 3000);
+    this.watcher.onDidChange(() => this.debouncedRefresh());
+    this.watcher.onDidCreate(() => this.debouncedRefresh());
+    this.watcher.onDidDelete(() => this.debouncedRefresh());
   }
 
   getTreeItem(element: StateItem): vscode.TreeItem {

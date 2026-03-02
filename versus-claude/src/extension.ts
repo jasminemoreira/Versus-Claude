@@ -11,11 +11,11 @@ let sidebarProvider: SidebarProvider | undefined;
 let outputChannel: vscode.OutputChannel;
 
 function log(msg: string) {
-  outputChannel?.appendLine(`[Versus] ${new Date().toISOString()} ${msg}`);
+  outputChannel?.appendLine(`[Versus Lite] ${new Date().toISOString()} ${msg}`);
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  outputChannel = vscode.window.createOutputChannel("Versus for Claude");
+  outputChannel = vscode.window.createOutputChannel("Versus Claude");
   context.subscriptions.push(outputChannel);
   log("Activating extension...");
 
@@ -75,6 +75,15 @@ export function activate(context: vscode.ExtensionContext) {
 
           engine.initProject(name, description);
 
+          // Create specs/ directory structure
+          const specsDirs = [
+            "domain", "references", "technical", "examples",
+            "design", "models", "datasets", "validation", "competitors",
+          ];
+          for (const dir of specsDirs) {
+            fs.mkdirSync(path.join(workspacePath, "specs", dir), { recursive: true });
+          }
+
           // Deploy bundles and configurations (only now, by user action)
           deployServer(extensionPath, workspacePath);
           generateMcpConfig(workspacePath);
@@ -98,7 +107,7 @@ export function activate(context: vscode.ExtensionContext) {
           log("initProject: completed successfully.");
         } catch (err) {
           log(`initProject ERROR: ${String(err)}`);
-          vscode.window.showErrorMessage(`Versus: Error initializing project: ${String(err)}`);
+          vscode.window.showErrorMessage(`Versus Claude: Error initializing project: ${String(err)}`);
         }
       })
     );
@@ -118,7 +127,7 @@ export function activate(context: vscode.ExtensionContext) {
     log("Activation completed successfully.");
   } catch (err) {
     log(`ACTIVATION ERROR: ${String(err)}`);
-    vscode.window.showErrorMessage(`Versus: Activation error — ${String(err)}`);
+    vscode.window.showErrorMessage(`Versus Claude: Activation error — ${String(err)}`);
   }
 }
 

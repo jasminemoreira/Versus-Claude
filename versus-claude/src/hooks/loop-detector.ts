@@ -57,8 +57,15 @@ function main() {
 
   let input = "";
   process.stdin.setEncoding("utf-8");
+
+  const timeoutId = setTimeout(() => {
+    process.stdin.destroy();
+    allow();
+  }, 5000);
+
   process.stdin.on("data", (chunk) => { input += chunk; });
   process.stdin.on("end", () => {
+    clearTimeout(timeoutId);
     try {
       const hookInput: HookInput = JSON.parse(input);
       const command = hookInput.tool_input?.command || "";

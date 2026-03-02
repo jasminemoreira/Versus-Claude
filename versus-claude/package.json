@@ -1,8 +1,8 @@
 {
   "name": "versus-claude",
-  "displayName": "Versus for Claude",
+  "displayName": "Versus Claude",
   "description": "IACDM orchestrator for Claude Code — 8-phase structured development with adversarial critique, verification gates, and safeguards that close the AI verification gap",
-  "version": "0.3.35",
+  "version": "0.4.0",
   "publisher": "JasmineMoreira",
   "author": "Jasmine Moreira",
   "license": "MIT",
@@ -43,7 +43,7 @@
       "activitybar": [
         {
           "id": "versus-claude",
-          "title": "Versus for Claude",
+          "title": "Versus Claude",
           "icon": "$(layers)"
         }
       ]
