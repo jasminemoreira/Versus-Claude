@@ -20,7 +20,6 @@ function main() {
   const phase = state.currentPhase;
   const phaseName = getPhaseDefinition(phase)?.name ?? "Unknown";
 
-  // Compact summary (avoid spending too many tokens)
   const lines: string[] = [
     `[Versus] Phase ${phase} — ${phaseName} | Iteration ${state.currentIteration}`,
   ];
@@ -29,36 +28,33 @@ function main() {
     lines.push(`Score Phase 0: ${state.phase0Score}/100`);
   }
 
-  // Last 3 relevant decisions (phase-aware: P6 prioritizes testing, P2+P3 pin ACTIVATED LENSES)
-  let recentDecisions;
-  if (phase === 6) {
-    const testingDecisions = state.decisions
-      .filter((d) => d.phase === 6 && d.category === "testing")
-      .slice(-3);
-    recentDecisions = testingDecisions.length > 0 ? testingDecisions : state.decisions.slice(-3);
-  } else if (phase === 2 || phase === 3) {
-    const lensDecision = [...state.decisions]
-      .reverse()
-      .find((d) => d.phase === 2 && d.category === "architecture" && d.content.includes("ACTIVATED LENSES"));
-    const last3 = state.decisions.slice(-3);
-    if (lensDecision && !last3.find((d) => d.id === lensDecision.id)) {
-      recentDecisions = [lensDecision, ...state.decisions.slice(-2)];
-    } else {
-      recentDecisions = last3;
+  // Full decision history (all phases, grouped)
+  if (state.decisions.length > 0) {
+    const byPhase: Record<number, typeof state.decisions> = {};
+    for (const d of state.decisions) {
+      if (!byPhase[d.phase]) byPhase[d.phase] = [];
+      byPhase[d.phase].push(d);
     }
-  } else {
-    recentDecisions = state.decisions.slice(-3);
+    lines.push("Decision history (all phases):");
+    for (const p of Object.keys(byPhase).map(Number).sort((a, b) => a - b)) {
+      for (const d of byPhase[p]) {
+        lines.push(`  [P${d.phase}/${d.category}] ${d.content.substring(0, 200)}`);
+      }
+    }
   }
-  if (recentDecisions.length > 0) {
-    lines.push(phase === 6 ? "Testing progress:" : "Recent decisions:");
-    for (const d of recentDecisions) {
-      lines.push(`  [P${d.phase}/${d.category}] ${d.content.substring(0, 100)}`);
-    }
+
+  // Project spec (stack, patterns, constraints, out-of-scope)
+  const spec = state.projectSpec;
+  if (spec) {
+    if (spec.stack.length > 0) lines.push(`Approved stack: ${spec.stack.join(", ")}`);
+    if (spec.outOfScope.length > 0) lines.push(`Out of scope: ${spec.outOfScope.join(", ")}`);
+    if (spec.patterns.length > 0) lines.push(`Patterns: ${spec.patterns.join(", ")}`);
+    if (spec.constraints.length > 0) lines.push(`Constraints: ${spec.constraints.join(", ")}`);
   }
 
   // P2: warn if ACTIVATED LENSES decision is missing (Step 1 not yet executed)
   if (phase === 2) {
-    const hasLensDecision = recentDecisions.some((d) => d.content.includes("ACTIVATED LENSES"));
+    const hasLensDecision = state.decisions.some((d) => d.content.includes("ACTIVATED LENSES"));
     if (!hasLensDecision) {
       lines.push("⚠ P2 STEP 1 MISSING: No lens activation decision found. Call record_decision(category='architecture', content='ACTIVATED LENSES: [list]. NOT ACTIVATED: [lens — reason]') BEFORE applying any lens.");
     }

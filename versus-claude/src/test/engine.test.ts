@@ -364,8 +364,7 @@ test("P5 compact: implementation + exit chain", () => {
   assertContains(5, "specs/",            "R4: must consult specs before each module");
   assertContains(5, "Tier 1",            "S6 tiers must be named");
   assertContains(5, "BINDING",           "P1 tech/pattern decisions are hard constraints — prevents framework drift");
-  assertContains(5, "NEW SESSION",       "context recovery is conditional on new session, not mandatory overhead");
-  assertContains(5, "get_decisions",     "context recovery tool — available when starting fresh (LLM Switch / resumed project)");
+  assertContains(5, "Decision history",  "hook injects full history — compact guidance must reference it for constraint enforcement");
   assertContains(5, "NEXT TOOL CALL",    "imperative tool-call language prevents model from stopping between modules");
   assertContains(5, "text between modules", "writing text between modules ends the turn — must be explicitly forbidden");
   assertContains(5, "ADVERSARIAL MICRO-CHECK", "per-module divergence check — adversarial framing prevents AP1 rubber-stamp");
@@ -378,7 +377,7 @@ test("P5 compact: implementation + exit chain", () => {
 
 test("P6 compact: spec-driven testing + manual handoff + exit chain", () => {
   assertContains(6, "FLOW",              "intra-phase flow instruction — prevents stopping between test steps");
-  assertContains(6, "get_decisions(phase=3)", "P3 scope revisions must be merged into P6 scope recovery — prevents testing against stale P0 scope");
+  assertContains(6, "Decision history",  "hook injects all decisions — P6 must reference Decision history to merge P0 use cases + P3 scope revisions");
   assertContains(6, "BINDING CONSTRAINTS", "P1 tech stack must be enforced in test code — prevents unapproved test frameworks");
   assertContains(6, "HUMAN USER",        "manual testing must be restricted to human — full: Step 4");
   assertContains(6, "WAIT",              "must require waiting for user return");
