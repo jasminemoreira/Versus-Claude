@@ -290,8 +290,15 @@ Future work will follow independent sessions:
 - Validation Session: CI/CD runs tests → AI only invoked for corrections
 **CAUTION AP3 (Monolithic session):** Separating phases into distinct sessions preserves context efficiency.
 
-### Next Step (MANDATORY after user confirms architecture):
-Call advance_phase() to move to Phase 2. Then call get_phase_guidance() and begin Phase 2 immediately: record activated lenses and start the adversarial critique.`;
+### Exit: Persist structured spec before advancing (MANDATORY)
+After user confirms architecture, call update_project_spec() with:
+- stack: approved technologies (e.g., ["TypeScript", "React 18", "FastAPI", "PostgreSQL"])
+- outOfScope: items the system deliberately will NOT do (mirrors negative scope from question 4)
+- patterns: architectural patterns selected (e.g., ["Clean Architecture", "Repository pattern"])
+- constraints: hard constraints that must survive model switches (e.g., ["Claude-only", "no external auth providers"])
+This structured context is injected before every message in all phases — it is the primary mechanism for enforcing P1 decisions across sessions.
+
+Then call advance_phase() to move to Phase 2. Then call get_phase_guidance() and begin Phase 2 immediately: record activated lenses and start the adversarial critique.`;
 
 // [G2] Critique-response asymmetry + [G3] Concentration analysis + [G8] AV types + [G10] Gate criteria
 const PHASE_2_GUIDANCE = `## Phase 2 — Adversarial Critique

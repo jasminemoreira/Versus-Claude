@@ -38,7 +38,7 @@ function main() {
     lines.push("Decision history (all phases):");
     for (const p of Object.keys(byPhase).map(Number).sort((a, b) => a - b)) {
       for (const d of byPhase[p]) {
-        lines.push(`  [P${d.phase}/${d.category}] ${d.content.substring(0, 200)}`);
+        lines.push(`  [P${d.phase}/${d.category}] ${d.content}`);
       }
     }
   }
