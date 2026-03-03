@@ -42,7 +42,9 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
         this.state = JSON.parse(raw) as PhaseState;
 
         // Detect phase transition and notify user
-        if (prevPhase >= 0 && this.state.currentPhase !== prevPhase) {
+        // Only notify if this state belongs to Claude (prevents cross-extension duplicates)
+        const isOurs = !this.state.agent || this.state.agent === "claude";
+        if (isOurs && prevPhase >= 0 && this.state.currentPhase !== prevPhase) {
           this.notifyPhaseTransition(this.state.currentPhase);
         }
         if (this.lastPhase < 0 && this.state) {

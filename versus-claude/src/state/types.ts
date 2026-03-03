@@ -1,6 +1,7 @@
 // Versus core types
 
 export interface PhaseState {
+  agent?: "copilot" | "claude";  // identifies which extension owns this state
   projectName: string;
   projectDescription: string;
   projectSpec: ProjectSpec;      // structured technical context
@@ -100,6 +101,7 @@ export type Result<T, E> =
 
 export function createDefaultState(name: string, description: string): PhaseState {
   return {
+    agent: "claude",
     projectName: name,
     projectDescription: description,
     projectSpec: { stack: [], outOfScope: [], patterns: [], constraints: [] },
