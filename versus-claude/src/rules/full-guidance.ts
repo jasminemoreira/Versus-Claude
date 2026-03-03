@@ -74,6 +74,16 @@ const PHASE_0_GUIDANCE = `## Phase 0 — Problem Discovery Loop
 
 ### Step 0: Read ALL content from specs/ before asking questions. Build on what already exists.
 
+### Step 0.5 — Delivery Target (MANDATORY FIRST QUESTION — before starting HSA):
+Before any analysis, ask via AskUserQuestion: "What is the delivery target for this project?"
+- Option 1: "Complete product" — all requirements delivered in a single cycle. No scope splitting unless a technical blocker exists.
+- Option 2: "MVP first, then iterate" — minimal viable product, with deferred features planned for future cycles.
+- Option 3: "Prototype / proof of concept" — disposable, for validation only.
+
+Record the answer immediately: record_decision(category='scope', content='DELIVERY TARGET: ...').
+This answer frames the ENTIRE HSA: depth of research, scope boundaries, and feasibility thresholds depend on it.
+Do NOT begin Level 1 without this decision recorded.
+
 ### HIERARCHICAL SEMANTIC ANALYSIS (HSA) — 5-level exploration:
 Explore the problem systematically from the broadest context (Domain) to the concrete deliverable (Product). Each level builds on the previous. Use AskUserQuestion (R2) at every level.
 
@@ -163,14 +173,7 @@ Define what "done" looks like — the expected output and how to measure success
 | Acceptance Criteria | What must be true for the user to accept the result? |
 | Out of Scope (YAGNI) | What NOT to do, with cost/benefit justification |
 
-**Delivery Target (MANDATORY question via AskUserQuestion):**
-Ask: "What is the delivery target for this project?"
-- Option 1: "Complete product" — all requirements delivered in a single cycle. No scope splitting unless a technical blocker exists.
-- Option 2: "MVP first, then iterate" — minimal viable product, with deferred features planned for future cycles.
-- Option 3: "Prototype / proof of concept" — disposable, for validation only.
-
-Record the answer with record_decision(category='scope', content='DELIVERY TARGET: ...').
-This decision conditions Phase 1's Progressive Scope: if the user chose "Complete product", do NOT offer v1.0/v2.0 scope splitting unless there is an explicit technical blocker (missing platform capability, immature dependency). The AI must not reduce scope by preference — only by necessity.
+Note: Delivery Target was already recorded in Step 0.5 — use get_decisions(category='scope') to confirm before defining Out of Scope (YAGNI).
 
 ---
 
