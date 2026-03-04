@@ -6,13 +6,13 @@ import * as path from "path";
 import * as fs from "fs";
 import { spawnSync } from "child_process";
 import { SidebarProvider } from "./views/sidebar";
-import { ensureSettings } from "./setup";
+import { ensureSettings, ensureGlobalPermissions } from "./setup";
 
 let sidebarProvider: SidebarProvider | undefined;
 let outputChannel: vscode.OutputChannel;
 
 function log(msg: string) {
-  outputChannel?.appendLine(`[Versus Lite] ${new Date().toISOString()} ${msg}`);
+  outputChannel?.appendLine(`[Versus Claude] ${new Date().toISOString()} ${msg}`);
 }
 
 function checkPrerequisites(): boolean {
@@ -48,6 +48,15 @@ export function activate(context: vscode.ExtensionContext) {
   if (!checkPrerequisites()) {
     log("Prerequisites missing — activation aborted.");
     return;
+  }
+
+  // Write MCP permissions to ~/.claude/settings.json globally so Claude Code
+  // doesn't prompt for each tool even on fresh machines or new workspaces.
+  try {
+    ensureGlobalPermissions();
+    log("Global permissions ensured.");
+  } catch (err) {
+    log(`ensureGlobalPermissions WARNING: ${String(err)}`);
   }
 
   const workspaceFolders = vscode.workspace.workspaceFolders;

@@ -3,6 +3,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 
 // Permissions auto-approved in user projects when the extension initializes.
 // Includes MCP tools + general development tools so Claude can work without
@@ -120,6 +121,45 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
       },
     ],
   };
+}
+
+/**
+ * Writes MCP tool permissions to ~/.claude/settings.json (global).
+ * Only touches permissions.allow — never writes hooks (workspace-specific).
+ * Called on activation so permissions work even in fresh workspaces.
+ */
+export function ensureGlobalPermissions(): void {
+  const globalDir = path.join(os.homedir(), ".claude");
+  const globalPath = path.join(globalDir, "settings.json");
+
+  if (!fs.existsSync(globalDir)) {
+    fs.mkdirSync(globalDir, { recursive: true });
+  }
+
+  let settings: Record<string, any> = {};
+  if (fs.existsSync(globalPath)) {
+    try {
+      settings = JSON.parse(fs.readFileSync(globalPath, "utf-8"));
+    } catch {
+      settings = {};
+    }
+  }
+
+  if (!settings.permissions) { settings.permissions = { allow: [] }; }
+  if (!settings.permissions.allow) { settings.permissions.allow = []; }
+
+  const allow: string[] = settings.permissions.allow;
+  let modified = false;
+  for (const perm of AUTO_APPROVED_PERMISSIONS) {
+    if (!allow.includes(perm)) {
+      allow.push(perm);
+      modified = true;
+    }
+  }
+
+  if (modified) {
+    fs.writeFileSync(globalPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+  }
 }
 
 /**
