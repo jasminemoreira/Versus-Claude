@@ -4,6 +4,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
+import { spawnSync } from "child_process";
 import { SidebarProvider } from "./views/sidebar";
 import { ensureSettings } from "./setup";
 
@@ -14,10 +15,40 @@ function log(msg: string) {
   outputChannel?.appendLine(`[Versus Lite] ${new Date().toISOString()} ${msg}`);
 }
 
+function checkPrerequisites(): boolean {
+  const missing: string[] = [];
+
+  const nodeResult = spawnSync("node", ["--version"], { encoding: "utf-8" });
+  if (nodeResult.status !== 0 || nodeResult.error) {
+    missing.push("**Node.js** — install from https://nodejs.org and restart VSCode.");
+  }
+
+  if (!vscode.extensions.getExtension("anthropic.claude-code")) {
+    missing.push("**Claude Code** — install from the VSCode Marketplace (publisher: Anthropic).");
+  }
+
+  if (missing.length > 0) {
+    const msg = `Versus Claude requires the following to work:\n${missing.join("\n")}\nThe extension will not function until these are installed.`;
+    vscode.window.showErrorMessage(msg, "Open Marketplace").then((action) => {
+      if (action === "Open Marketplace") {
+        vscode.commands.executeCommand("workbench.extensions.search", "@publisher:anthropic");
+      }
+    });
+    return false;
+  }
+
+  return true;
+}
+
 export function activate(context: vscode.ExtensionContext) {
   outputChannel = vscode.window.createOutputChannel("Versus Claude");
   context.subscriptions.push(outputChannel);
   log("Activating extension...");
+
+  if (!checkPrerequisites()) {
+    log("Prerequisites missing — activation aborted.");
+    return;
+  }
 
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders || workspaceFolders.length === 0) {
