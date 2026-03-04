@@ -59,7 +59,7 @@ const ANTIPATTERNS = `## ANTI-PATTERNS TO AVOID
 
 | # | Anti-pattern | Description | Antidote |
 |---|-------------|-------------|----------|
-| AP1 | Validation theater | Asking the AI "is this design good?" and accepting affirmative response. AI has agreement bias (RLHF). | Never ask for validation — ask for REFUTATION. |
+| AP1 | Validation theater | Asking the AI "is this design good?" — evaluation mode (judging what the AI produced) activates confirmation bias. Generation mode (producing new content) does not. | Operate in GENERATION mode: produce failure scenarios ("how does this fail?"), not quality judgments ("is this good?"). |
 | AP2 | Complexity as false solution | When critique reveals fragility, adding components instead of simplifying. "Second-system effect" (Brooks). | Each iteration must simplify, not complexify. |
 | AP3 | Monolithic session | Design, code, and tests in a single conversation. Context saturates and quality degrades. | One session per phase, one phase per module. |
 | AP4 | Implicit assumption | The design works — as long as unlisted conditions are true. | Assumptions lens in Phase 2 + assumptions in Phase 1. |
@@ -349,7 +349,7 @@ Conditional lens activation: review ProjectSpec (stack, constraints, out-of-scop
 2. Classify findings: 🔴 Critical (blocks) | 🟡 Important (degrades) | 🟢 Suggestion
 3. Finding = concrete evidence, not opinion
 4. Passes are independent (one lens at a time)
-**CAUTION AP1 (Validation theater):** Never ask "is it good?". Ask for refutation.
+**GENERATION MODE:** Phase 2 operates in generative mode — produce failure scenarios, not quality judgments. "How does this module fail?" generates new content (no confirmation bias anchor). "Is this design good?" asks the AI to evaluate what it produced (confirmation bias activated). The lens central questions are already in generative mode — follow them as written.
 
 ### Coverage Matrix (mandatory) (⚠️ MUST DISPLAY complete table in chat — do NOT summarize or skip modules/lenses):
 Table of modules × lenses (universal + activated conditional) with severities.

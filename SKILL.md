@@ -378,6 +378,8 @@ Selection principle: if removing this lens, is there a failure class that NO oth
 3. Finding = concrete evidence, not opinion
 4. Passes are independent (one lens at a time)
 
+**GENERATION MODE:** Phase 2 operates in generative mode — produce failure scenarios, not quality judgments. "How does this module fail?" generates new content (no confirmation bias anchor). "Is this design good?" asks the AI to evaluate what it produced (confirmation bias activated). The lens central questions are already in generative mode — follow them as written.
+
 ### Coverage Matrix:
 Table modules × lenses with severities.
 
@@ -503,7 +505,7 @@ Checklist per module: mature lib? → if not, why? → documented algorithm? →
 
 | # | Antipattern | Description | Antidote |
 |---|------------|-------------|----------|
-| AP1 | Validation theater | Asking the AI "is this design good?" — agreement bias (RLHF) | Never ask for validation — ask for REFUTATION |
+| AP1 | Validation theater | Asking the AI "is this design good?" — evaluation mode (judging what the AI produced) activates confirmation bias; generation mode (producing new content) does not | Operate in GENERATION mode: produce failure scenarios ("how does this fail?"), not quality judgments ("is this good?") |
 | AP2 | Complexity as false solution | Adding components when critique reveals fragility | Each iteration must simplify |
 | AP3 | Monolithic session | Design, code, and tests in one conversation | One session per phase, one phase per module |
 | AP4 | Implicit assumption | Design works if unlisted conditions are true | Assumptions Lens P2 + P1 assumptions |
