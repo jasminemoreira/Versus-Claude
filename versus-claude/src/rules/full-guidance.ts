@@ -253,6 +253,8 @@ Read specs/technical, examples, models, design. If critical technical/scientific
 3. **Assumptions.** What does the system assume as true? Implicit assumptions are the most common source of failures. (Leveson)
 4. **Negative scope.** What does the system deliberately NOT do? Conscious limitations prevent scope creep.
 
+**If the project requires a user interface:** list it as an explicit module in the decomposition (e.g., "Web UI", "React SPA", "CLI"). Never leave UI as an implicit extension of a backend module — it must appear by name with its own interface contract and be within scope as a named deliverable.
+
 ### Granularity principle (E = I₀/C):
 Each module must be understandable by the AI in a SINGLE interaction. If it doesn't fit in context with its dependencies, it needs to be decomposed. Interfaces work as "executable summaries" — the AI doesn't need module B's code, only B's interface.
 
@@ -507,6 +509,7 @@ If creating heuristics for problems with known solutions, debugging complex logi
 After all modules are implemented, before calling advance_phase():
 1. **P1 modules present?** List every module defined in the P1 decomposition — ✅ if present in codebase, ❌ if missing.
 2. **specs/validation covered?** List every requirement in specs/validation — ✅ if covered by at least one module, ❌ if not.
+3. **UI runnable?** If the project has a UI module (listed in P1 decomposition): is the UI implemented and accessible for manual testing (dev server starts, main flows navigable)? → mark_exit_criteria(phase=5, criterion='ui_runnable', met=true/false, details=...). If backend-only: mark_exit_criteria(phase=5, criterion='ui_runnable', met=true, details='N/A — backend-only').
 Scope inventory = **presence/absence check only** (not quality — that is Phase 6's job).
 If any ❌: implement the missing module/requirement before advancing.
 **CAUTION AP1:** do NOT mark ✅ without checking — the goal is to find ❌s, not to confirm ✅s.

@@ -372,6 +372,8 @@ test("P5 compact: implementation + exit chain", () => {
   assertContains(5, "DIVERGE",           "micro-check must seek divergence, not validate — prevents self-assessment bias");
   assertContains(5, "SCOPE INVENTORY",   "final presence/absence check before advance — catches unimplemented modules");
   assertContains(5, "WHEN ALL MODULES DONE", "trigger point for scope inventory before exit to P6");
+  assertContains(5, "ui_runnable",       "P5 exit criterion: UI must be implemented or N/A documented before advancing");
+  assertContains(5, "UI runnable",       "scope inventory item 3: explicit UI check — prevents backend-only delivery in UI projects");
   assertContains(5, "advance_phase",     "exit action to P6");
   assertContains(5, "get_phase_guidance","must chain to P6 guidance after advancing");
 });
