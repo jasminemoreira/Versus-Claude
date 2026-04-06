@@ -134,6 +134,9 @@ export function activate(context: vscode.ExtensionContext) {
             `Project '${name}' initialized. Phase 0 — Problem Discovery.`
           );
           vscode.window.showWarningMessage(
+            `⚠️ If Claude Code is already open, close and reopen the chat so it discovers the MCP server (.mcp.json was just created).`
+          );
+          vscode.window.showWarningMessage(
             `⚠️ Populate ./specs/ before starting Phase 0 — the AI reads from there. Key dirs: domain, references, technical, examples.`,
             "Open specs/"
           ).then((action) => {

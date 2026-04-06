@@ -20,6 +20,9 @@ const entryPoints = [
   { in: resolve(root, "src", "hooks", "inject-context.ts"), out: "inject-context" },
   { in: resolve(root, "src", "hooks", "phase-gate.ts"), out: "phase-gate" },
   { in: resolve(root, "src", "hooks", "loop-detector.ts"), out: "loop-detector" },
+  { in: resolve(root, "src", "hooks", "stop-verify.ts"), out: "stop-verify" },
+  { in: resolve(root, "src", "hooks", "truncation-check.ts"), out: "truncation-check" },
+  { in: resolve(root, "src", "hooks", "block-destructive.ts"), out: "block-destructive" },
   { in: resolve(root, "src", "mcp", "server.ts"), out: "server" },
 ];
 

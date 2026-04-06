@@ -36,7 +36,7 @@ async function main() {
   const server = new Server(
     {
       name: "versus-claude",
-      version: "0.4.3",
+      version: "0.5.0",
     },
     {
       capabilities: {

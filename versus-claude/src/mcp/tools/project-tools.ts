@@ -18,7 +18,7 @@ const SPECS_SUBDIRS = [
   "competitors",
 ];
 
-const BUNDLE_FILES = ["inject-context.js", "phase-gate.js", "loop-detector.js", "server.js"];
+const BUNDLE_FILES = ["inject-context.js", "phase-gate.js", "loop-detector.js", "stop-verify.js", "truncation-check.js", "block-destructive.js", "server.js"];
 
 /**
  * Resolves the bundle directory.
@@ -173,7 +173,7 @@ export function handleInitProject(
     message:
       `NEW PROJECT '${args.name}' initialized in ${workspace}. ` +
       `This is an INDEPENDENT and AUTONOMOUS project — DO NOT fetch specs, decisions, or code from other projects. ` +
-      `Structure created: state.json, server.js + 3 hooks (in .versus/), specs/ (9 subfolders), .mcp.json, settings.json. ` +
+      `Structure created: state.json, server.js + 6 hooks (in .versus/), specs/ (9 subfolders), .mcp.json, settings.json. ` +
       `Everything local — no external dependencies. ` +
       `MANDATORY ACTION: Read ${settingsPath} with the Read tool to load permissions and hooks. ` +
       `Then call get_phase_guidance() for Phase 0 instructions.`,

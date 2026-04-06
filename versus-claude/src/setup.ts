@@ -73,6 +73,37 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
           },
         ],
       },
+      {
+        matcher: "Bash",
+        hooks: [
+          {
+            type: "command",
+            command: `node "${path.join(orchDir, "block-destructive.js")}"`,
+          },
+        ],
+      },
+    ],
+    PostToolUse: [
+      {
+        matcher: "Grep|Bash",
+        hooks: [
+          {
+            type: "command",
+            command: `node "${path.join(orchDir, "truncation-check.js")}"`,
+          },
+        ],
+      },
+    ],
+    Stop: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: `node "${path.join(orchDir, "stop-verify.js")}"`,
+            timeout: 120,
+          },
+        ],
+      },
     ],
     PreCompact: [
       {
