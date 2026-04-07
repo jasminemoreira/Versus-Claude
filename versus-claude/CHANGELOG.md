@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.1] - 2026-04-07
+
+### Fixed
+- **MCP args type coercion (sanitizer).** All MCP tool arguments are now sanitized before dispatch: `phase`, `target_phase`, and `score` are coerced to number; `met` is coerced to boolean; array params (`stack`, `outOfScope`, `patterns`, `constraints`) accept both single strings and arrays. Prevents silent failures when an LLM sends `"2"` (string) instead of `2` (number) — strict equality comparisons in the engine would fail without coercion. Bug was latent with Claude (which sends correct types) but manifested with other models.
+
 ## [0.5.0] - 2026-04-06
 
 ### Added

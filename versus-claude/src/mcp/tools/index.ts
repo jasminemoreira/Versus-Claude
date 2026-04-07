@@ -57,11 +57,47 @@ export function handleToolCall(
   return result;
 }
 
+// --- Arg sanitizers: coerce types from LLMs that send strings instead of numbers/booleans ---
+
+function toNumber(val: unknown): number | undefined {
+  if (val === undefined || val === null) return undefined;
+  const n = Number(val);
+  return isNaN(n) ? undefined : n;
+}
+
+function toBoolean(val: unknown): boolean {
+  if (typeof val === "boolean") return val;
+  if (val === "true" || val === "1") return true;
+  if (val === "false" || val === "0") return false;
+  return Boolean(val);
+}
+
+function toStringArray(val: unknown): string[] | undefined {
+  if (val === undefined || val === null) return undefined;
+  if (Array.isArray(val)) return val.map(String);
+  if (typeof val === "string") return [val];
+  return undefined;
+}
+
+function sanitize(args: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...args };
+  if ("phase" in out) out.phase = toNumber(out.phase);
+  if ("target_phase" in out) out.target_phase = toNumber(out.target_phase);
+  if ("score" in out) out.score = toNumber(out.score);
+  if ("met" in out) out.met = toBoolean(out.met);
+  if ("stack" in out) out.stack = toStringArray(out.stack);
+  if ("outOfScope" in out) out.outOfScope = toStringArray(out.outOfScope);
+  if ("patterns" in out) out.patterns = toStringArray(out.patterns);
+  if ("constraints" in out) out.constraints = toStringArray(out.constraints);
+  return out;
+}
+
 function dispatch(
   toolName: string,
-  args: Record<string, unknown>,
+  rawArgs: Record<string, unknown>,
   engine: StateEngine
 ): string {
+  const args = sanitize(rawArgs);
   switch (toolName) {
     case "get_phase_state":
       return handleGetPhaseState(engine);
