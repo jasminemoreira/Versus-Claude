@@ -390,9 +390,11 @@ test("P6 compact: spec-driven testing + manual handoff + exit chain", () => {
   assertContains(6, "get_phase_guidance","must chain to P7 guidance after advancing");
 });
 
-test("P7 compact: double-loop + meta-iteration safety", () => {
+test("P7 compact: product evaluation + project lessons + meta-iteration safety", () => {
   assertContains(7, "start_new_cycle",   "meta-iteration tool must be named");
   assertContains(7, "init_project",      "prohibition against init_project for v2 must be present");
+  assertContains(7, "project lessons",   "project-focused lessons must be mentioned");
+  assertContains(7, "specs/",            "specs/ update step must be present");
 });
 
 console.log("\n=== All tests completed ===\n");
