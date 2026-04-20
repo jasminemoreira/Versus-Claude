@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
-import { ensureSettings } from "../../setup";
+import { ensureSettings, ensureSpecsReadme } from "../../setup";
 
 const SPECS_SUBDIRS = [
   "references",
@@ -152,6 +152,8 @@ export function handleInitProject(
     }
     specsCreated = true;
   }
+  // Write specs/README.md (idempotent — never overwrites user edits)
+  ensureSpecsReadme(workspace);
 
   // Ensure .mcp.json pointing to LOCAL server.js
   const mcpCreated = ensureMcpJson(workspace);

@@ -6,7 +6,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { spawnSync } from "child_process";
 import { SidebarProvider } from "./views/sidebar";
-import { ensureSettings, ensureGlobalPermissions } from "./setup";
+import { ensureSettings, ensureGlobalPermissions, ensureSpecsReadme } from "./setup";
 
 let sidebarProvider: SidebarProvider | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -17,20 +17,28 @@ function log(msg: string) {
 
 function checkPrerequisites(): boolean {
   const missing: string[] = [];
+  const nodeOk = (() => {
+    const r = spawnSync("node", ["--version"], { encoding: "utf-8" });
+    return r.status === 0 && !r.error;
+  })();
+  const claudeOk = !!vscode.extensions.getExtension("anthropic.claude-code");
 
-  const nodeResult = spawnSync("node", ["--version"], { encoding: "utf-8" });
-  if (nodeResult.status !== 0 || nodeResult.error) {
-    missing.push("**Node.js** — install from https://nodejs.org and restart VSCode.");
+  if (!nodeOk) {
+    missing.push("**Node.js** — install from https://nodejs.org/en/download and restart VSCode.");
   }
-
-  if (!vscode.extensions.getExtension("anthropic.claude-code")) {
+  if (!claudeOk) {
     missing.push("**Claude Code** — install from the VSCode Marketplace (publisher: Anthropic).");
   }
 
   if (missing.length > 0) {
     const msg = `Versus Claude requires the following to work:\n${missing.join("\n")}\nThe extension will not function until these are installed.`;
-    vscode.window.showErrorMessage(msg, "Open Marketplace").then((action) => {
-      if (action === "Open Marketplace") {
+    const buttons: string[] = [];
+    if (!nodeOk) buttons.push("Download Node.js");
+    if (!claudeOk) buttons.push("Open Marketplace");
+    vscode.window.showErrorMessage(msg, ...buttons).then((action) => {
+      if (action === "Download Node.js") {
+        vscode.env.openExternal(vscode.Uri.parse("https://nodejs.org/en/download"));
+      } else if (action === "Open Marketplace") {
         vscode.commands.executeCommand("workbench.extensions.search", "@publisher:anthropic");
       }
     });
@@ -123,6 +131,7 @@ export function activate(context: vscode.ExtensionContext) {
           for (const dir of specsDirs) {
             fs.mkdirSync(path.join(workspacePath, "specs", dir), { recursive: true });
           }
+          ensureSpecsReadme(workspacePath);
 
           // Deploy bundles and configurations (only now, by user action)
           deployServer(extensionPath, workspacePath);
