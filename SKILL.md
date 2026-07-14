@@ -495,6 +495,15 @@ Present recommendation and ask: accept / override. The user validates the RECOMM
 
 **Alarm signal (immediate STOP):** If during Phase 5-6 the AI is creating heuristics for problems with known solutions, debugging complex logic written from scratch, doing trial-and-error on something that should be deterministic, or spending >2 iterations on the same module → STOP, communicate, look for reference implementation (Tier 2).
 
+**Loop detection — what trips it.** What S6 forbids is *blind* debugging: re-running the tests hoping something sticks, with no named cause. It does not forbid debugging, and it must never forbid verification — S4 requires the AI to execute the tests and see them pass, so a safeguard that blocks the green run makes S4 impossible to satisfy. The rule therefore counts *understanding*, not commands:
+
+- Only a **failed** run counts. A passing run clears the counter.
+- **3 consecutive failures with no diagnosis recorded between them** → the next test run is blocked.
+- The escape is to name the cause: `record_decision(category='diagnosis', content='<root cause + the fix it implies>')`, which clears the counter at once.
+- Fix a test, name why it broke, run again: that is the normal cycle and never accumulates. Four failures with four named causes is not a loop; four failures with no cause named is.
+
+Record the diagnosis because it is the honest log of the debugging session, not to appease the counter. If you cannot state the root cause in one sentence, you do not have one — and that is exactly the moment S6 exists to catch. Go Tier 2: find a reference implementation, and record *that* as the diagnosis.
+
 Checklist per module: mature lib? → if not, why? → documented algorithm? → portable implementation? → decision (use lib / port / implement from scratch + justification).
 
 **S7 — Sequence Discipline.** After each file: mark completed, identify next, announce "X/N completed, next: Y", start immediately. Don't start tangential discussions (→ Phase 7). If interrupted: consult todo list → announce resumption → continue.
