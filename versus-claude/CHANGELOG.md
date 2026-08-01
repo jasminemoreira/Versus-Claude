@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0] - 2026-07-14
+
+### Changed — methodology
+- **The LLM Switch Point (P4→P5) is now a decision, not a notice.** Phase 4 told the model to "Display the LLM Switch Point notification" and then, in the very next step, to `advance_phase()` and "begin Phase 5 implementation immediately" — so the model correctly announced the option and started coding, leaving the user to interrupt if they wanted a different model. That inverts R2/S2 (the switch is a *user* decision), and it inverts it at the worst possible moment: the choice is only free *before* any code exists, since afterwards switching means abandoning a session mid-implementation. Phase 4 now asks in chat with two options (default "Continue here"), advances the phase in either case (the gate is already satisfied — a new session should resume at Phase 5, not re-run the convergence check), and on "Switch model" records the decision and stops. This mirrors the Session Renewal step Phase 6 already had. The fix includes an explicit prohibition of the observed antipattern ("Do NOT write 'I am advancing to Phase 5; interrupt me if you want to switch'"), since an instruction without the named antipattern tends to be reinvented.
+- **The Reverse LLM Switch (Phase 7 → new cycle) got the same treatment.** `start_new_cycle` recommends switching *back* to a capable model for the new cycle's Phase 0 (design), and it had the identical "MUST DISPLAY … recommend" notice shape — announce and proceed to load Phase 0. It is now a decision folded into the new-cycle steps (recommended "Switch model", since design benefits from the most capable model), stopping before Phase 0 guidance loads if the user switches. Same antipattern prohibition. If only the forward switch were fixed, the same inversion would survive at the cycle boundary.
+- **`process` is now a documented `record_decision` category.** Both switch decisions record with `category='process'`, which was not in the tool's documented list (it recorded fine — the engine is permissive — but was invisible to any category-filtered `get_decisions`). Added to the description as "methodology/session decisions".
+- **These were upstream methodology gaps, not port divergences** — the notice-shaped wording exists in the Kimi, Qwen and LocalQwen builds. The forward-switch fix mirrors the one first applied in the Kimi window; the reverse-switch fix and the `process` category are new here and belong upstream too. Goal: the four builds converge on identical guidance text.
+
 ## [0.9.0] - 2026-07-14
 
 ### Changed
