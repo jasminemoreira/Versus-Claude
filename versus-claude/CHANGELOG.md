@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.10.1] - 2026-08-03
+
+### Fixed
+- **`.versus/` bundles crashed in any project whose `package.json` declares `"type":"module"`.** Modern JS projects commonly set this, and it makes Node treat every `.js` under the project tree as an ES module — including the CommonJS bundles Versus deploys (`server.js` + all hooks). The MCP server and every hook then died on load with `ReferenceError: require is not defined in ES module scope`, silently disabling the whole methodology in that project. `deployServer` now writes `.versus/package.json` = `{"type":"commonjs"}` alongside the bundles, pinning CommonJS for the `.versus/` tree (Node resolves module type from the nearest `package.json`). Idempotent, and never overwritten on reactivation, so the immunization persists. Existing broken projects are fixed on the next activation, or by dropping that file in by hand.
+
 ## [0.10.0] - 2026-07-14
 
 ### Changed — methodology

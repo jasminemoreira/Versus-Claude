@@ -207,6 +207,19 @@ function deployServer(extensionPath: string, workspacePath: string) {
     fs.mkdirSync(targetDir, { recursive: true });
   }
 
+  // The project's own package.json may declare "type":"module" (common in modern
+  // JS projects). That makes Node treat every .js under the project tree as an ES
+  // module — including these CommonJS bundles — and they crash with "require is
+  // not defined in ES module scope". A package.json here pins CommonJS for .versus/,
+  // since Node resolves module type from the nearest package.json. deployServer
+  // rewrites the bundles on every activation but never touches this file, so the
+  // immunization survives reinstalls.
+  const pkgPath = path.join(targetDir, "package.json");
+  const pkgContent = JSON.stringify({ type: "commonjs" }, null, 2) + "\n";
+  if (!fs.existsSync(pkgPath) || fs.readFileSync(pkgPath, "utf-8") !== pkgContent) {
+    fs.writeFileSync(pkgPath, pkgContent);
+  }
+
   for (const file of files) {
     const src = path.join(bundleDir, file);
     const dest = path.join(targetDir, file);
