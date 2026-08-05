@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.3] - 2026-08-05
+
+### Fixed — the structural-gate error message pointed at the wrong artifact
+The `artifactRows` denial message was hardcoded with the coverage-matrix example (`P-01 | auth | Security | 🔴 | …`) and the phrase "findings-table form". But the same message serves every criterion with `artifactRows` — so when `architecture_doc` (a module table) failed, the model was told to write a *findings* row into `architecture.md`. An obedient model would produce the wrong file. Found by the Kimi build during the port.
+
+Fix is per-criterion, not per-message: `artifactRows` gained an optional `example` field, and the message is now generic ("structured form", "table row(s) with an id") plus that example. `coverage_matrix` carries the `P-01 …` example, `architecture_doc` the `M-01 …` example. Tests now assert each artifact's error shows its own example and not the other's.
+
 ## [0.12.2] - 2026-08-05
 
 ### Changed — the module list is now machine-readable (architecture_doc)
