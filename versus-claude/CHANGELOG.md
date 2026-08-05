@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.12.0] - 2026-08-05
+
+### Changed — the coverage matrix is a findings table, and the gate checks its form
+Preparing a designed batch to test lens orthogonality (RO3) surfaced that the persisted coverage matrix could not answer the question it exists for. v0.11.0 persisted a **severity-per-cell grid** (module × lens), and the gate checked only that the file existed and was non-trivial. But orthogonality vs. overlap — two lenses finding the *same* defect vs. *different* defects in the same module — cannot be read from a grid: it needs **per-finding identity**. There was no finding id anywhere in the methodology.
+
+- **`coverage_matrix` (P2) is now a findings table**: one row per finding, `id | module | lens | severity | description`, each with a unique in-project id (P-01, A-03, …) and `duplica: <id>` when it is the same defect another lens recorded. Guidance rewritten (P2 writes it, P3 addresses findings by id).
+- **The artifact gate now validates structure, not just existence.** New `ExitCriterionDef.artifactRows: { pattern, count }`: the file must contain at least `count` lines matching the finding-id pattern. A severity-only grid (no ids) now BLOCKS advance to Phase 3 with a message showing the required form. Existence-only gates (architecture_doc, lessons_documented) are unchanged. As always, the engine checks **form, not content** — whether a finding is real or a `duplica` mark honest stays a human judgment (the oracle).
+
+This makes the matrix the analysable instrument the batch needs, and — beyond the batch — findings with stable ids are referenceable in Phase 3, in rework logs, and in a post-mortem, which the grid never was.
+
 ## [0.11.0] - 2026-08-05
 
 ### Changed — methodology: gates require evidence, not a self-attested boolean

@@ -220,8 +220,20 @@ test("advancePhase blocks invalid transition (0→2)", () => {
   assert.strictEqual(result.ok, false);
 });
 
-/** Writes a non-trivial coverage matrix artifact so Phase 2 can advance. */
+/** Writes a valid coverage findings table (per-finding ids) so Phase 2 can advance. */
 function writeCoverageMatrix(ws: string): void {
+  const content =
+    "# Coverage Matrix\n\n" +
+    "| id | module | lens | severity | description |\n" +
+    "|------|--------|------|----------|-------------|\n" +
+    "| P-01 | auth | Security | 🔴 | login builds SQL by string concat → injection |\n" +
+    "| A-03 | auth | Architectural | 🟡 | auth imports ui for its toast → cycle |\n" +
+    "| P-02 | ui   | Security | 🔴 | stored XSS via unescaped comment body |\n";
+  fs.writeFileSync(path.join(ws, "specs", "design", "coverage-matrix.md"), content);
+}
+
+/** A severity-only grid: non-trivial, but no per-finding ids — must NOT satisfy the gate. */
+function writeSeverityGrid(ws: string): void {
   const content =
     "# Coverage Matrix\n\n" +
     "| module | correctness | security | performance |\n" +
@@ -425,6 +437,27 @@ test("a trivial artifact does not count as persisted", () => {
   fs.writeFileSync(path.join(workspace, "specs", "design", "coverage-matrix.md"), "| |\n");
   const r = engine.advancePhase(3);
   assert.strictEqual(r.ok, false, "empty/near-empty file must not satisfy the gate");
+});
+
+test("a severity grid without per-finding ids BLOCKS (structural gate)", () => {
+  toPhase2Stamped();
+  writeSeverityGrid(workspace); // non-trivial, but no P-01/A-03 ids
+  const r = engine.advancePhase(3);
+  assert.strictEqual(r.ok, false);
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria[0].includes("finding-id format"));
+
+  writeCoverageMatrix(workspace); // proper findings table
+  assert.strictEqual(engine.advancePhase(3).ok, true);
+});
+
+test("countArtifactRows counts finding rows, not grid rows", () => {
+  engine.initProject("Test", "Desc");
+  const pat = "\\|\\s*[A-Za-z]{1,4}-\\d+\\s*\\|";
+  writeSeverityGrid(workspace);
+  assert.strictEqual(engine.countArtifactRows("design/coverage-matrix.md", pat), 0);
+  writeCoverageMatrix(workspace);
+  assert.strictEqual(engine.countArtifactRows("design/coverage-matrix.md", pat), 3);
 });
 
 test("artifactPresent: existence + non-trivial content", () => {
