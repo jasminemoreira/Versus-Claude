@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.1] - 2026-08-05
+
+### Fixed — three regressions from the v0.12.0 findings-table change
+- **The finding-count floor is gone.** `coverage_matrix.artifactRows.count` was 3, imposing a tool-enforced floor of 3 findings — a measurement artifact in a study whose metric is findings-per-lens. Lowered to 1: the gate still rejects the old severity grid (0 rows with ids) but imposes no count floor. A floor of 1 is not arbitrary — an adversarial pass over 19 lenses that finds literally nothing was not adversarial.
+- **The "zero findings" guidance path was unreachable and partly invalid.** Phase 2 guidance still offered "zero findings → advance to Phase 3 OR skip to Phase 4"; the gate blocked <1 finding, and `2→4` was never a valid transition anyway. Rewritten: zero findings is flagged as a red flag (shallow critique), and the only valid transition from Phase 2 is to Phase 3.
+- **Internal contradiction in the Phase 2 guidance.** The header line still described "a table of modules × lenses with severities" directly above the paragraph mandating "one row per finding, not a severity grid." The model read both. The stale line is removed.
+- **Lens vocabulary pinned for cross-project aggregation.** The guidance said "pick a short prefix per lens family" (per project, model's choice), which would let one project write `Security` and another `Segurança`/`SEG` in the lens column — making a multi-project analysis unaggregatable. The guidance now requires the exact canonical lens name from the Phase 2 lens table in the `lens` column, and a consistent prefix per lens.
+
 ## [0.12.0] - 2026-08-05
 
 ### Changed — the coverage matrix is a findings table, and the gate checks its form

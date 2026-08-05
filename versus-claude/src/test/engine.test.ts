@@ -445,10 +445,20 @@ test("a severity grid without per-finding ids BLOCKS (structural gate)", () => {
   const r = engine.advancePhase(3);
   assert.strictEqual(r.ok, false);
   if (r.ok) return;
-  assert.ok(r.error.missingCriteria[0].includes("finding-id format"));
+  assert.ok(r.error.missingCriteria[0].includes("findings-table form"));
 
   writeCoverageMatrix(workspace); // proper findings table
   assert.strictEqual(engine.advancePhase(3).ok, true);
+});
+
+test("a single finding row satisfies the gate (no ≥3 floor)", () => {
+  toPhase2Stamped();
+  fs.writeFileSync(
+    path.join(workspace, "specs", "design", "coverage-matrix.md"),
+    "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
+    "| P-01 | auth | Security | 🔴 | the one finding this simple design has: token never expires |\n"
+  );
+  assert.strictEqual(engine.advancePhase(3).ok, true, "one real finding is enough — the gate must not impose a count floor");
 });
 
 test("countArtifactRows counts finding rows, not grid rows", () => {
