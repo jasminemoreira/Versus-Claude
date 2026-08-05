@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.4] - 2026-08-05
+
+### Fixed — the coverage-matrix gate accepted echoed module rows as findings
+v0.12.2 made Phase 1 write a module table with `M-\d+` ids, and Phase 2 reads that file for the module names. But the coverage-matrix gate pattern was `[A-Za-z]{1,4}-\d+`, and `M` fits `{1,4}` — so a matrix containing only the Phase-1 module rows (`| M-01 | quota | … |`, zero findings) satisfied the Phase-2 gate. With `count: 1`, one echoed module row passed a matrix with no findings recorded — defeating the gate exactly where the batch (RO3) needs it, since a matrix with no findings is not analysable. Found by the Kimi build.
+
+- **Coverage-matrix pattern now excludes the module prefix:** `\|\s*(?!M-)[A-Za-z]{1,4}-\d+\s*\|`. `M-01` (a module) no longer counts as a finding; `P-01`, `A-03`, `MEC-01` still do.
+- **`M-` reserved in the Phase 2 guidance:** the negative lookahead alone would silently drop findings if a model chose `M-` as the prefix for the Mechanical Engineering lens. The guidance now states `M-` identifies a module, never a lens, and Mechanical Engineering uses `MEC-`. Without this the fix would turn a lens finding into a phantom module — the exact error the batch cannot have.
+
 ## [0.12.3] - 2026-08-05
 
 ### Fixed — the structural-gate error message pointed at the wrong artifact

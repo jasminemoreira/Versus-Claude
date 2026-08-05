@@ -454,6 +454,29 @@ test("a severity grid without per-finding ids BLOCKS (structural gate)", () => {
   assert.strictEqual(engine.advancePhase(3).ok, true);
 });
 
+test("a matrix of only module rows (M- echo, zero findings) BLOCKS", () => {
+  toPhase2Stamped();
+  // A model echoes Phase 1's module table into the matrix — no actual findings.
+  fs.writeFileSync(
+    path.join(workspace, "specs", "design", "coverage-matrix.md"),
+    "# Modules under critique\n\n| id | module | responsibility |\n|---|---|---|\n" +
+    "| M-01 | rate-limiter | enforce quota — echoed from architecture, not a finding |\n" +
+    "| M-02 | store | persist counters — echoed, not a finding |\n"
+  );
+  const r = engine.advancePhase(3);
+  assert.strictEqual(r.ok, false, "M- rows are modules, not findings — must not satisfy the coverage gate");
+});
+
+test("Mechanical Engineering findings (MEC-) still count", () => {
+  toPhase2Stamped();
+  fs.writeFileSync(
+    path.join(workspace, "specs", "design", "coverage-matrix.md"),
+    "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
+    "| MEC-01 | gearbox | Mechanical Engineering | 🔴 | torque exceeds spec under load, real finding |\n"
+  );
+  assert.strictEqual(engine.advancePhase(3).ok, true, "MEC- is a lens finding, not the reserved M- module prefix");
+});
+
 test("a single finding row satisfies the gate (no ≥3 floor)", () => {
   toPhase2Stamped();
   fs.writeFileSync(
