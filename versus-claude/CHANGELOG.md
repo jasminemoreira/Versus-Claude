@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.11.0] - 2026-08-05
+
+### Changed — methodology: gates require evidence, not a self-attested boolean
+The audit found the methodology's core inconsistency: almost every exit criterion was a boolean the AI flips via `mark_exit_criterion`, which contradicts its own thesis (S4: gates need verification). A gate could be — and in the corpus routinely was — stamped in seconds with no trace left. Quality cannot be mechanized (the oracle: Tarski/Rice), but **existence and observation can**, and a persisted/witnessed record makes a stamped gate *auditable after a failure* instead of vanishing with the chat. Two mechanisms added to `ExitCriterionDef`:
+
+- **`artifact?: string`** — the criterion is not met until a non-trivial file exists at `specs/<path>`. Marking it met is not enough; `advance_phase` (and `start_new_cycle`) block until the file is on disk. Applied to:
+  - `coverage_matrix` (P2) → `specs/design/coverage-matrix.md`, keyed by module; **read by P3** to address criticals.
+  - `architecture_doc` (P1) → `specs/technical/architecture.md`, keyed by module; **read by P5** to implement each module.
+  - `lessons_documented` (P7) → `specs/references/lessons.md`; feeds the next cycle via `start_new_cycle`.
+- **`verify?: "test-pass"`** — the criterion requires the `test-outcome` hook to have *witnessed* a green run in the phase, not merely be told so. Applied to `tests_passing` (P6): `advance_phase` to P7 is blocked unless a passing run was observed in Phase 6. This is S4 (“execute and verify, never assume”) made mechanical. New `PhaseState.lastTestOutcome` records what the hook saw; a witnessed FAIL, or a pass witnessed in an earlier phase, does not satisfy it.
+
+The engine checks **existence/observation, never quality** — whether the matrix is good, the tests meaningful, the lessons real stays a human judgment, and the guidance says so explicitly. The point is a trace to audit, not automated proof.
+
+### Fixed
+- **The MCP server now reloads state before every tool call.** It previously loaded `state.json` once at startup and reused the in-memory copy, so out-of-process hook writes (the `test-outcome` hook's `lastTestOutcome`, the loop counter) were invisible to the server — the new `tests_passing` gate would have blocked forever. The engine saves after every mutation, so disk is authoritative; the reload only picks up hook writes. Negligible cost, and it also makes `get_phase_state` reflect live hook state.
+
+### Notes
+- Honest limits: the `tests_passing` gate depends on `test-outcome` recognizing the run (same detector S6 already trusts to block) — an unrecognized command/output can false-block; run a standard test command so the hook sees a clear pass. The "non-trivial artifact" bar is 80 non-whitespace chars (a real matrix/doc clears it easily; a stub does not) — tunable.
+- The remaining stampable criteria are oracle-limited (semantic quality) and deliberately left as human-judgment gates; the honest move there is the text admitting so, not fake verification.
+
 ## [0.10.1] - 2026-08-03
 
 ### Fixed

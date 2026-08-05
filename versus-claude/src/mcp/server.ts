@@ -36,7 +36,7 @@ async function main() {
   const server = new Server(
     {
       name: "versus-claude",
-      version: "0.10.1",
+      version: "0.11.0",
     },
     {
       capabilities: {
@@ -52,6 +52,12 @@ async function main() {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     try {
+      // Reload state from disk before every call: hooks (test-outcome, loop-detector)
+      // run in separate processes and write state.json, so the server's in-memory
+      // copy would otherwise be stale — the tests_passing gate reads what the
+      // test-outcome hook witnessed. The engine saves after every mutation, so
+      // disk is authoritative; reloading only picks up out-of-process writes.
+      engine.load();
       const result = handleToolCall(name, (args ?? {}) as Record<string, unknown>, engine);
       return {
         content: [{ type: "text" as const, text: result }],
