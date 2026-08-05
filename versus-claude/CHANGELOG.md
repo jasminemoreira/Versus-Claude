@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.12.2] - 2026-08-05
+
+### Changed — the module list is now machine-readable (architecture_doc)
+Phase 1 guidance already declared the invariant — "key each module by a stable name; Phase 2's coverage matrix and Phase 5's implementation will reference those same names" — but nothing structured or enforced it: the `architecture_doc` gate was existence + non-triviality, and the doc was prose. So Phase 2 wrote module names from chat memory, Phase 5 did the same, and nothing compared. The coverage matrix's per-module traceability ("keyed by module so a later failure traces to the lens") silently depends on that key being stable.
+
+- **`architecture.md` must now be a module table** — `| M-01 | module | responsibility | interface | depends-on |` — one row per module. The `M-\d+` id makes the row machine-recognizable (module names have no distinguishable token); the **stable key across phases stays the `module` name**. `architecture_doc` reuses the `artifactRows` gate from v0.12.0 (`{ pattern: "\\|\\s*M-\\d+\\s*\\|", count: 1 }`): a prose architecture no longer passes. No new machinery — the same mechanism the coverage matrix uses, one phase earlier.
+- The coverage-matrix finding format (frozen in the batch protocol §5) is unchanged: Phase 2's `module` column stays the name; the M-id lives only in the architecture doc, to make the canonical module list extractable.
+
+### Known limit (not yet closed)
+The engine checks the FORM (there is a module table), not that Phase 2 and Phase 5 actually **reused** those names. The name drift (Phase 1 `rate-limiter` → Phase 2 `quota`) is now **detectable** — both artifacts are machine-readable and can be diffed — but not **prevented**: no gate cross-checks `matrix.module ∈ architecture.modules`. That cross-artifact check is a further step; this change makes it possible, not automatic.
+
 ## [0.12.1] - 2026-08-05
 
 ### Fixed — three regressions from the v0.12.0 findings-table change
