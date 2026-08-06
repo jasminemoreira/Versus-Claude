@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.5] - 2026-08-05
+
+### Changed — Phase 3 appends the architecture version, never overwrites it (guidance only)
+The T01 pilot showed a real information loss: the Phase 2↔3 loop critiques a different architecture each round, but the guidance let Phase 3 overwrite `specs/technical/architecture.md`. A module removed between V(1) and V(2) (`quota-limiter` in the pilot) took its `M-` row with it, so an iteration-1 finding that named it pointed at a module no machine-readable artifact recorded any more — the per-module traceability the coverage matrix exists for broke exactly where the design changed most. Phase 3 now **appends** a `## V(N+1)` section with its own module table; every version is kept, the last is current. Guidance only — no code, no gate, no test change.
+
+Deliberately not included before the batch: the Portuguese-session false warning (`⚠ P2 STEP 1 MISSING` when the lens decision is recorded as "LENTES ATIVADAS") — it is a context warning, not a gate, and touching instrument code on the eve of collection is the regression risk this version series has repeatedly shown to be real. Declared as a known limitation; the real fix (structured lens recording) is deferred to after the batch.
+
 ## [0.12.4] - 2026-08-05
 
 ### Fixed — the coverage-matrix gate accepted echoed module rows as findings
