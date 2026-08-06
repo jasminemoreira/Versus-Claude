@@ -343,6 +343,18 @@ export class StateEngine {
     this.state.currentPhase = targetPhase;
     this.state.currentIteration = 1;
     this.resetLoopCounter();
+
+    // Re-entering Phase 2 from the 2↔3 loop: the lens set must be re-declared
+    // against the NEW architecture version. A set fixed against V(1) while the
+    // design changes is the defect the pilots exposed. Reset the criterion so the
+    // gate demands a fresh, iteration-stamped declaration this round.
+    if (from === 3 && targetPhase === 2) {
+      const c = this.state.exitCriteria.find(
+        (ec) => ec.phase === 2 && ec.criterion === "activated_lenses_recorded"
+      );
+      if (c) c.met = false;
+    }
+
     this.save();
 
     // Returns OK with specs warnings if any

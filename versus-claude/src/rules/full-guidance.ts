@@ -398,7 +398,11 @@ Selection principle: if removing this lens, is there a failure class that NO oth
 | Linguistics / Grammar | Is the interface contract unambiguous? Can two correct implementations of the same contract produce incompatible behaviors? | Protocol ambiguity — two correct implementations that are mutually incompatible | Inter-component communication, protocol definitions, message formats, interface contracts between independent teams |
 | Mechanical Engineering | Where are the tolerances? Does the system tolerate variation or only work at exact specification? | Rigid coupling disguised as tolerance — failure from small deviations in dependency versions, environment, or load | Module maintenance, system evolution, long-lived systems with technical debt accumulation |
 
-Conditional lens activation: review ProjectSpec (stack, constraints, out-of-scope) and activate applicable lenses. Record activated set with record_decision(category='architecture').
+Conditional lens activation (STEP 1, before applying any lens): review ProjectSpec (stack, constraints, out-of-scope) and decide, for EACH of the 12 conditional lenses, whether this project activates it. Record with record_decision(category='architecture', phase=2). The record MUST state, in one entry: (a) the marker \`ACTIVATED LENSES\` (or \`LENTES ATIVADAS\`); (b) the **iteration number and the architecture version** it is decided against — e.g. "ACTIVATED LENSES — iteration 2, against V(2)"; (c) the activated conditional lenses; (d) EVERY non-activated conditional lens with its own one-line reason.
+
+**Re-declare each round of the 2↔3 loop.** When you return to Phase 2 to critique V(N+1), the lens set is re-examined against the NEW architecture — a set fixed against V(1) while the design changes is a defect. The engine resets \`activated_lenses_recorded\` on loop-back, so a fresh, iteration-stamped record is required each round.
+
+**Activation is by PROJECT SIGNAL only.** That another lens seems to cover the same failure class is NOT a reason to skip a lens: absence of findings is already a valid result, and deciding in advance that two lenses overlap is the conclusion the study measures, not a premise. Never drop a lens for redundancy with another — the individual reason for a non-activated lens must be a project signal ("no external dependencies", "no user-facing surface"), never "already covered by lens X".
 
 ### Protocol per lens:
 1. Apply central question to EACH module
@@ -413,6 +417,8 @@ Record every finding from every applied lens (universal + activated conditional)
 **PERSIST IT AS A FINDINGS TABLE — the criterion is not met until the file has this form.** Write \`specs/design/coverage-matrix.md\` as ONE ROW PER FINDING, not a severity-per-cell grid:
 
 \`\`\`
+## Iteração 1 — V(1)
+
 | id | module | lens | severity | description |
 |------|--------|----------|----------|-------------|
 | P-01 | auth   | Security | 🔴 | login builds SQL by string concat → injection |
@@ -420,7 +426,9 @@ Record every finding from every applied lens (universal + activated conditional)
 | P-02 | auth   | Security | 🔴 | duplica: none — session token never expires |
 \`\`\`
 
-Rules: every finding gets a **unique id in this project** (P-01, A-03, … — use a consistent prefix per lens, the SAME prefix every time that lens appears). **The prefix \`M-\` is RESERVED for modules (Phase 1's architecture table) — never use it for a finding; the Mechanical Engineering lens uses \`MEC-\`, not \`M-\`.** In the **\`lens\` column use the EXACT lens name from the Phase 2 lens table** (Security, Architectural, Resilience, …) — never an abbreviation or a translation, because cross-project analysis groups on this column and a "Segurança"/"SEG"/"Security" split makes the data unaggregatable. Use the exact Phase-1 module name in the \`module\` column. When a finding is **the same defect** another lens already recorded, add \`duplica: <that id>\` in the description. This per-finding format — not a grid of severities — is the whole point: it is what lets a later analysis (or a post-mortem when \`auth\` breaks) tell two lenses finding the SAME defect (overlap) from two lenses finding DIFFERENT defects in the same module (orthogonality). You MAY still display a readable module×lens grid in chat, but the PERSISTED file must be the findings table.
+**Head each round's findings with a section line \`## Iteração N — V(N)\`** (the same N and V as that round's lens declaration). When the 2↔3 loop runs again, APPEND a new \`## Iteração N+1 — V(N+1)\` section with that round's findings — do NOT overwrite the earlier ones. Without the header every finding silently collapses into iteration 1, and which architecture version a finding was against is lost.
+
+Rules: every finding gets a **unique id in this project** (P-01, A-03, … — use a consistent prefix per lens, the SAME prefix every time that lens appears). **The prefix \`M-\` is RESERVED for modules (Phase 1's architecture table) — never use it for a finding; the Mechanical Engineering lens uses \`MEC-\`, not \`M-\`.** In the **\`lens\` column use the EXACT lens name from the Phase 2 lens table** (Security, Architectural, Resilience, …) — never an abbreviation or a translation, because cross-project analysis groups on this column and a "Segurança"/"SEG"/"Security" split makes the data unaggregatable. Use the exact Phase-1 module name in the \`module\` column. When a finding is **the same defect** another lens already recorded, add \`duplica: <that id>\` in the description. **This applies WITHIN the same lens too:** if one lens records the same defect twice under two ids, mark the second \`duplica: <first id>\`. A lens double-counting one defect inflates its own exclusive contribution, which is exactly the quantity the study measures. This per-finding format — not a grid of severities — is the whole point: it is what lets a later analysis (or a post-mortem when \`auth\` breaks) tell two lenses finding the SAME defect (overlap) from two lenses finding DIFFERENT defects in the same module (orthogonality). You MAY still display a readable module×lens grid in chat, but the PERSISTED file must be the findings table.
 
 \`advance_phase()\` to Phase 3 is BLOCKED until the file exists AND contains findings rows with ids (the engine checks the form, not whether the findings are real or the \`duplica\` marks honest — that stays your and the user's judgment).
 

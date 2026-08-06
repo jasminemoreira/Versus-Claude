@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.12.6] - 2026-08-06
+
+### Changed — lens declaration is per-iteration; two measurement-artifact guards
+The T13/T05 pilots were discarded on a defect: Phase 2 declares the conditional lens set once, on the first pass, and the 2↔3 loop never re-examines it — the set stays fixed against V(1) while the architecture changes, so lenses that would activate against V(final) (MEC in both pilots) were never declared. Corrections, from the RO3 analysis contract (`CORRECOES-EXTENSAO.md`), items 1, 2, 3, 5, 7:
+
+- **The lens set is re-declared each round of the 2↔3 loop.** `advancePhase` now resets `activated_lenses_recorded` on the 3→2 loop-back, so the gate demands a fresh declaration before the next 2→3. (item 1, code + guidance)
+- **The declaration names its iteration and architecture version** — "ACTIVATED LENSES — iteration 2, against V(2)" — so a later analysis can pair each finding with the lens set that was live when it was produced, instead of inferring from timestamps. (item 2, guidance)
+- **A lens may not be dropped for redundancy with another.** The T05 Phase 2 skipped Mechanical Engineering as "already covered by Resilience" — anticipating the very conclusion the batch measures. Activation is by project signal only; "already covered by lens X" is never a valid non-activation reason. (item 3, guidance)
+- **The coverage matrix heads each round with `## Iteração N — V(N)`** and appends rather than overwrites, so findings carry their iteration; without it every finding silently collapses into iteration 1. (item 5, guidance)
+- **`duplica` applies within the same lens too:** a lens recording one defect twice under two ids inflates its own exclusive contribution, which is the measured quantity. (item 7, guidance)
+
+### Deferred (from the same contract)
+- **item 4** (timestamped `projectSpec` entries) — back-compat type change touching several readers; low-risk, done next to match the parallel Qwen build.
+- **item 6** (cross-gate `matrix.module ⊆ architecture.modules`) — high-risk new gate whose per-iteration parsing is the exact trap the contract itself warns of (it blocked legitimate projects in the analysis parser), and it is **redundant**: the analysis already validates this. Not before the batch.
+
 ## [0.12.5] - 2026-08-05
 
 ### Changed — Phase 3 appends the architecture version, never overwrites it (guidance only)
