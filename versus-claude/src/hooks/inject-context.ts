@@ -6,6 +6,7 @@
 import { StateEngine, LOOP_FAILURE_THRESHOLD } from "../state/engine";
 import { getCompleteGuidance } from "../rules/full-guidance";
 import { getPhaseDefinition } from "../rules/phases";
+import { specEntryValue } from "../state/types";
 
 function main() {
   const workspacePath = process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -55,10 +56,10 @@ function main() {
   // Project spec (stack, patterns, constraints, out-of-scope)
   const spec = state.projectSpec;
   if (spec) {
-    if (spec.stack.length > 0) lines.push(`Approved stack: ${spec.stack.join(", ")}`);
-    if (spec.outOfScope.length > 0) lines.push(`Out of scope: ${spec.outOfScope.join(", ")}`);
-    if (spec.patterns.length > 0) lines.push(`Patterns: ${spec.patterns.join(", ")}`);
-    if (spec.constraints.length > 0) lines.push(`Constraints: ${spec.constraints.join(", ")}`);
+    if (spec.stack.length > 0) lines.push(`Approved stack: ${spec.stack.map(specEntryValue).join(", ")}`);
+    if (spec.outOfScope.length > 0) lines.push(`Out of scope: ${spec.outOfScope.map(specEntryValue).join(", ")}`);
+    if (spec.patterns.length > 0) lines.push(`Patterns: ${spec.patterns.map(specEntryValue).join(", ")}`);
+    if (spec.constraints.length > 0) lines.push(`Constraints: ${spec.constraints.map(specEntryValue).join(", ")}`);
   }
 
   // P2: warn if ACTIVATED LENSES decision is missing (Step 1 not yet executed)

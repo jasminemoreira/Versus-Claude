@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { StateEngine, LOOP_FAILURE_THRESHOLD } from "../state/engine";
-import { ScoreBreakdown } from "../state/types";
+import { ScoreBreakdown, SpecEntry } from "../state/types";
 import { getCompleteGuidance } from "../rules/full-guidance";
 import { validateSafeguard } from "../rules/safeguards";
 import { detectOutcome } from "../hooks/test-outcome";
@@ -777,6 +777,26 @@ test("detectOutcome: red run is a failure", () => {
 test("detectOutcome: ambiguous output records nothing", () => {
   assert.strictEqual(detectOutcome("Running tests..."), "unknown");
   assert.strictEqual(detectOutcome(""), "unknown");
+});
+
+// --- projectSpec entries are timestamped (item 4), back-compat with strings ---
+
+test("updateProjectSpec timestamps new entries and dedups by value", () => {
+  engine.initProject("Test", "Desc");
+  engine.updateProjectSpec({ stack: ["TypeScript"] });
+  const e = engine.getPhaseState()!.projectSpec.stack[0];
+  assert.ok(typeof e === "object" && e.value === "TypeScript" && !!e.at, "new entry carries value + timestamp");
+
+  engine.updateProjectSpec({ stack: ["TypeScript", "Node 18"] }); // TS repeated
+  assert.strictEqual(engine.getPhaseState()!.projectSpec.stack.length, 2, "dedup by value — no duplicate TypeScript");
+});
+
+test("legacy string entries survive and read through the normalizer", () => {
+  engine.initProject("Test", "Desc");
+  // Simulate a legacy state where entries were plain strings.
+  (engine.getPhaseState()!.projectSpec.patterns as SpecEntry[]) = ["Clean Architecture", { value: "Repository", at: "2026-01-01T00:00:00Z" }];
+  const spec = engine.getProjectSpec();
+  assert.deepStrictEqual(spec.patterns, ["Clean Architecture", "Repository"], "both forms normalize to plain strings");
 });
 
 console.log("\n=== All tests completed ===\n");

@@ -14,6 +14,8 @@ import {
   Result,
   createDefaultState,
   SafeguardState,
+  SpecEntry,
+  specEntryValue,
 } from "./types";
 import {
   isValidTransition,
@@ -411,16 +413,36 @@ export class StateEngine {
       this.state.projectSpec = { stack: [], outOfScope: [], patterns: [], constraints: [] };
     }
     const ps = this.state.projectSpec;
-    if (spec.stack) ps.stack = dedupe([...ps.stack, ...spec.stack]);
-    if (spec.outOfScope) ps.outOfScope = dedupe([...ps.outOfScope, ...spec.outOfScope]);
-    if (spec.patterns) ps.patterns = dedupe([...ps.patterns, ...spec.patterns]);
-    if (spec.constraints) ps.constraints = dedupe([...ps.constraints, ...spec.constraints]);
+    const at = new Date().toISOString();
+    const phase = this.state.currentPhase;
+    // New entries are timestamped; existing ones (string or object) are kept as-is.
+    // Dedup is by VALUE, so a string and its timestamped form don't both survive.
+    const merge = (existing: SpecEntry[], added: string[]): SpecEntry[] => {
+      const have = new Set(existing.map(specEntryValue));
+      const out = [...existing];
+      for (const v of added) {
+        if (!have.has(v)) { out.push({ value: v, phase, at }); have.add(v); }
+      }
+      return out;
+    };
+    if (spec.stack) ps.stack = merge(ps.stack, spec.stack);
+    if (spec.outOfScope) ps.outOfScope = merge(ps.outOfScope, spec.outOfScope);
+    if (spec.patterns) ps.patterns = merge(ps.patterns, spec.patterns);
+    if (spec.constraints) ps.constraints = merge(ps.constraints, spec.constraints);
     this.save();
   }
 
   getProjectSpec(): { stack: string[]; outOfScope: string[]; patterns: string[]; constraints: string[] } {
     if (!this.state) throw new Error("Project not initialized.");
-    return this.state.projectSpec ?? { stack: [], outOfScope: [], patterns: [], constraints: [] };
+    const ps = this.state.projectSpec ?? { stack: [], outOfScope: [], patterns: [], constraints: [] };
+    // Normalize to plain strings for consumers — the timestamps live in state.json
+    // for the analysis to read directly; the tool response shape is unchanged.
+    return {
+      stack: ps.stack.map(specEntryValue),
+      outOfScope: ps.outOfScope.map(specEntryValue),
+      patterns: ps.patterns.map(specEntryValue),
+      constraints: ps.constraints.map(specEntryValue),
+    };
   }
 
   updateScore(score: number, breakdown: ScoreBreakdown): void {

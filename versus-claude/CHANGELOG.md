@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.7] - 2026-08-06
+
+### Changed — projectSpec entries are timestamped (item 4, isolated)
+Shipped on its own, after the 0.12.6 restart block, so a regression here would not be mixed with the corrections that unblock the batch. `ProjectSpec.stack/outOfScope/patterns/constraints` change from `string[]` to `SpecEntry[]`, where `SpecEntry = string | { value, phase?, at }` — new entries carry when and in which phase they were added, so the re-estimation can ask "which entries existed when Phase 2 declared lenses in iteration N?" instead of excluding projectSpec wholesale.
+
+Back-compat by construction: every reader goes through one normalizer, `specEntryValue()`. Only the writer (`updateProjectSpec`, which timestamps new entries and dedups by value) and `getProjectSpec` (normalizes to plain strings for the tool response) really change; `inject-context`, which runs every turn, is immune to the type. Legacy string entries survive untouched. Matches the `SpecEntry`/`specEntryValue` names already in the Qwen build so the two do not diverge.
+
 ## [0.12.6] - 2026-08-06
 
 ### Changed — lens declaration is per-iteration; two measurement-artifact guards
