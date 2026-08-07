@@ -298,12 +298,14 @@ test("looping 3→2 resets activated_lenses_recorded (re-declare per iteration)"
   for (const c of engine.getExitCriteriaWithDefs(3)) engine.markExitCriterion(3, c.criterion, true);
   engine.advancePhase(2); // loop back
 
-  const lensMetAfterLoop = engine.getExitCriteriaWithDefs(2).find((c) => c.criterion === "activated_lenses_recorded")!.met;
-  assert.strictEqual(lensMetAfterLoop, false, "loop-back must reset the lens criterion so a fresh declaration is required");
+  // ALL Phase 2 criteria reset — a fresh critique of V(N+1), not just re-declared lenses.
+  const p2AfterLoop = engine.getExitCriteriaWithDefs(2);
+  assert.ok(p2AfterLoop.every((c) => !c.met), "loop-back must reset EVERY Phase 2 criterion");
+  assert.ok(p2AfterLoop.length >= 5, "sanity: Phase 2 has its full criteria set");
 
-  // And the next 2→3 is blocked until re-declared
+  // And the next 2→3 is blocked until the round is redone
   writeCoverageMatrix(workspace);
-  assert.strictEqual(engine.advancePhase(3).ok, false, "cannot advance again without re-declaring lenses");
+  assert.strictEqual(engine.advancePhase(3).ok, false, "cannot advance again without re-doing the Phase 2 critique");
 });
 
 // --- Iterations ---

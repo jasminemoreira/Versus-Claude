@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.12.8] - 2026-08-06
+
+### Changed — the 2↔3 loop-back resets the WHOLE Phase 2 critique, not just the lenses
+v0.12.6 reset only `activated_lenses_recorded` when the 2↔3 loop returned to Phase 2. The other four Phase 2 criteria (`lenses_applied`, `coverage_matrix`, `criticals_identified`, `concentration_analyzed`) stayed met from iteration 1, so the sidebar showed a "4/5 done" Phase 2 on re-entry and the gate let the critique of V(1) stand for V(N+1). But re-entering Phase 2 is a FRESH critique of the new architecture version — findings re-produced, criticals and concentration re-analysed against V(N+1). `advancePhase(3→2)` now resets every Phase 2 exit criterion, so the gate re-requires the full round each iteration and the sidebar reflects a clean Phase 2. Surfaced by the sidebar showing criteria as still-met after a loop-back; the fix is in the logic (the sidebar was faithfully reporting an incomplete reset).
+
 ## [0.12.7] - 2026-08-06
 
 ### Changed — projectSpec entries are timestamped (item 4, isolated)

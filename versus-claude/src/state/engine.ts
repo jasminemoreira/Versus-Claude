@@ -346,15 +346,16 @@ export class StateEngine {
     this.state.currentIteration = 1;
     this.resetLoopCounter();
 
-    // Re-entering Phase 2 from the 2↔3 loop: the lens set must be re-declared
-    // against the NEW architecture version. A set fixed against V(1) while the
-    // design changes is the defect the pilots exposed. Reset the criterion so the
-    // gate demands a fresh, iteration-stamped declaration this round.
+    // Re-entering Phase 2 from the 2↔3 loop is a FRESH critique of the new
+    // architecture version V(N+1): lenses re-declared, findings re-produced for
+    // the new design, criticals and concentration re-analysed. Reset EVERY Phase 2
+    // exit criterion so the gate re-requires the full round — not just the lens
+    // declaration — and the sidebar reflects a clean round. A critique of V(1)
+    // carried forward as if it were of V(N+1) is the defect the pilots exposed.
     if (from === 3 && targetPhase === 2) {
-      const c = this.state.exitCriteria.find(
-        (ec) => ec.phase === 2 && ec.criterion === "activated_lenses_recorded"
-      );
-      if (c) c.met = false;
+      for (const ec of this.state.exitCriteria) {
+        if (ec.phase === 2) ec.met = false;
+      }
     }
 
     this.save();
