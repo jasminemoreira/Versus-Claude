@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.12.9] - 2026-08-07
+
+### Changed — three conditional-lens triggers that could not be exercised (RO3 R2, block A)
+The discarded batch showed three lenses activating far below where they apply, because their trigger text was too narrow or measured a different thing than the lens's own question. A lens that never fires produces silence, later misread as "detects nothing". Guidance only.
+
+- **Sustainability (A1)** activated in 0/7. Its trigger was a list of examples (AI/ML, data processing, cloud-native); a model matched the examples, found none, and refused — even for an autoscaler whose whole job is deciding how much resource to consume. Trigger now names the condition ("the system decides, allocates, or consumes a resource whose cost grows with use — e.g. **but not only** …, apply the central question, do not just match the examples").
+- **UI/UX (A2):** "User-facing interface" did not decide whether a CLI counts; three CLI projects diverged (Phase 2 activated, the external estimator did not). Trigger now: "any surface a person operates — including a CLI or operational tooling".
+- **Governance (A3):** the question and failure class are about a *system* property (attributability, data ownership) but the trigger was about the *organization* (multiple teams, compliance). GOV activated in 0/7, always "correctly" by the mismatched trigger. Trigger now aligns with the question: the system records/decides something to be audited, attributed, or answered for — a single-operator project activates it when the system has that property.
+
+**A3 changes the taxonomy the paper defends** — the batch now measures the corrected taxonomy, not the published one. That must be stated in the protocol; the original mismatch becomes a pilot finding, it does not disappear.
+
 ## [0.12.8] - 2026-08-06
 
 ### Changed — the 2↔3 loop-back resets the WHOLE Phase 2 critique, not just the lenses
