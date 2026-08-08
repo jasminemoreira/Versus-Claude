@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0] - 2026-08-07
+
+### Added — cross-artifact gate: matrix modules must exist in the architecture (RO3 R2, C2)
+Deferred through 0.12.x as "the analysis already validates it". It does not: on re-check, 2 of the 4 valid discarded projects had real module-name drift the analysis passed over (T14 cited `health-prober` and `reinsertion-sweeper`, T02 `repository` and `errors` — 11 findings on modules absent from the architecture). The analysis parser had been loosened to tolerate the *earlier* iterations (a real fix for a false positive on T13's removed `quota-limiter`), and that tolerance hid the true positives too. The gate is a better place than the analysis because it flags with the session open — 11 findings on invented modules cost two minutes to fix in Phase 2 and are irrecoverable after.
+
+`advance_phase` 2→3 now checks that every module a finding cites (the `module` column of a finding row) appears in `architecture.md`'s module table. **Checked against the UNION of every `## V(N)` version**, which is the hard part the pilots proved: a module removed between versions (its earlier-iteration findings are legitimate) is tolerated; a name that appears in no version is drift and blocks, naming the module(s). Case-insensitive; skips when either artifact is absent (other gates cover that). Existence/name-match only — never whether the module is well-designed.
+
 ## [0.12.9] - 2026-08-07
 
 ### Changed — three conditional-lens triggers that could not be exercised (RO3 R2, block A)
