@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1] - 2026-08-08
+
+### Fixed — the loop-back reset was asymmetric: Phase 3 stamps survived
+v0.12.8 reset Phase 2 criteria on the 3→2 loop-back but left Phase 3's four criteria (`criticals_addressed`, `important_decided`, `scope_preserved`, `architecture_simplified`) marked from the first pass. So a project that looped (`2→3 · 3→2 · 2→3 · 3→4`) passed the 3→4 gate with the iteration-1 stamp — which answered the iteration-1 findings, not iteration 2. It is the same defect that discarded cycle 1, on the other side of the loop: there the critique of V(1) counted as V(N+1)'s; here the *response* to V(1)'s critique counts as the response to V(2)'s. Worse, because `criticals_addressed` from iteration 1 means nobody confirmed the iteration-2 criticals were handled.
+
+The reset is now symmetric and general: on any backward transition inside the loop (only 3→2 today), every exit criterion of the phases that will be redone — the range `[target, from]`, i.e. Phase 2 **and** Phase 3 — is cleared. Verified there is no third asymmetry: `start_iteration` only increments the counter and moves no phase, so the redo always happens through `advancePhase`, where the reset now lives. **T21 (cycle 2, project 1) ran under the old asymmetry and its 3→4 passed with iteration-1 stamps — it must be discarded for a clean cycle.**
+
 ## [0.13.0] - 2026-08-07
 
 ### Added — cross-artifact gate: matrix modules must exist in the architecture (RO3 R2, C2)

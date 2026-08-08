@@ -298,14 +298,40 @@ test("looping 3→2 resets activated_lenses_recorded (re-declare per iteration)"
   for (const c of engine.getExitCriteriaWithDefs(3)) engine.markExitCriterion(3, c.criterion, true);
   engine.advancePhase(2); // loop back
 
-  // ALL Phase 2 criteria reset — a fresh critique of V(N+1), not just re-declared lenses.
+  // Phase 2 AND Phase 3 criteria reset — both rounds will be redone against V(N+1).
   const p2AfterLoop = engine.getExitCriteriaWithDefs(2);
+  const p3AfterLoop = engine.getExitCriteriaWithDefs(3);
   assert.ok(p2AfterLoop.every((c) => !c.met), "loop-back must reset EVERY Phase 2 criterion");
-  assert.ok(p2AfterLoop.length >= 5, "sanity: Phase 2 has its full criteria set");
+  assert.ok(p3AfterLoop.every((c) => !c.met), "loop-back must ALSO reset Phase 3 (criticals_addressed etc.)");
+  assert.ok(p2AfterLoop.length >= 5 && p3AfterLoop.length >= 4, "sanity: both criteria sets present");
 
   // And the next 2→3 is blocked until the round is redone
   writeCoverageMatrix(workspace);
   assert.strictEqual(engine.advancePhase(3).ok, false, "cannot advance again without re-doing the Phase 2 critique");
+});
+
+test("after a loop, the 3→4 gate re-requires Phase 3 (no stale iteration-1 stamp)", () => {
+  engine.initProject("Test", "Desc");
+  engine.updateScore(95, makeFullBreakdown(95));
+  for (const c of engine.getExitCriteriaWithDefs(0)) engine.markExitCriterion(0, c.criterion, true);
+  engine.advancePhase(1);
+  for (const c of engine.getExitCriteriaWithDefs(1)) engine.markExitCriterion(1, c.criterion, true);
+  writeArchitectureDoc(workspace);
+  engine.advancePhase(2);
+  const doP2 = () => { for (const c of engine.getExitCriteriaWithDefs(2)) engine.markExitCriterion(2, c.criterion, true); writeCoverageMatrix(workspace); };
+  doP2();
+  engine.advancePhase(3);                                                        // pass 1 of Phase 3
+  for (const c of engine.getExitCriteriaWithDefs(3)) engine.markExitCriterion(3, c.criterion, true);
+  engine.advancePhase(2);                                                        // loop back — resets P2 and P3
+  doP2();
+  engine.advancePhase(3);                                                        // pass 2 of Phase 3
+
+  // Phase 3 criteria were reset by the loop-back; the iteration-1 stamp is gone.
+  assert.ok(engine.getExitCriteriaWithDefs(3).every((c) => !c.met), "Phase 3 stamps from iteration 1 must not survive");
+  assert.strictEqual(engine.advancePhase(4).ok, false, "3→4 must be blocked until iteration-2 criticals are confirmed addressed");
+
+  for (const c of engine.getExitCriteriaWithDefs(3)) engine.markExitCriterion(3, c.criterion, true);
+  assert.strictEqual(engine.advancePhase(4).ok, true, "…and passes once Phase 3 is redone");
 });
 
 // --- Iterations ---
