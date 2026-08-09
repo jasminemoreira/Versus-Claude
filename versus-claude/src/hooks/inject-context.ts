@@ -62,11 +62,19 @@ function main() {
     if (spec.constraints.length > 0) lines.push(`Constraints: ${spec.constraints.map(specEntryValue).join(", ")}`);
   }
 
-  // P2: warn if ACTIVATED LENSES decision is missing (Step 1 not yet executed)
+  // P2: warn if lens activation is missing (Step 1 not yet executed). The structured
+  // record is checked first; the legacy free-text markers are honoured only so a
+  // project mid-flight before v0.14.0 does not see this warning spuriously — and in
+  // both languages, since accepting only the English marker was the original bug.
   if (phase === 2) {
-    const hasLensDecision = state.decisions.some((d) => d.content.includes("ACTIVATED LENSES"));
+    const hasLensDecision =
+      (state.activatedLenses?.length ?? 0) > 0 ||
+      state.decisions.some((d) => {
+        const up = d.content.toUpperCase();
+        return up.includes("ACTIVATED LENSES") || up.includes("LENTES ATIVADAS");
+      });
     if (!hasLensDecision) {
-      lines.push("⚠ P2 STEP 1 MISSING: No lens activation decision found. Call record_decision(category='architecture', content='ACTIVATED LENSES: [list]. NOT ACTIVATED: [lens — reason]') BEFORE applying any lens.");
+      lines.push("⚠ P2 STEP 1 MISSING: No lens activation on record. Call record_activated_lenses(conditional=[...], notActivated=[{lens, reason}, ...]) — the structured tool — BEFORE applying any lens.");
     }
   }
 

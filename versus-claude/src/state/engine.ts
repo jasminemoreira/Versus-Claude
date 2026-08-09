@@ -16,12 +16,14 @@ import {
   SafeguardState,
   SpecEntry,
   specEntryValue,
+  LensActivation,
 } from "./types";
 import {
   isValidTransition,
   getExitCriteriaForPhase,
   CRITERION_ID_MIGRATION,
 } from "../rules/phases";
+import { CONDITIONAL_LENSES, UNIVERSAL_LENSES, canonicalLens } from "../rules/lenses";
 import {
   SafeguardResult,
   validateSafeguard,
@@ -273,6 +275,113 @@ export class StateEngine {
     ];
   }
 
+  /**
+   * The current critique iteration: how many times the run has ENTERED Phase 2.
+   * `currentIteration` cannot serve this — it resets to 1 on every phase change,
+   * INCLUDING the 3→2 loop-back, so it does not track the critique round. Counting
+   * transitions into Phase 2 (the initial 1→2 plus each 3→2 loop) does, and it is
+   * the number the matrix's `## Iteração N` headers are meant to mirror. Minimum 1
+   * so a declaration made before any transition (tests) still lands somewhere.
+   */
+  private critiqueIteration(): number {
+    const entries = (this.state?.history ?? []).filter((h) => h.to === 2).length;
+    return Math.max(1, entries);
+  }
+
+  /** Current architecture version = number of `## V(N)` sections in architecture.md,
+   *  or 1 if none/absent. Stamped on a lens declaration as `againstVersion` so the
+   *  analysis can see which design the critique ran against. */
+  private currentArchitectureVersion(): number {
+    try {
+      const full = path.join(this.specsPath, "technical/architecture.md");
+      if (!fs.existsSync(full)) return 1;
+      const text = fs.readFileSync(full, "utf-8");
+      const n = (text.match(/^#{1,6}\s*V\s*\(\s*\d+\s*\)/gmi) || []).length;
+      return n > 0 ? n : 1;
+    } catch { return 1; }
+  }
+
+  /** Finding rows of the coverage matrix, each tagged with the iteration of the
+   *  `## Iteração N` section it sits under (null before the first header). The lens
+   *  is the 3rd cell — the row format is frozen (id | module | lens | severity | desc). */
+  private matrixFindings(): { id: string; lens: string; iteration: number | null }[] {
+    const out: { id: string; lens: string; iteration: number | null }[] = [];
+    try {
+      const full = path.join(this.specsPath, "design/coverage-matrix.md");
+      if (!fs.existsSync(full)) return out;
+      const text = fs.readFileSync(full, "utf-8");
+      const idRe = /^(?!M-)[A-Za-z]{1,4}-\d+$/;                       // finding id, M- reserved for modules
+      const headerRe = /^#{1,6}\s*(?:Itera[cç][ãa]o|Iteration)\s+(\d+)/i;
+      let currentIter: number | null = null;
+      for (const line of text.split(/\r?\n/)) {
+        const h = line.match(headerRe);
+        if (h) { currentIter = parseInt(h[1], 10); continue; }
+        if (!line.includes("|")) continue;
+        const cells = line.split("|").map((c) => c.trim());
+        if (cells.length && cells[0] === "") cells.shift();            // outer pipes
+        if (cells.length && cells[cells.length - 1] === "") cells.pop();
+        if (cells.length < 3) continue;
+        if (!idRe.test(cells[0])) continue;
+        out.push({ id: cells[0], lens: cells[2], iteration: currentIter });
+      }
+    } catch { /* telemetry never blocks */ }
+    return out;
+  }
+
+  /**
+   * Errors in the `lens` column of the coverage matrix (2→3 gate). Two layers:
+   *   (2.1) every finding's lens must be one of the 19 canonical names — or the
+   *         literal NENHUMA (the declared channel for a finding that fit no lens).
+   *         `Sustainability` (a truncation) is rejected; `Sustainability /
+   *         Proportionality` accepted. This is what the T21 case needed.
+   *   (2.2) a CONDITIONAL lens on a finding must have been DECLARED for that
+   *         finding's iteration. Universals always run, so they never fail (2.2).
+   * The iteration is matched against the declaration WITH THE SAME iteration number —
+   * never the current one nor the union, the trap the v0.13.0 module gate proved
+   * costly: a lens set legitimately evolves across the loop (MEC entered in iteration
+   * 2 in the pilot), so a finding must be judged by ITS round's set. When the
+   * iteration cannot be resolved (no header, or no declaration for that number) the
+   * check degrades to the UNION of all declared sets — permissive, never over-blocking.
+   * Skips (2.2) entirely when nothing is declared yet; (2.1) still runs. Form only.
+   */
+  private findingLensErrors(): string[] {
+    const findings = this.matrixFindings();
+    if (findings.length === 0) return [];
+    const acts = this.state?.activatedLenses ?? [];
+    const union = new Set<string>();
+    const byIter = new Map<number, Set<string>>();
+    for (const a of acts) {
+      for (const c of a.conditional) union.add(c);
+      byIter.set(a.iteration, new Set(a.conditional));
+    }
+    const universals = new Set<string>(UNIVERSAL_LENSES as readonly string[]);
+    const errs: string[] = [];
+    for (const f of findings) {
+      if (/^nenhuma$/i.test(f.lens)) continue;                        // declared "no lens" channel
+      const canon = canonicalLens(f.lens);
+      if (!canon) {
+        errs.push(
+          `[Phase 2] coverage_matrix row ${f.id}: lens "${f.lens}" is not one of the 19 canonical lens names (nor NENHUMA). ` +
+          `Use the EXACT canonical name — an abbreviation or a translation breaks cross-project analysis, which groups on this column.`
+        );
+        continue;
+      }
+      if (universals.has(canon)) continue;                            // universals always valid
+      if (acts.length === 0) continue;                                // nothing to check membership against yet
+      const iterSet = f.iteration !== null ? byIter.get(f.iteration) : undefined;
+      const declared = iterSet ?? union;                              // fall back to union, never the current-only set
+      if (!declared.has(canon)) {
+        const scope = iterSet ? `iteration ${f.iteration}` : "any declared iteration";
+        errs.push(
+          `[Phase 2] coverage_matrix row ${f.id}: lens "${canon}" was not among the conditional lenses declared for ${scope} ` +
+          `(declared: ${[...declared].join(", ") || "none"}). A finding may only use a lens activated for its own iteration — ` +
+          `declare it for that round with record_activated_lenses, or fix the finding's lens.`
+        );
+      }
+    }
+    return errs;
+  }
+
   /** How many lines of a specs/ artifact match `pattern`. Used for structural
    *  gates (e.g. per-finding rows in the coverage matrix). Form, not content. */
   countArtifactRows(relPath: string, pattern: string): number {
@@ -292,6 +401,110 @@ export class StateEngine {
   witnessedTestPass(phase: number): boolean {
     const t = this.state?.lastTestOutcome;
     return !!t && t.outcome === "pass" && t.phase === phase;
+  }
+
+  /**
+   * Records Phase 2 lens activation as structured state, stamped with the current
+   * critique iteration and architecture version. Rejects any name outside the
+   * canonical 12 conditionals and any lens left unaccounted for: silence about a
+   * lens is exactly what the criterion exists to prevent — "I did not activate it"
+   * and "I forgot it" must not look the same. Re-recording within the SAME iteration
+   * replaces that iteration's entry (a correction); a new iteration appends, so the
+   * per-round history the matrix gate reads is preserved across the 2↔3 loop.
+   */
+  recordActivatedLenses(
+    conditional: string[],
+    notActivated: { lens: string; reason: string }[]
+  ): Result<LensActivation, { message: string }> {
+    if (!this.state) {
+      return { ok: false, error: { message: "Project not initialized." } };
+    }
+
+    // Conditional-only. canonicalLens() spans all 19, so validating with it alone lets a
+    // UNIVERSAL lens land in `conditional` — and the count of activated conditionals is a
+    // measured variable of the study, not a display detail.
+    const asConditional = (raw: string): string | null => {
+      const c = canonicalLens(raw);
+      return c && (CONDITIONAL_LENSES as readonly string[]).includes(c) ? c : null;
+    };
+    const outOfDomain = (raw: string): string =>
+      canonicalLens(raw)
+        ? `"${raw}" is a UNIVERSAL lens. Universals always run and are not passed here — this ` +
+          `field records the CONDITIONAL set, and counting a universal among them corrupts it.`
+        : `"${raw}" is not one of the 12 conditional lenses. Use the exact canonical name — ` +
+          `abbreviations and translations break cross-project analysis, which groups on this value.`;
+
+    const canon: string[] = [];
+    for (const raw of conditional) {
+      const c = asConditional(raw);
+      if (!c) return { ok: false, error: { message: outOfDomain(raw) } };
+      if (canon.includes(c)) {
+        return { ok: false, error: { message:
+          `Lens "${c}" is listed twice as activated. A duplicate inflates the activated count ` +
+          `while passing the completeness check unnoticed.` } };
+      }
+      canon.push(c);
+    }
+
+    const no: { lens: string; reason: string }[] = [];
+    for (const item of notActivated) {
+      const c = asConditional(item.lens);
+      if (!c) return { ok: false, error: { message: outOfDomain(item.lens) } };
+      if (canon.includes(c)) {
+        return { ok: false, error: { message:
+          `Lens "${c}" appears as BOTH activated and not-activated. The record would contradict ` +
+          `itself, and a later analysis has no way to tell which was meant.` } };
+      }
+      if (no.some((x) => x.lens === c)) {
+        return { ok: false, error: { message: `Lens "${c}" is listed twice as not-activated.` } };
+      }
+      if (!item.reason || !item.reason.trim()) {
+        return { ok: false, error: { message:
+          `Lens "${c}" is marked not-activated without a reason. The justification is half the ` +
+          `record: without it there is no way to tell a considered exclusion from an oversight.` } };
+      }
+      no.push({ lens: c, reason: item.reason.trim() });
+    }
+
+    const counted = new Set([...canon, ...no.map((n) => n.lens)]);
+    const missing = CONDITIONAL_LENSES.filter((l) => !counted.has(l));
+    if (missing.length > 0) {
+      return { ok: false, error: { message:
+        `${missing.length} conditional lens(es) unaccounted for: ${missing.join(", ")}. ` +
+        `Every one of the 12 must be either activated or explicitly not activated with a reason.` } };
+    }
+
+    const iteration = this.critiqueIteration();
+    const activation: LensActivation = {
+      universal: [...UNIVERSAL_LENSES],
+      conditional: canon,
+      notActivated: no,
+      iteration,
+      againstVersion: this.currentArchitectureVersion(),
+      recordedAt: new Date().toISOString(),
+    };
+    if (!this.state.activatedLenses) this.state.activatedLenses = [];
+    const existing = this.state.activatedLenses.findIndex((a) => a.iteration === iteration);
+    if (existing >= 0) this.state.activatedLenses[existing] = activation;   // correction within a round
+    else this.state.activatedLenses.push(activation);
+    this.save();
+    return { ok: true, value: activation };
+  }
+
+  /** True if Phase 2 lens activation is on record for the CURRENT critique iteration.
+   *  Checking the current iteration (not merely "any entry") is what forces a fresh
+   *  declaration each round of the 2↔3 loop — a stale entry from iteration 1 must not
+   *  satisfy the gate for iteration 2. Legacy free-text is honoured ONLY for projects
+   *  created before this schema (no stateVersion); on new projects the structured
+   *  record is mandatory, so the fallback cannot become an opt-out. */
+  lensesRecorded(): boolean {
+    const acts = this.state?.activatedLenses ?? [];
+    if (acts.some((a) => a.iteration === this.critiqueIteration())) return true;
+    if (this.state?.stateVersion !== undefined) return false;              // new project: structured only
+    const marks = ["ACTIVATED LENSES", "LENTES ATIVADAS"];
+    return (this.state?.decisions ?? []).some((d) =>
+      marks.some((m) => d.content.toUpperCase().includes(m))
+    );
   }
 
   /**
@@ -322,6 +535,14 @@ export class StateEngine {
           `[Phase ${phase}] ${def.criterion}: the engine did not witness a passing test run in this phase. ` +
           `Run your test suite so the result is verified by the test-outcome hook (S4: never assume tests passed — execute and verify). ` +
           `Marking the criterion met is not enough.`
+        );
+      }
+      if (def.verify === "lenses-recorded" && !this.lensesRecorded()) {
+        out.push(
+          `[Phase ${phase}] ${def.criterion}: lens activation is not on record for iteration ${this.critiqueIteration()}. ` +
+          `Call record_activated_lenses(conditional, notActivated) — the structured tool — BEFORE advancing. ` +
+          `Marking the criterion met is not enough: without the record, which lenses were applied cannot be reconstructed after the session, ` +
+          `and each round of the 2↔3 loop must re-declare against the new architecture.`
         );
       }
     }
@@ -368,12 +589,18 @@ export class StateEngine {
     // version is drift, and it breaks the matrix's per-module traceability silently.
     const moduleDrift = from === 2 ? this.moduleTraceabilityErrors() : [];
 
-    if (!validation.valid || artifactMissing.length > 0 || moduleDrift.length > 0) {
+    // Lens-column traceability (2→3): every finding's lens must be a canonical name
+    // (or NENHUMA), and a conditional lens must have been declared for the finding's
+    // OWN iteration. Matched per-iteration, degrading to the union when the round
+    // cannot be resolved — never the current-only set (the v0.13.0 over-block trap).
+    const lensDrift = from === 2 ? this.findingLensErrors() : [];
+
+    if (!validation.valid || artifactMissing.length > 0 || moduleDrift.length > 0 || lensDrift.length > 0) {
       return {
         ok: false,
         error: {
           message: `Cannot advance from Phase ${from} to Phase ${targetPhase}.`,
-          missingCriteria: [...validation.missingCriteria, ...artifactMissing, ...moduleDrift],
+          missingCriteria: [...validation.missingCriteria, ...artifactMissing, ...moduleDrift, ...lensDrift],
           safeguardViolations: validation.safeguardViolations,
           specsWarnings,
         },

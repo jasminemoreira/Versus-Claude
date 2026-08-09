@@ -16,10 +16,33 @@ export interface PhaseState {
   /** Last test run the test-outcome hook actually witnessed. Gates tests_passing:
    *  the engine must have seen a green run in the phase, not just be told it passed. */
   lastTestOutcome?: { outcome: "pass" | "fail"; phase: number; at: string };
+  /** Lens activation for Phase 2, recorded STRUCTURALLY by record_activated_lenses —
+   *  ONE entry per critique iteration (the 2↔3 loop re-declares against each new
+   *  architecture version). Was a free-text decision consumers had to grep for
+   *  "ACTIVATED LENSES", which failed silently in any other language and could not be
+   *  validated against the canonical lens set. Per-iteration history is what lets a
+   *  finding be matched to the lens set in force when it was produced. */
+  activatedLenses?: LensActivation[];
+  /** State-schema era. Absent = a project created before v0.14.0: the legacy free-text
+   *  lens decision is still honoured for it. Present = a project that must use the
+   *  structured record — so the fallback cannot become an opt-out on new work. */
+  stateVersion?: number;
   lastPhaseStateCheck?: string;  // ISO timestamp — gateway guard for smaller models
   createdAt: string;             // ISO timestamp
   updatedAt: string;
   history: PhaseTransition[];    // transition log
+}
+
+/** Which lenses one critique iteration activated, and why the others were not.
+ *  Names are validated against rules/lenses.ts on write, so a later analysis can
+ *  group on this field across projects without a normalization table. */
+export interface LensActivation {
+  universal: string[];                                  // the 7, always
+  conditional: string[];                                // the subset activated this iteration
+  notActivated: { lens: string; reason: string }[];     // the rest, each with a reason
+  iteration: number;                                    // critique iteration (1 = first Phase 2 pass)
+  againstVersion: number;                               // architecture version it was decided against
+  recordedAt: string;                                   // ISO timestamp
 }
 
 /**
@@ -135,6 +158,8 @@ export function createDefaultState(name: string, description: string): PhaseStat
     phase0Score: null,
     phase0Breakdown: null,
     decisions: [],
+    activatedLenses: [],
+    stateVersion: 1,
     exitCriteria: [],
     safeguards: [
       { id: "S0", status: "ok" },
