@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.14.1] - 2026-08-09
+
+### Changed — housekeeping, no behavior change: lens defs are one source, PT-id migration retired
+Two consolidations, both non-behavioral (the injected guidance and the gates are byte-for-byte the same); verified by 80 green tests including a new one that guards the rendered table.
+
+- **Lens definitions moved into `rules/lenses.ts`.** The 19 lenses' central question, exclusive failure class and (for conditionals) activation trigger lived as hand-written markdown inside the Phase 2 guidance, a second copy of names that `lenses.ts` already owned — exactly where a v0.12.9-style trigger edit could silently drift a name away from the gate. `lenses.ts` now holds the full `LensDef` for each; the guidance table is RENDERED from them, and the `UNIVERSAL_LENSES`/`CONDITIONAL_LENSES` name arrays the enum and gates consume are DERIVED from the same defs. One source, no hand-kept copy. A guidance-presence test asserts every name and the three v0.12.9 triggers survive the rendering.
+
+- **`CRITERION_ID_MIGRATION` retired.** The Portuguese→English criterion-id rename shim (v0.3.5→v0.3.6) ran on every `load()` and was mirrored defensively in the sidebar. Evidence over assumption: a sweep of all 36 live `state.json` found the old ids in only 5 files, all disposable projects under `lixo/jogos/`. With no project worth keeping still on the old ids, the map + `migrateCriterionIds()` + the sidebar fallback are removed. (A pre-v0.3.6 project reopened after this would show its criteria unmet — accepted; those five are junk.)
+
 ## [0.14.0] - 2026-08-08
 
 ### Added — the lens name is now enforced, at the call and in the matrix (RO3, PEDIDO-v0.14.0)

@@ -9,7 +9,7 @@ import { ScoreBreakdown, SpecEntry } from "../state/types";
 import { getCompleteGuidance } from "../rules/full-guidance";
 import { validateSafeguard } from "../rules/safeguards";
 import { detectOutcome } from "../hooks/test-outcome";
-import { CONDITIONAL_LENSES } from "../rules/lenses";
+import { CONDITIONAL_LENSES, UNIVERSAL_LENS_DEFS, CONDITIONAL_LENS_DEFS } from "../rules/lenses";
 
 const MATRIX_REL = path.join("specs", "design", "coverage-matrix.md");
 
@@ -441,6 +441,20 @@ test("P2 critical terms present", () => {
   for (const lens of ["Assumptions", "Architectural", "Implementability", "Scientific", "Security", "Performance", "Regulatory"]) {
     assertPresent(lens, `universal lens "${lens}" must be named`);
   }
+});
+
+test("P2 lens table renders from lenses.ts — names, questions and triggers survive", () => {
+  // The Phase 2 lens tables are now rendered from rules/lenses.ts, not hand-written
+  // markdown. Guard the rendering: every lens name, plus the v0.12.9 trigger wording
+  // that was fixed at real cost, must still appear in the injected guidance.
+  for (const l of [...UNIVERSAL_LENS_DEFS, ...CONDITIONAL_LENS_DEFS]) {
+    assertPresent(l.name, `lens "${l.name}" must be named in the rendered table`);
+    assertPresent(l.failureClass.split(",")[0].trim(), `lens "${l.name}" failure class must render`);
+  }
+  assertPresent("including a CLI or operational tooling", "UI/UX v0.12.9 trigger must survive rendering");
+  assertPresent("resource whose cost grows with use", "Sustainability v0.12.9 trigger must survive rendering");
+  assertPresent("single-operator project activates it", "Governance v0.12.9 trigger must survive rendering");
+  assertPresent("| Lens | Central Question | Exclusive Failure Class | Activate when... |", "conditional table header renders");
 });
 
 test("P5 critical terms present", () => {
