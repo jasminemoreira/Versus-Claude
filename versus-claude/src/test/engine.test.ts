@@ -526,6 +526,8 @@ test("a trivial artifact does not count as persisted", () => {
   fs.writeFileSync(path.join(workspace, "specs", "design", "coverage-matrix.md"), "| |\n");
   const r = engine.advancePhase(3);
   assert.strictEqual(r.ok, false, "empty/near-empty file must not satisfy the gate");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("missing or empty")), "the block must say WHY, not just fail");
 });
 
 test("a severity grid without per-finding ids BLOCKS (structural gate)", () => {
@@ -552,6 +554,8 @@ test("a matrix of only module rows (M- echo, zero findings) BLOCKS", () => {
   );
   const r = engine.advancePhase(3);
   assert.strictEqual(r.ok, false, "M- rows are modules, not findings — must not satisfy the coverage gate");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("structured form")), "the block must name the missing form");
 });
 
 test("Mechanical Engineering findings (MEC-) still count", () => {
@@ -1025,7 +1029,10 @@ test("an abbreviation in the lens column BLOCKS", () => {
     "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
     "| P-01 | auth | SEG | 🔴 | sql injection in login |\n"
   );
-  assert.strictEqual(engine.advancePhase(3).ok, false, "'SEG' is not a canonical lens name");
+  const r = engine.advancePhase(3);
+  assert.strictEqual(r.ok, false, "'SEG' is not a canonical lens name");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("P-01") && m.includes("canonical")), "the block must name the row and the reason");
 });
 
 test("the literal NENHUMA is accepted as a lens value", () => {
@@ -1122,7 +1129,10 @@ test("an empty severity cell BLOCKS", () => {
     "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
     "| P-01 | auth | Security |  | sql injection in login |\n"
   );
-  assert.strictEqual(engine.advancePhase(3).ok, false, "a finding must carry a severity");
+  const r = engine.advancePhase(3);
+  assert.strictEqual(r.ok, false, "a finding must carry a severity");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("P-01") && m.includes("severity")), "the block must name the row and the column");
 });
 
 test("two severity glyphs in one cell BLOCKS (ambiguous)", () => {
@@ -1131,7 +1141,10 @@ test("two severity glyphs in one cell BLOCKS (ambiguous)", () => {
     "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
     "| P-01 | auth | Security | 🔴🟡 | can't be both critical and important |\n"
   );
-  assert.strictEqual(engine.advancePhase(3).ok, false, "exactly one severity, not two");
+  const r = engine.advancePhase(3);
+  assert.strictEqual(r.ok, false, "exactly one severity, not two");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("P-01") && m.includes("severity")), "the block must name the row and the column");
 });
 
 test("the three canonical severities pass", () => {
