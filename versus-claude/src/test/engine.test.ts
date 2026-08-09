@@ -1100,4 +1100,58 @@ test("a conditional lens never declared in any iteration BLOCKS", () => {
   assert.ok(r.error.missingCriteria.some((m) => m.includes("G-01") && m.includes("declared")));
 });
 
+// --- coverage-matrix severity column (Block 3 — same form-gate family) ---
+
+console.log("\n=== Coverage-Matrix Severity Column Tests ===\n");
+
+test("a non-canonical severity BLOCKS (word instead of glyph)", () => {
+  toPhase2Stamped();
+  writeMatrix(
+    "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
+    "| P-01 | auth | Security | high | sql injection in login |\n"
+  );
+  const r = engine.advancePhase(3);
+  assert.strictEqual(r.ok, false, "'high' is not one of 🔴/🟡/🟢 — the analysis counts on this column");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("P-01") && m.includes("severity")));
+});
+
+test("an empty severity cell BLOCKS", () => {
+  toPhase2Stamped();
+  writeMatrix(
+    "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
+    "| P-01 | auth | Security |  | sql injection in login |\n"
+  );
+  assert.strictEqual(engine.advancePhase(3).ok, false, "a finding must carry a severity");
+});
+
+test("two severity glyphs in one cell BLOCKS (ambiguous)", () => {
+  toPhase2Stamped();
+  writeMatrix(
+    "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
+    "| P-01 | auth | Security | 🔴🟡 | can't be both critical and important |\n"
+  );
+  assert.strictEqual(engine.advancePhase(3).ok, false, "exactly one severity, not two");
+});
+
+test("the three canonical severities pass", () => {
+  toPhase2Stamped();
+  writeMatrix(
+    "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
+    "| P-01 | auth | Security | 🔴 | critical finding |\n" +
+    "| A-01 | auth | Architectural | 🟡 | important finding |\n" +
+    "| P-02 | ui | Security | 🟢 | suggestion |\n"
+  );
+  assert.strictEqual(engine.advancePhase(3).ok, true, "🔴/🟡/🟢 are the accepted set");
+});
+
+test("severity decoration is tolerated (🔴 Critical)", () => {
+  toPhase2Stamped();
+  writeMatrix(
+    "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
+    "| P-01 | auth | Security | 🔴 Critical | glyph plus its word is fine |\n"
+  );
+  assert.strictEqual(engine.advancePhase(3).ok, true, "the glyph is the signal; a trailing word is decoration");
+});
+
 console.log("\n=== All tests completed ===\n");

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.14.2] - 2026-08-09
+
+### Added — the severity column is now validated (closing the form-gate family, by evidence)
+Six discards; the last three were all the same class — an instruction in the guidance with no lock in the gate. An audit of the remaining Phase-2 matrix instructions of that class found two candidates: severity and the description of a duplicate finding. Each was decided by looking at the pilot corpus (853 findings across 10 matrices), not by assumption.
+
+- **Severity → gated.** The `severity` column is a closed enum, and the corpus uses exactly three glyphs: 🟡 (487), 🟢 (217), 🔴 (149), zero variation. `advance_phase` 2→3 now requires each finding's 4th cell to carry exactly one of 🔴 / 🟡 / 🟢 — decoration tolerated ("🔴 Critical" passes), a word ("high", "P1") or an empty cell blocked, naming the row. The analysis counts criticals vs important on this column, so a non-countable value there is a silent miscount. A strict gate over-blocks nothing: every existing finding already conforms.
+- **Duplicate-finding description → declared limitation, NOT gated.** The guidance asks a `duplica:` row to describe the defect on its own terms (§3). That is a quality property — the oracle — and unmechanizable. The only mechanizable proxies (a pointer-only description, a dangling `duplica:` reference) occur **zero times** in the corpus, so a form-gate would guard nothing and only risk false blocks. Recorded as an explicit limitation instead: the engine checks that a lens and a severity are present and canonical; whether a finding is real, and whether a duplicate is described well, remains the reviewer's judgment.
+
+Same family as the lens gate; folded into the finding-row check (`findingRowErrors`). 5 new tests; 85 total, all green.
+
 ## [0.14.1] - 2026-08-09
 
 ### Changed — housekeeping, no behavior change: lens defs are one source, PT-id migration retired
