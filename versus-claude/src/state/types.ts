@@ -135,6 +135,18 @@ export interface ExitCriterionState {
   criterion: string;
   met: boolean;
   details?: string;
+  /** Engine-authored provenance for a `verify:`-gated criterion (II.1/II.2): HOW the
+   *  gate was satisfied and whether the path was the nominal one. Written by the engine
+   *  when the transition passes — not self-reported — so a post-mortem sees a degraded
+   *  path (hook not nominal, legacy fallback) without depending on the agent having
+   *  written a separate decision. Only the two verify-criteria carry it. */
+  verifiedBy?: {
+    path: "test-pass" | "lenses-recorded";
+    nominal: boolean;                 // false = satisfied via a degraded path
+    at: string;
+    note?: string;
+    snapshot?: Record<string, unknown>;
+  };
 }
 
 export interface SafeguardState {

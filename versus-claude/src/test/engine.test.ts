@@ -469,6 +469,17 @@ test("P6 critical terms present", () => {
   assertPresent("Session Renewal", "P6 Step 0 session renewal");
   assertPresent("Playwright", "primary UI tool recommendation for web SPA");
   assertPresent("Detox", "primary UI tool recommendation for React Native");
+  // Post-batch additions (III.1–III.4, IV)
+  assertPresent("critical-coverage.md", "III.1 critical coverage artifact");
+  assertPresent("premise-coverage.md", "III.2 premise coverage artifact");
+  assertPresent("Detection power", "III.3 detection-power recommendation");
+  assertPresent("Measure by stage before optimizing", "IV practice 1");
+  assertPresent("name the SCENARIO, not just the assertion", "IV test-fix scenario record");
+});
+
+test("P1 post-batch terms present (numbered premises + full version table)", () => {
+  assertPresent("number each premise", "III.2 Phase-1 premise numbering nudge");
+  assertPresent("write each `## V(N)` table COMPLETE", "III.4 full module table per version");
 });
 
 test("P7 critical terms present", () => {
@@ -628,12 +639,24 @@ test("artifactPresent: existence + non-trivial content", () => {
   assert.strictEqual(engine.artifactPresent("design/coverage-matrix.md"), true);
 });
 
+/** Traces every 🔴 finding of writeCoverageMatrix (P-01, P-02) to a test — the III.1
+ *  cross-gate now required to leave Phase 6. */
+function writeCriticalCoverage(ws: string): void {
+  fs.writeFileSync(
+    path.join(ws, "specs", "validation", "critical-coverage.md"),
+    "# Critical coverage\n\n| finding | test | note |\n|---|---|---|\n" +
+    "| P-01 | test/auth.test.ts::rejects sql in login | regression test added |\n" +
+    "| P-02 | test/ui.test.ts::escapes comment body | regression test added |\n"
+  );
+}
+
 /** Fast-forward to Phase 6 with all earlier gates satisfied. */
 function toPhase6() {
   toPhase5();
   for (const c of engine.getExitCriteriaWithDefs(5)) engine.markExitCriterion(5, c.criterion, true);
   engine.advancePhase(6);
   assert.strictEqual(engine.getPhaseState()!.currentPhase, 6);
+  writeCriticalCoverage(workspace); // III.1: leaving Phase 6 requires every 🔴 finding traced
 }
 
 test("tests_passing stamped but no witnessed green run BLOCKS P6→P7", () => {
@@ -704,6 +727,88 @@ test("start_new_cycle BLOCKED until lessons.md is persisted", () => {
   const r = engine.startNewCycle();
   assert.strictEqual(r.ok, true);
   assert.strictEqual(engine.getPhaseState()!.currentPhase, 0);
+});
+
+// --- Part II: engine-authored verification provenance on the gate ---
+
+console.log("\n=== Verification Provenance + Phase-6 Re-verification Tests ===\n");
+
+test("tests_passing is stamped with nominal provenance when the pass came via exit_code=0 (II)", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "pass", { source: "harness", exitCode: 0, outputSha256: "abc" });
+  assert.strictEqual(engine.advancePhase(7).ok, true);
+  const ec = engine.getExitCriteriaState(6).find((c) => c.criterion === "tests_passing")!;
+  assert.ok(ec.verifiedBy, "the engine stamps HOW the gate was verified, not just that it was");
+  assert.strictEqual(ec.verifiedBy!.path, "test-pass");
+  assert.strictEqual(ec.verifiedBy!.nominal, true, "harness exit_code=0 is the nominal path");
+  assert.strictEqual((ec.verifiedBy!.snapshot as Record<string, unknown>).exitCode, 0);
+});
+
+test("a pass classified without exit_code is marked non-nominal (II.2 degradation)", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "pass"); // markers-only, no exit_code / source
+  assert.strictEqual(engine.advancePhase(7).ok, true);
+  const ec = engine.getExitCriteriaState(6).find((c) => c.criterion === "tests_passing")!;
+  assert.strictEqual(ec.verifiedBy!.nominal, false, "a pass not confirmed by a harness exit_code=0 is a degraded path");
+  assert.ok(ec.verifiedBy!.note && ec.verifiedBy!.note.includes("exit_code"), "and the record says why");
+});
+
+test("Phase 6 blocks 6→7 until every critical finding is covered (III.1)", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "pass", { source: "harness", exitCode: 0 });
+  fs.rmSync(path.join(workspace, "specs", "validation", "critical-coverage.md")); // undo what toPhase6 wrote
+  const r = engine.advancePhase(7);
+  assert.strictEqual(r.ok, false, "P-01/P-02 (🔴) must be traced before sign-off");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("critical coverage") && m.includes("critical-coverage.md")));
+  writeCriticalCoverage(workspace);
+  assert.strictEqual(engine.advancePhase(7).ok, true, "…and passes once every critical is traced");
+});
+
+test("a critical finding absent from the coverage file blocks, naming it (III.1)", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "pass", { source: "harness", exitCode: 0 });
+  fs.writeFileSync(
+    path.join(workspace, "specs", "validation", "critical-coverage.md"),
+    "# Critical coverage\n\n| finding | test | note |\n|---|---|---|\n" +
+    "| P-01 | test/auth.test.ts::rejects sql injection in the login path | regression test added |\n" // P-02 omitted, file non-trivial
+  );
+  const r = engine.advancePhase(7);
+  assert.strictEqual(r.ok, false);
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("P-02") && m.includes("critical coverage")));
+});
+
+test("Phase 6 requires premise coverage when premises are NUMBERED (III.2)", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "pass", { source: "harness", exitCode: 0 });
+  fs.writeFileSync(
+    path.join(workspace, "specs", "technical", "architecture.md"),
+    "# Architecture\n\n| id | module | responsibility | interface | depends-on |\n|---|---|---|---|---|\n" +
+    "| M-01 | auth | a | l() | db |\n| M-02 | ui | r | r() | auth |\n\n" +
+    "## Premissas\n| id | premissa | consequência |\n|---|---|---|\n| A-1 | single-thread | races |\n| A-2 | streaming migration | memory spike |\n"
+  );
+  const r = engine.advancePhase(7);
+  assert.strictEqual(r.ok, false, "numbered premises A-1/A-2 must be traced to tests");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("premise coverage")));
+  fs.writeFileSync(
+    path.join(workspace, "specs", "validation", "premise-coverage.md"),
+    "# Premise coverage\n\n| premise | test |\n|---|---|\n| A-1 | test/threads.test.ts |\n| A-2 | test/memory.test.ts |\n"
+  );
+  assert.strictEqual(engine.advancePhase(7).ok, true);
+});
+
+test("prose premises (no ids) do NOT trigger the premise gate — no over-block (III.2)", () => {
+  toPhase6(); // writeArchitectureDoc has a prose "## Assumptions", no A-\d+
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "pass", { source: "harness", exitCode: 0 });
+  assert.strictEqual(engine.advancePhase(7).ok, true, "premise ids are not a stable convention — prose must not be gated");
 });
 
 test("architecture_doc stamped but not persisted BLOCKS P1→P2", () => {

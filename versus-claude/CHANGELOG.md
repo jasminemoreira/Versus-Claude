@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.16.0] - 2026-08-12
+
+### Added — exit-criterion provenance + Phase-6 re-verification (post-batch spec Parts II, III, IV)
+The method decided things (critical findings, premises) and never re-checked they survived the code; and the two evidence-backed criteria recorded conformance without recording whether the mechanism was nominal. Each item below cleared the form-vs-quality bias rule — gate only what is form AND has an observed, correctly-diagnosed failure in the corpus.
+
+- **II — verification provenance on the gate.** The two `verify:` criteria (`tests_passing`, `activated_lenses_recorded`) now carry an engine-authored `verifiedBy` — path, a `nominal` flag, and a snapshot — stamped when the transition passes. `nominal:false` marks a degraded path (a pass classified without a harness `exit_code=0`; a lens record satisfied by the legacy prose fallback), so a post-mortem sees a bypass in the criterion itself, not only if the agent logged a separate decision. No new criteria (II.3): the record of the existing ones is enriched.
+- **III.1 — Phase 6 confirms every critical finding survived (gate).** New cross-gate on 6→7: when the matrix has 🔴 findings, `specs/validation/critical-coverage.md` must reference each by id (a test that catches its regression, or a reason there is none). Catches the T26/T27 class — a resolved critical silently reintroduced. Skips when there are no criticals; form only.
+- **III.2 — Phase 6 confirms numbered premises hold (conditional gate).** When `architecture.md` numbers its premises (`A-1`, `P-A8`, …), `specs/validation/premise-coverage.md` must trace each to a test that would fail if it stopped holding. **Conditional by evidence:** premise numbering is not a stable convention in the corpus (half the projects write prose), so the gate engages only where premises are numbered — never over-blocking prose, the v0.13.0 trap. Phase-1 guidance now nudges numbering.
+- **III.3 / III.4 / IV — guidance, not gates.** III.3 (detection power / mutation testing) stays a strong recommendation — mutation tooling is not universal, so a hard gate would over-block. III.4 (each `## V(N)` architecture table complete, not a delta) is a Phase-1 note — delta vs removal is textually indistinguishable, so it is not cleanly gateable. IV records the four practices the agents already adopt spontaneously (stage-measure before optimizing; micro-check by running not reading; mutation testing; test map from specs not code) and the rule to name the scenario, not just the assertion, when recording a test fix.
+
+Not done: **Part V** (taxonomy / conditional-lens triggers) — it alters the published taxonomy and must be coordinated with the paper; held for a dedicated decision. **Part VI** is confirmation only (duplica-intra-lens and lens-set-fixing remain declared limitations, not gates — κ 0.110–0.338 across four raters recorded in `CLASSIFICACAO-FORMA-VS-QUALIDADE-FASE2.md`). 96 tests, all green.
+
 ## [0.15.0] - 2026-08-12
 
 ### Fixed — test-gate integrity (Part I of the post-batch spec: I.1–I.5)
