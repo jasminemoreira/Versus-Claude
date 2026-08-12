@@ -17,6 +17,7 @@ import {
   SpecEntry,
   specEntryValue,
   LensActivation,
+  TestProvenance,
 } from "./types";
 import {
   isValidTransition,
@@ -525,9 +526,21 @@ export class StateEngine {
         );
       }
       if (def.verify === "test-pass" && !this.witnessedTestPass(phase)) {
+        const t = this.state?.lastTestOutcome;
+        // Distinguish "nothing was observed" from "observed and not a pass" — the old
+        // message conflated them, and an agent whose suite was green had no signal that
+        // the hook, not the tests, was the problem (I.3).
+        const seen = t
+          ? `The last run the engine recorded was outcome="${t.outcome}"` +
+            `${t.command ? ` for \`${t.command}\`` : ""} at ${t.at}` +
+            `${t.phase !== phase ? ` (in Phase ${t.phase}, not this phase)` : ""}` +
+            `${typeof t.exitCode === "number" ? `, exit_code=${t.exitCode}` : ""}.` +
+            (t.outcome === "unknown" ? ` "unknown" means the hook could not classify the output — check the run's output, or re-run.` : "")
+          : `The engine has recorded NO test run in this phase.`;
         out.push(
-          `[Phase ${phase}] ${def.criterion}: the engine did not witness a passing test run in this phase. ` +
-          `Run your test suite so the result is verified by the test-outcome hook (S4: never assume tests passed — execute and verify). ` +
+          `[Phase ${phase}] ${def.criterion}: no witnessed passing test run in this phase. ${seen} ` +
+          `A green run must be seen by the test-outcome hook (S4: never assume tests passed — execute and verify). ` +
+          `If the suite is green but this stays red, the run was not classified as a pass — inspect get_phase_state.lastTestOutcome. ` +
           `Marking the criterion met is not enough.`
         );
       }
@@ -824,23 +837,39 @@ export class StateEngine {
 
   /**
    * Records the outcome of a test run. Only FAILURES accumulate: a green run is
-   * the end of the work, never a loop, so it clears the counter. Blocking is
-   * decided by the caller reading getLoopCounter() BEFORE the run.
+   * the end of the work, never a loop, so it clears the counter. An `unknown` run
+   * (unclassifiable output) is RECORDED — so it cannot leave a stale `fail` frozen
+   * in place (I.1) — but it is not a failure: it neither satisfies the gate nor
+   * counts toward S6. Blocking is decided by the caller reading getLoopCounter()
+   * BEFORE the run. `provenance` (I.5) is stored verbatim when supplied.
    */
-  recordTestOutcome(command: string, failed: boolean): { count: number } {
+  recordTestOutcome(
+    command: string,
+    outcome: "pass" | "fail" | "unknown",
+    provenance?: TestProvenance
+  ): { count: number } {
     if (!this.state) return { count: 0 };
 
     // Record what the engine actually witnessed — this is what gates tests_passing
     // (S4), independent of the S6 loop-counter logic below.
     this.state.lastTestOutcome = {
-      outcome: failed ? "fail" : "pass",
+      outcome,
       phase: this.state.currentPhase,
       at: new Date().toISOString(),
+      command,
+      ...(provenance ?? {}),
     };
 
-    if (!failed) {
+    if (outcome === "pass") {
       this.resetLoopCounter();  // resetLoopCounter saves, persisting lastTestOutcome too
       return { count: 0 };
+    }
+
+    if (outcome === "unknown") {
+      // Unclassifiable output is not a failure: leave the loop counter untouched,
+      // just persist the record so the stale-fail freeze cannot happen.
+      this.save();
+      return { count: this.state.loopCounter?.count ?? 0 };
     }
 
     const normalized = this.normalizeCommandPattern(command);

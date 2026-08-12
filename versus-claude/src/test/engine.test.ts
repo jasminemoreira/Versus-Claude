@@ -643,13 +643,27 @@ test("tests_passing stamped but no witnessed green run BLOCKS P6→P7", () => {
   const blocked = engine.advancePhase(7);
   assert.strictEqual(blocked.ok, false);
   if (blocked.ok) return;
-  assert.ok(blocked.error.missingCriteria.some((m) => m.includes("witness a passing test run")));
+  const msg = blocked.error.missingCriteria.find((m) => m.includes("no witnessed passing test run"))!;
+  assert.ok(msg, "the refusal must name the missing witnessed pass");
+  assert.ok(msg.includes("recorded NO test run in this phase"), "with nothing observed, the message says so — not 'failed'");
+});
+
+test("the refusal distinguishes observed-fail from nothing-observed (I.3)", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "fail"); // the engine DID observe — a fail
+  const r = engine.advancePhase(7);
+  assert.strictEqual(r.ok, false);
+  if (r.ok) return;
+  const msg = r.error.missingCriteria.find((m) => m.includes("no witnessed passing test run"))!;
+  assert.ok(msg.includes('outcome="fail"'), "the message must say what the engine saw, not just that it did not pass");
+  assert.ok(msg.includes("npm test"), "and which command it was");
 });
 
 test("a witnessed green run in Phase 6 unblocks P6→P7", () => {
   toPhase6();
   for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
-  engine.recordTestOutcome("npm test", false); // the hook witnesses a pass in phase 6
+  engine.recordTestOutcome("npm test", "pass"); // the hook witnesses a pass in phase 6
   const r = engine.advancePhase(7);
   assert.strictEqual(r.ok, true);
   assert.strictEqual(engine.getPhaseState()!.currentPhase, 7);
@@ -658,13 +672,13 @@ test("a witnessed green run in Phase 6 unblocks P6→P7", () => {
 test("a witnessed FAIL does not satisfy tests_passing", () => {
   toPhase6();
   for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
-  engine.recordTestOutcome("npm test", true); // red run
+  engine.recordTestOutcome("npm test", "fail"); // red run
   assert.strictEqual(engine.advancePhase(7).ok, false);
 });
 
 test("a pass witnessed in an EARLIER phase does not satisfy Phase 6", () => {
   toPhase5();
-  engine.recordTestOutcome("npm test", false); // green run, but in phase 5
+  engine.recordTestOutcome("npm test", "pass"); // green run, but in phase 5
   for (const c of engine.getExitCriteriaWithDefs(5)) engine.markExitCriterion(5, c.criterion, true);
   engine.advancePhase(6);
   for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
@@ -674,7 +688,7 @@ test("a pass witnessed in an EARLIER phase does not satisfy Phase 6", () => {
 test("start_new_cycle BLOCKED until lessons.md is persisted", () => {
   toPhase6();
   for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
-  engine.recordTestOutcome("npm test", false);
+  engine.recordTestOutcome("npm test", "pass");
   engine.advancePhase(7);
   for (const c of engine.getExitCriteriaWithDefs(7)) engine.markExitCriterion(7, c.criterion, true);
 
@@ -752,7 +766,7 @@ function toPhase5() {
 test("passing runs never accumulate — final verification is never blocked", () => {
   toPhase5();
   for (let i = 0; i < 10; i++) {
-    engine.recordTestOutcome("npm test", false);
+    engine.recordTestOutcome("npm test", "pass");
   }
   assert.strictEqual(engine.getLoopCounter().count, 0);
   assert.strictEqual(engine.isLoopBlocked(), false);
@@ -760,11 +774,11 @@ test("passing runs never accumulate — final verification is never blocked", ()
 
 test("a passing run clears failures accumulated before it", () => {
   toPhase5();
-  engine.recordTestOutcome("npm test", true);
-  engine.recordTestOutcome("npm test", true);
+  engine.recordTestOutcome("npm test", "fail");
+  engine.recordTestOutcome("npm test", "fail");
   assert.strictEqual(engine.getLoopCounter().count, 2);
 
-  engine.recordTestOutcome("npm test", false);
+  engine.recordTestOutcome("npm test", "pass");
   assert.strictEqual(engine.getLoopCounter().count, 0);
   assert.strictEqual(engine.isLoopBlocked(), false);
 });
@@ -773,7 +787,7 @@ test("blind loop: consecutive failures with no diagnosis block", () => {
   toPhase5();
   for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) {
     assert.strictEqual(engine.isLoopBlocked(), false, `should not block before failure ${i + 1}`);
-    engine.recordTestOutcome("npm test", true);
+    engine.recordTestOutcome("npm test", "fail");
   }
   assert.strictEqual(engine.getLoopCounter().count, LOOP_FAILURE_THRESHOLD);
   assert.strictEqual(engine.isLoopBlocked(), true, "blocked after threshold undiagnosed failures");
@@ -781,7 +795,7 @@ test("blind loop: consecutive failures with no diagnosis block", () => {
 
 test("named diagnosis clears the counter and unblocks", () => {
   toPhase5();
-  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", true);
+  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
   assert.strictEqual(engine.isLoopBlocked(), true);
 
   engine.recordDecision(5, "diagnosis", "Duplicate const in card.ts shadowed the export.");
@@ -801,27 +815,27 @@ test("real session: 4 failures, 4 named causes — never blocked", () => {
   ];
   for (const r of rounds) {
     assert.strictEqual(engine.isLoopBlocked(), false, `blocked before running ${r.cmd} — regression`);
-    engine.recordTestOutcome(r.cmd, true);
+    engine.recordTestOutcome(r.cmd, "fail");
     engine.recordDecision(5, "diagnosis", r.cause);
   }
   assert.strictEqual(engine.isLoopBlocked(), false, "four diagnosed failures are the normal cycle, not a loop");
 
   // And the green verification run goes through.
-  engine.recordTestOutcome("npm test", false);
+  engine.recordTestOutcome("npm test", "pass");
   assert.strictEqual(engine.getLoopCounter().count, 0);
 });
 
 test("non-diagnosis decisions do NOT clear the counter", () => {
   toPhase5();
-  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", true);
+  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
   engine.recordDecision(5, "testing", "ran the suite again");
   assert.strictEqual(engine.isLoopBlocked(), true, "only a named diagnosis clears S6");
 });
 
 test("different suites are different patterns (S6 speaks of modules)", () => {
   toPhase5();
-  engine.recordTestOutcome("npm test -- consent", true);
-  engine.recordTestOutcome("npm test -- link", true);
+  engine.recordTestOutcome("npm test -- consent", "fail");
+  engine.recordTestOutcome("npm test -- link", "fail");
   // Second suite starts its own count instead of compounding the first.
   assert.strictEqual(engine.getLoopCounter().count, 1);
   assert.ok(engine.getLoopCounter().pattern.includes("link"));
@@ -830,7 +844,7 @@ test("different suites are different patterns (S6 speaks of modules)", () => {
 test("a blocked S6 vetoes the phase transition, and says why", () => {
   toPhase5();
   for (const c of engine.getExitCriteriaWithDefs(5)) engine.markExitCriterion(5, c.criterion, true);
-  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", true);
+  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
 
   // Advancing must not be an escape from a blind loop — but the refusal must be legible.
   const blocked = engine.advancePhase(6);
@@ -844,7 +858,7 @@ test("a blocked S6 vetoes the phase transition, and says why", () => {
 test("advancePhase clears the counter (after the loop is diagnosed)", () => {
   toPhase5();
   for (const c of engine.getExitCriteriaWithDefs(5)) engine.markExitCriterion(5, c.criterion, true);
-  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", true);
+  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
 
   engine.recordDecision(5, "diagnosis", "Named the cause.");
   const r = engine.advancePhase(6);
@@ -855,10 +869,41 @@ test("advancePhase clears the counter (after the loop is diagnosed)", () => {
 
 test("S6 safeguard reports violated when blocked", () => {
   toPhase5();
-  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", true);
+  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
   const s6 = validateSafeguard("S6", engine.getPhaseState()!);
   assert.strictEqual(s6.status, "violated");
   assert.ok(s6.details.includes("diagnosis"), "must point at the escape hatch");
+});
+
+test("unknown outcome is recorded, not dropped — no frozen stale fail (I.1)", () => {
+  toPhase5();
+  engine.recordTestOutcome("npm test", "fail");
+  assert.strictEqual(engine.getPhaseState()!.lastTestOutcome!.outcome, "fail");
+  // An unclassifiable run must OVERWRITE the stale fail, not be silently dropped.
+  engine.recordTestOutcome("npm test", "unknown");
+  const t = engine.getPhaseState()!.lastTestOutcome!;
+  assert.strictEqual(t.outcome, "unknown", "unknown must replace the stale fail, not vanish");
+  assert.strictEqual(t.command, "npm test", "the command is recorded for the refusal message");
+  assert.strictEqual(engine.witnessedTestPass(5), false, "unknown does not satisfy the gate");
+});
+
+test("unknown does not count toward S6 (I.1)", () => {
+  toPhase5();
+  for (let i = 0; i < 5; i++) engine.recordTestOutcome("npm test", "unknown");
+  assert.strictEqual(engine.getLoopCounter().count, 0, "an unreadable run is not a failing run");
+  assert.strictEqual(engine.isLoopBlocked(), false);
+});
+
+test("a recorded pass carries provenance when supplied (I.5)", () => {
+  toPhase5();
+  engine.recordTestOutcome("npm test", "pass", {
+    source: "harness", toolUseId: "tu_1", sessionId: "s_1",
+    outputSha256: "abc", outputBytes: 42, exitCode: 0,
+  });
+  const t = engine.getPhaseState()!.lastTestOutcome!;
+  assert.strictEqual(t.source, "harness");
+  assert.strictEqual(t.exitCode, 0);
+  assert.strictEqual(t.toolUseId, "tu_1");
 });
 
 test("detectOutcome: green run is not a failure", () => {

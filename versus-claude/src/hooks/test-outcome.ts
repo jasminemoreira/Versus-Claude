@@ -10,12 +10,32 @@
 // is ambiguous we record nothing — a false "failed" would push toward a bogus
 // block, a missed failure only delays a legitimate one.
 
+import { createHash } from "crypto";
 import { StateEngine, LOOP_FAILURE_THRESHOLD } from "../state/engine";
+import { TestProvenance } from "../state/types";
 
 interface HookInput {
-  tool_name: string;
-  tool_input: { command?: string };
-  tool_response: string | Record<string, unknown>;
+  tool_name?: string;
+  tool_input?: { command?: string };
+  // Bash tool_response is { stdout, stderr, exit_code } (exit_code is snake_case and
+  // numeric); older builds may send a plain string. Handle both.
+  tool_response?: string | { stdout?: string; stderr?: string; exit_code?: number } | Record<string, unknown>;
+  tool_use_id?: string;
+  session_id?: string;
+}
+
+/** Text to classify from a Bash tool_response — stdout+stderr when structured, the
+ *  string itself otherwise. Used only as the FALLBACK when no exit_code is present. */
+function responseText(resp: HookInput["tool_response"]): string {
+  if (typeof resp === "string") return resp;
+  if (resp && typeof resp === "object") {
+    const o = resp as { stdout?: string; stderr?: string };
+    if (typeof o.stdout === "string" || typeof o.stderr === "string") {
+      return `${o.stdout ?? ""}\n${o.stderr ?? ""}`;
+    }
+    return JSON.stringify(resp);
+  }
+  return "";
 }
 
 const TEST_PATTERNS = [
@@ -110,27 +130,44 @@ function main() {
   process.stdin.on("data", (chunk) => { input += chunk; });
   process.stdin.on("end", () => {
     clearTimeout(timeoutId);
+    let command = "";
+    let isTest = false;
     try {
       const hookInput: HookInput = JSON.parse(input);
-      const command = hookInput.tool_input?.command || "";
-
-      if (!isTestCommand(command)) {
+      command = hookInput.tool_input?.command || "";
+      isTest = isTestCommand(command);
+      if (!isTest) {
         emit();
         return;
       }
 
-      const output = typeof hookInput.tool_response === "string"
-        ? hookInput.tool_response
-        : JSON.stringify(hookInput.tool_response || "");
+      const resp = hookInput.tool_response;
+      const exitCode =
+        resp && typeof resp === "object" && typeof (resp as { exit_code?: unknown }).exit_code === "number"
+          ? (resp as { exit_code: number }).exit_code
+          : undefined;
+      const output = responseText(resp);
 
-      const outcome = detectOutcome(output);
+      // I.4: the process exit code is authoritative when present — a green suite exits
+      // 0, and the reporter's prose (which broke on T21/T28/T30/T31) becomes the
+      // fallback only when no exit_code is supplied.
+      const outcome: Outcome =
+        typeof exitCode === "number" ? (exitCode === 0 ? "pass" : "fail") : detectOutcome(output);
 
-      if (outcome === "unknown") {
-        emit();
-        return;
-      }
+      // I.5: provenance. Does not prevent forgery — it makes a workaround legible in a
+      // post-mortem, which is exactly what the four bypassed projects lacked.
+      const provenance: TestProvenance = {
+        source: "harness",
+        toolUseId: hookInput.tool_use_id,
+        sessionId: hookInput.session_id,
+        outputBytes: Buffer.byteLength(output, "utf-8"),
+        outputSha256: createHash("sha256").update(output).digest("hex"),
+        exitCode,
+      };
 
-      const { count } = engine.recordTestOutcome(command, outcome === "fail");
+      // I.1: an `unknown` outcome is recorded like any other — it must not leave a
+      // stale `fail` frozen in place. recordTestOutcome keeps it out of the S6 count.
+      const { count } = engine.recordTestOutcome(command, outcome, provenance);
 
       if (outcome === "fail" && count >= LOOP_FAILURE_THRESHOLD) {
         emit(
@@ -153,6 +190,11 @@ function main() {
 
       emit();
     } catch {
+      // I.1 (pt.4): if we already knew this was a test command, a malformed payload or
+      // downstream error must not make the run vanish — record it as unknown.
+      if (isTest) {
+        try { engine.recordTestOutcome(command, "unknown", { source: "unknown" }); } catch { /* ignore */ }
+      }
       emit();
     }
   });

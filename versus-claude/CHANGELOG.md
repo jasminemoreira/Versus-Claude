@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.15.0] - 2026-08-12
+
+### Fixed — test-gate integrity (Part I of the post-batch spec: I.1–I.5)
+`tests_passing` locked in **4 of 12 batch projects (33%)** with the suite green. No falsification occurred — the agents unlocked it by feeding the classifier the real output and declared the workaround themselves — but a gate whose integrity rests on the good faith of the party it polices is an instruction wearing a lock's clothes. The paralysis and the forgeability are one package: fixing one without the other yields stuck agents instead of honest ones.
+
+- **I.1 — `unknown` runs are recorded.** An unclassifiable run used to `emit()` without recording, so a stale `fail` stayed frozen: re-running green changed nothing. `recordTestOutcome` now takes the outcome directly and persists `unknown` as its own value — it does not satisfy the gate (only `pass` does) and does not count toward S6 (an unreadable run is not a failing run). A malformed payload for a known test command records `unknown` instead of vanishing.
+- **I.2 — `get_phase_state` exposes `lastTestOutcome`.** The engine had it; the MCP tool filtered it out, so the T31 agent had to read `.versus/state.json` directly — *"contornando a interface que a metodologia oferece"*. One line; the worst symptom's cure.
+- **I.3 — the refusal says what the engine saw.** The old message made "not observed" indistinguishable from "observed and failed", with no timestamp. It now cites `lastTestOutcome` — outcome, command, time, exit code — or states plainly that nothing was recorded in this phase, and points at `get_phase_state.lastTestOutcome`.
+- **I.4 — classify by exit code, not prose.** Three distinct failure causes across the four projects (inverted `pass 68`/`fail 0` order; markers matched but the hook wasn't invoked; a user's innocent `-q` in `pytest.ini` collapsing to `-qq`). The PostToolUse Bash payload carries a structured numeric `exit_code`; the hook now keys on it (0 = pass), with the text markers as fallback only when it's absent. Verified end-to-end: a green suite whose reporter prose the markers mis-read now classifies as pass on `exit_code=0`.
+- **I.5 — provenance on `lastTestOutcome`.** `source`, `toolUseId`, `sessionId`, `outputSha256`, `outputBytes`, `exitCode`. Does not prevent forgery — makes a workaround legible in a post-mortem, which is exactly what the four cases lacked (the honesty came from the agent, not the file).
+
+Deferred: **I.6** (match `toolUseId` against the transcript) — marked optional in the spec; its value is conditional on a threat model where the agent's good faith cannot be assumed, which the batch did not present. Parts II–V of the spec (exit-criterion provenance, Phase-6 re-verification, guidance, taxonomy) are separate units, pending. 89 tests, all green; hook path e2e-verified.
+
 ## [0.14.2] - 2026-08-09
 
 ### Added — the severity column is now validated (closing the form-gate family, by evidence)
