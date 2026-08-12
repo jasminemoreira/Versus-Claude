@@ -459,6 +459,10 @@ test("P2 lens table renders from lenses.ts — names, questions and triggers sur
   // misread ("internal contracts in the same repo" → wrong refusal) is the load-bearing one.
   assertPresent("it does not require separate teams", "LIN/Y fixes the documented misread");
   assertPresent("not only in long-lived or maintenance-heavy systems", "MEC/Y condition-from-question");
+  // Part V complete (all 9): the three re-measured formulations.
+  assertPresent("a store only this version ever reads, do not activate", "MIG/Y2 restored selectivity (3/3)");
+  assertPresent("A system that decides nothing consequential about anyone stays out", "ETI/Y2 restrictive clause");
+  assertPresent("regulates state over time rather than only reacting", "CTR-conservative (enumeration kept as illustration)");
 });
 
 test("P5 critical terms present", () => {

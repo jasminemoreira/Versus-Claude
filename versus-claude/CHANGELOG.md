@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.16.2] - 2026-08-12
+
+### Changed — the last 3 conditional-lens triggers, re-measured and shipped (post-batch Part V, complete)
+The three held in 0.16.1 (ETI, MIG, CTR) were re-measured in their revised forms on both estimators, and all nine conditional triggers are now in the Y taxonomy.
+
+- **MIG/Y2 — approved without reservation.** The tightened clause ("a store only this version ever reads does not activate") measured **3/3** on both readers — exactly X and the Phase-2 value. Perfect convergence, the only lens where both models land on the same integer. MIG is the discriminating conditional again; the diff's original conclusion holds under Y2.
+- **ETI/Y2 — approved, number declared.** Both readers converge at **9/12** (down from the loose Y's 12/9). The restrictive "effect falls on people, directly or via the entity they depend on" fixes the T25 case without the "any party" over-reach that pushed it near-universal — but it does not restore ETI's original selectivity. Whether 9/12 is the *target* is a project judgment the measurement cannot settle; it is declared, not hidden.
+- **CTR — conservative form shipped.** Under the loose Y the "regulates vs reacts" clause measured −3 on GPT / 0 on Kimi (flagged as non-replicating). Keeping X's enumeration as illustration, the conservative form measures **+1 on both** — the effect now replicates, confirming the clause was the cause, not noise. CTR lands at 9/7 (below X's 11/6): part of the selectivity recovered, not all.
+
+Methodological note for the paper: the Y→Y2 control was clean on GPT (1 unit of drift across the six unchanged lenses) but tied on Kimi (≈4), so Kimi carries ±1–2 per-lens run-to-run variation and movements of that size on it are not read as effect; GPT is the more stable reader. Paper framing unchanged: this is Y activation on the archived (DOI-frozen) corpus, not a verdict against Phase 2; testing Y is future work. 96 tests green.
+
 ## [0.16.1] - 2026-08-12
 
 ### Changed — 6 of 9 conditional-lens triggers rewritten to the measured Y form (post-batch Part V, partial)
