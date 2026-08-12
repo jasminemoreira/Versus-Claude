@@ -455,6 +455,10 @@ test("P2 lens table renders from lenses.ts — names, questions and triggers sur
   assertPresent("resource whose cost grows with use", "Sustainability v0.12.9 trigger must survive rendering");
   assertPresent("single-operator project activates it", "Governance v0.12.9 trigger must survive rendering");
   assertPresent("| Lens | Central Question | Exclusive Failure Class | Activate when... |", "conditional table header renders");
+  // Part V (partial): the 6 measured-clear Y triggers. LIN's fix to the documented
+  // misread ("internal contracts in the same repo" → wrong refusal) is the load-bearing one.
+  assertPresent("it does not require separate teams", "LIN/Y fixes the documented misread");
+  assertPresent("not only in long-lived or maintenance-heavy systems", "MEC/Y condition-from-question");
 });
 
 test("P5 critical terms present", () => {

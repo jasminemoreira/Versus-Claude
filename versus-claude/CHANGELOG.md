@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.16.1] - 2026-08-12
+
+### Changed — 6 of 9 conditional-lens triggers rewritten to the measured Y form (post-batch Part V, partial)
+Guidance only, no gate — triggers were never gates. The V.1 decision: a trigger states the *condition the central question implies*, examples demoted to illustration, generalizing the v0.12.9 SUS/UX/GOV rewrites. The nine candidate rewrites were then **measured** — Y run against the 12 archived estimate packages on two capable estimators (GPT, Kimi), Y differing from X in exactly the nine trigger lines, SUS/UX/GOV held as controls. Shipped here are the six the measurement cleared:
+
+- **RES, PRO, MEC** — condition-from-question, measured null/±1 (pure formulation).
+- **LIN** — same, and it fixes the documented misread ("interface contracts between independent teams" → wrongly refused for internal contracts in one repo); now "does not require separate teams".
+- **OBS, JOG** — condition-from-question, measured moderate erosion (+3/+4 and +3/+1) — the declared price of stating the real condition.
+
+**Held at X, pending re-measurement of revised formulations** (the measurement caught three of my projections wrong): **ETI** (a "harm to any party" phrasing measured the largest erosion of the batch, +9/+6 — a restrictive "effect falls on people, directly or via the entity they depend on" version is queued to re-measure); **MIG** (projected to stay the last discriminator, measured 3→10/3→5 — a tightened "state/contract already relied upon" version queued); **CTR** (projected formulation-only, measured −3 on GPT and 0 on Kimi — the only non-replicating effect, on the corpus's strongest positively-adjudicated lens; the "regulates vs reacts" clause is dropped, a conservative version queued).
+
+The measurement also corrected the framing itself: **the condition-*form* does not universalize — the condition *content* does.** SUS has had the form since v0.12.9 and measured the most selective of all. A trigger must be substantively restrictive, and that is now testable by measured activation on the archived corpus (a condition that fires 12/12 is not a condition). Paper framing unchanged: RO3 measured X; Y is the correction derived from the finding; testing Y is future work — this is Y's activation on the archived corpus, not a new verdict against Phase 2. 96 tests green.
+
 ## [0.16.0] - 2026-08-12
 
 ### Added — exit-criterion provenance + Phase-6 re-verification (post-batch spec Parts II, III, IV)
