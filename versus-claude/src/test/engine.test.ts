@@ -8,7 +8,7 @@ import { StateEngine, LOOP_FAILURE_THRESHOLD } from "../state/engine";
 import { ScoreBreakdown, SpecEntry } from "../state/types";
 import { getCompleteGuidance } from "../rules/full-guidance";
 import { validateSafeguard } from "../rules/safeguards";
-import { detectOutcome } from "../hooks/test-outcome";
+import { detectOutcome, detectExitCode } from "../hooks/test-outcome";
 import { CONDITIONAL_LENSES, UNIVERSAL_LENS_DEFS, CONDITIONAL_LENS_DEFS } from "../rules/lenses";
 
 const MATRIX_REL = path.join("specs", "design", "coverage-matrix.md");
@@ -483,6 +483,8 @@ test("P6 critical terms present", () => {
   assertPresent("Detection power", "III.3 detection-power recommendation");
   assertPresent("Measure by stage before optimizing", "IV practice 1");
   assertPresent("name the SCENARIO, not just the assertion", "IV test-fix scenario record");
+  assertPresent("VERSUS_TEST_EXIT=$?", "the language-agnostic exit echo is the standard P6 test invocation");
+  assertPresent("Do NOT modify the test runner", "P6 tells the agent not to edit the runner to satisfy the hook");
 });
 
 test("P1 post-batch terms present (numbered premises + full version table)", () => {
@@ -1035,6 +1037,45 @@ test("detectOutcome: red run is a failure", () => {
 test("detectOutcome: ambiguous output records nothing", () => {
   assert.strictEqual(detectOutcome("Running tests..."), "unknown");
   assert.strictEqual(detectOutcome(""), "unknown");
+});
+
+// --- language-agnostic exit echo (the fix for a harness with no numeric exit_code) ---
+
+test("detectExitCode reads the VERSUS_TEST_EXIT token, last occurrence wins", () => {
+  assert.strictEqual(detectExitCode("67/67 testes passaram\nVERSUS_TEST_EXIT=0"), 0);
+  assert.strictEqual(detectExitCode("boom\nVERSUS_TEST_EXIT=1"), 1);
+  assert.strictEqual(detectExitCode("VERSUS_TEST_EXIT=1\n...retry...\nVERSUS_TEST_EXIT=0"), 0, "the final run's status is the one that counts");
+  assert.strictEqual(detectExitCode("no token here"), undefined);
+});
+
+test("a non-English runner is unclassifiable by markers but the echo is language-agnostic", () => {
+  // The Enduro case: a Portuguese runner prints "67/67 testes passaram" — markers can't read it.
+  const ptOutput = "67/67 testes passaram   (37 positivos, 30 negativos)";
+  assert.strictEqual(detectOutcome(ptOutput), "unknown", "markers are English-only, by design — not expanded per locale");
+  // With the sanctioned echo, the exit status is a number, readable in any language.
+  assert.strictEqual(detectExitCode(ptOutput + "\nVERSUS_TEST_EXIT=0"), 0);
+  assert.strictEqual(detectExitCode("1 teste falhou\nVERSUS_TEST_EXIT=1"), 1);
+});
+
+test("a pass observed via the exit echo is NOMINAL (II) — no harness exit_code needed", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  // Simulate what the hook records when the echo supplied the status on a no-exit_code harness.
+  engine.recordTestOutcome("npm test; echo \"VERSUS_TEST_EXIT=$?\"", "pass", { source: "harness", exitCode: 0, exitSource: "echo" });
+  assert.strictEqual(engine.advancePhase(7).ok, true);
+  const ec = engine.getExitCriteriaState(6).find((c) => c.criterion === "tests_passing")!;
+  assert.strictEqual(ec.verifiedBy!.nominal, true, "an observed exit status of 0 is nominal, whether from harness or echo");
+  assert.strictEqual((ec.verifiedBy!.snapshot as Record<string, unknown>).exitSource, "echo");
+});
+
+test("a pass classified by markers alone (no observed exit) is NON-nominal (II)", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "pass"); // no exitCode/exitSource — markers only
+  assert.strictEqual(engine.advancePhase(7).ok, true);
+  const ec = engine.getExitCriteriaState(6).find((c) => c.criterion === "tests_passing")!;
+  assert.strictEqual(ec.verifiedBy!.nominal, false);
+  assert.ok(ec.verifiedBy!.note && ec.verifiedBy!.note.includes("VERSUS_TEST_EXIT"), "the record names the missing observed-exit path");
 });
 
 // --- projectSpec entries are timestamped (item 4), back-compat with strings ---

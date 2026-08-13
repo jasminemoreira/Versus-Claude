@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.3] - 2026-08-13
+
+### Fixed — the test-gate classification is now language-agnostic (I.4 rested on a false assumption)
+A real run exposed it: an Enduro session on this machine (Versus 0.16.2) had a Portuguese test runner ("67/67 testes passaram"); the hook could not classify it and blocked Phase 6, and the agent got unstuck by *editing the test runner* to print English markers. Investigating the recorded `lastTestOutcome` of that run settled the cause with data: **the payload had no `exitCode` at all** — this Claude Code (the VS Code extension) does not put a numeric exit code in the Bash tool result (its shape is `{stdout, stderr, interrupted, returnCodeInterpretation}`, the last a *string*). So **I.4 (v0.15.0), "classify by exit code," never fired in this environment** — it was verified only against a hand-built payload, and the batch passed solely because English frameworks matched the output markers.
+
+Expanding the markers per language was rejected: it is whack-a-mole (Portuguese today, Mandarin tomorrow, a custom format after that). The only language-agnostic signal is the exit status, so the fix surfaces it as a fixed token instead of parsing prose:
+
+- **The hook keys on `VERSUS_TEST_EXIT=<n>`** — a number the test command emits via the shell's own `$?` (`npm test; echo "VERSUS_TEST_EXIT=$?"`). Precedence is harness `exit_code` (if a platform ever provides it) → the echo token → English markers (last resort, **not** grown per locale) → unknown. Verified end-to-end: the exact Enduro output (Portuguese, unclassifiable by markers) + the echo now classifies as pass; a failure with `=1` classifies as fail.
+- **Phase 6 guidance** makes the echo the standard test invocation and says explicitly: do NOT modify the runner to satisfy the hook — append the echo to the command instead.
+- **The refusal message (I.3)** teaches the echo form on the first `unknown`, so a stuck agent self-corrects without touching the runner.
+- **II `nominal` redefined**: an observed exit status (from the echo *or* a harness field) of 0 is nominal; a pass classified by markers alone is a degraded path. Provenance gains `exitSource: "harness" | "echo"`. Without this, `nominal` would be permanently false on this platform (no harness exit code), which is meaningless.
+
+100 tests; the failure and fix are both e2e-verified against the bundled hook. This is the kind of assumption the whole batch review exists to catch — caught here on my own I.4.
+
 ## [0.16.2] - 2026-08-12
 
 ### Changed — the last 3 conditional-lens triggers, re-measured and shipped (post-batch Part V, complete)

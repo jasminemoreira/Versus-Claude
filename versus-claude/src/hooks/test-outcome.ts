@@ -102,6 +102,20 @@ export function detectOutcome(output: string): Outcome {
   return "unknown";
 }
 
+/**
+ * Language-agnostic exit status from a sanctioned `echo "VERSUS_TEST_EXIT=$?"` appended
+ * to the test command. The harness on this platform (the VS Code extension) does not put
+ * a numeric exit code in the hook payload — confirmed from the recorded provenance of a
+ * real run — so the command surfaces the shell's own `$?` as a fixed token. It is a
+ * NUMBER, not prose, so it works whatever language or format the runner prints in — which
+ * is why the English-only output markers do not need to grow a translation per locale.
+ * Returns the LAST occurrence (the final run in a multi-command block).
+ */
+export function detectExitCode(output: string): number | undefined {
+  const ms = [...output.matchAll(/VERSUS_TEST_EXIT=(\d+)/g)];
+  return ms.length ? parseInt(ms[ms.length - 1][1], 10) : undefined;
+}
+
 function emit(msg?: string): void {
   if (msg) {
     process.stdout.write(JSON.stringify({ additionalContext: msg }) + "\n");
@@ -142,15 +156,23 @@ function main() {
       }
 
       const resp = hookInput.tool_response;
-      const exitCode =
+      const output = responseText(resp);
+
+      // The process exit code is the ONLY language-agnostic signal — a green suite exits 0
+      // whatever language or format the runner prints in. Precedence:
+      //   1. harness `exit_code` if this platform supplies it (the VS Code extension does NOT);
+      //   2. the sanctioned `echo "VERSUS_TEST_EXIT=$?"` token — a number, not prose, so it
+      //      survives any runner/locale (this is what makes the marker family unnecessary);
+      //   3. output markers, English-only, as a last resort — NOT expanded per language.
+      const harnessExit =
         resp && typeof resp === "object" && typeof (resp as { exit_code?: unknown }).exit_code === "number"
           ? (resp as { exit_code: number }).exit_code
           : undefined;
-      const output = responseText(resp);
+      const echoExit = detectExitCode(output);
+      const exitCode = typeof harnessExit === "number" ? harnessExit : echoExit;
+      const exitSource: TestProvenance["exitSource"] =
+        typeof harnessExit === "number" ? "harness" : typeof echoExit === "number" ? "echo" : undefined;
 
-      // I.4: the process exit code is authoritative when present — a green suite exits
-      // 0, and the reporter's prose (which broke on T21/T28/T30/T31) becomes the
-      // fallback only when no exit_code is supplied.
       const outcome: Outcome =
         typeof exitCode === "number" ? (exitCode === 0 ? "pass" : "fail") : detectOutcome(output);
 
@@ -163,6 +185,7 @@ function main() {
         outputBytes: Buffer.byteLength(output, "utf-8"),
         outputSha256: createHash("sha256").update(output).digest("hex"),
         exitCode,
+        exitSource,
       };
 
       // I.1: an `unknown` outcome is recorded like any other — it must not leave a
