@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.16.4] - 2026-08-13
+
+### Fixed — the module cross-gate regex walked across newlines and dropped a module (diagnosed by the LocalQwen build)
+`tableColumn2` ran one global regex `\|\s*(?:${idPattern})\s*\|\s*([^|]+?)\s*\|` over the whole file. Both `\s*` and `[^|]` match `\n`, so on a row whose LAST cell is itself a module id — `depends-on` holding `M-01` — the match `| M-01 |\n|` swallowed the pipe that OPENS the next row, and that row's module silently dropped from the extracted set. The `advance_phase` 2→3 cross-gate then reported real module drift on a name that was in the architecture table (`cites module(s) absent … : game`), and no edit to `architecture.md` could fix it — the file was already correct. Present since the v0.13.0 cross-gate (the spec shipped the regex verbatim), so every build that took Part B of that patch had it; fixed in LocalQwen 0.9.3, which diagnosed it by instrumenting the regex rather than re-reading the artifact.
+
+Fix: match **per line, `^`-anchored, no `g` flag** — a markdown table row never crosses a newline, so nothing legitimate is lost and no match can walk onto the next row. Applied to `tableColumn2` and to `countArtifactRows` (same whole-file `.match(/…/gm)` exposure — it counts lines, so it now matches per line). Regression test: an architecture whose middle row's `depends-on` is `M-01` and a finding on the module of the row right after — 2→3 must pass. It was untriggered before only because the test fixtures put module *names* in `depends-on`, never ids.
+
+Corpus sweep (old vs new extraction over every `architecture.md` and `coverage-matrix.md`, both directions): 92 files, **1 affected — RestaUm, a standalone game, architecture-side** (a false block: the safe, visible direction). **No RO3 batch project affected, and no matrix-side case anywhere** — the dangerous direction (a finding row ending in a lone id hiding the next finding's module → real drift passing silently) did not occur in the corpus. 101 tests.
+
 ## [0.16.3] - 2026-08-13
 
 ### Fixed — the test-gate classification is now language-agnostic (I.4 rested on a false assumption)

@@ -603,6 +603,29 @@ test("a finding citing a module absent from the architecture BLOCKS (module drif
   assert.ok(r.error.missingCriteria.some((m) => m.includes("health-prober") && m.includes("absent from every version")));
 });
 
+test("a depends-on cell holding a module id does not hide the next module (tableColumn2 newline walk)", () => {
+  toPhase2Stamped();
+  // The bug: a whole-file global regex walks across newlines. When a row's last cell is
+  // itself an id (`depends-on` = M-01), the match `| M-01 |\n|` swallows the pipe that
+  // OPENS the next row, so that row's module drops from the extracted set. Here `game`
+  // is the row right after `ui`, whose depends-on is `M-01` — game used to vanish.
+  fs.writeFileSync(
+    path.join(workspace, "specs", "technical", "architecture.md"),
+    "# Architecture\n\n| id | module | responsibility | interface | depends-on |\n|---|---|---|---|---|\n" +
+    "| M-01 | board | holds state | get() | — |\n" +
+    "| M-02 | ui | render | render() | M-01 |\n" +
+    "| M-03 | game | orchestrate | tick() | M-01, M-02 |\n"
+  );
+  // A finding on `game` — the module the bug dropped from the architecture set.
+  fs.writeFileSync(
+    path.join(workspace, "specs", "design", "coverage-matrix.md"),
+    "# Findings\n\n| id | module | lens | severity | description |\n|---|---|---|---|---|\n" +
+    "| P-01 | game | Security | 🔴 | a real finding on a real module the bug used to hide |\n"
+  );
+  const r = engine.advancePhase(3);
+  assert.strictEqual(r.ok, true, "game IS in the architecture table — a depends-on id must not hide it");
+});
+
 test("a module removed in a later version is tolerated (union of versions)", () => {
   // architecture with two versions: quota-limiter existed in V(1), gone in V(2).
   toPhase2Stamped();
