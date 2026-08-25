@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.16.5] - 2026-08-13
+
+### Fixed — the safeguard panel showed a stale snapshot, never the live state
+The sidebar and `get_phase_state` read the cached `state.safeguards[].status`. That field starts all-`ok` and is refreshed ONLY when the agent calls `check_all_safeguards`, which the guidance triggers once (Phase 4) and nowhere else — `advance_phase` validates safeguards for its block decision but does not write the statuses, and `record_test_outcome`/the loop-detector never touch them. So the panel was a snapshot from (at most) the last Phase-4 check: S6 could be actively vetoing test runs while the panel stayed green. That is why the safeguards were "always green, never seen to trigger" — enforcement was real (`advance_phase` blocks on a violated S0/S6, tested), but the display did not mirror it.
+
+Fix, same principle as the other integrity fixes this cycle — **derive at read, do not cache**: the sidebar and `get_phase_state` now compute each safeguard's status live via `validateSafeguard(id, state)` on the loaded state, so the panel reflects exactly what `advance_phase` would enforce right now (an S6 loop block shows the instant it blocks). New test: with three undiagnosed failures, `get_phase_state` reports S6 `violated` while the cached field still says `ok`.
+
+Note (unchanged, by design): only S0 and S6 can reach `violated`; S1/S5/S7 are warning-only; S2/S3/S4 are behavioral (always `ok`, "requires agent attention"). So the panel is mostly green legitimately — the fix is that the two which *can* go red now show it, when they do. 102 tests.
+
 ## [0.16.4] - 2026-08-13
 
 ### Fixed — the module cross-gate regex walked across newlines and dropped a module (diagnosed by the LocalQwen build)

@@ -9,6 +9,7 @@ import { ScoreBreakdown, SpecEntry } from "../state/types";
 import { getCompleteGuidance } from "../rules/full-guidance";
 import { validateSafeguard } from "../rules/safeguards";
 import { detectOutcome, detectExitCode } from "../hooks/test-outcome";
+import { handleGetPhaseState } from "../mcp/tools/state-tools";
 import { CONDITIONAL_LENSES, UNIVERSAL_LENS_DEFS, CONDITIONAL_LENS_DEFS } from "../rules/lenses";
 
 const MATRIX_REL = path.join("specs", "design", "coverage-matrix.md");
@@ -1003,6 +1004,18 @@ test("advancePhase clears the counter (after the loop is diagnosed)", () => {
   assert.strictEqual(r.ok, true);
   assert.strictEqual(engine.getLoopCounter().count, 0);
   assert.strictEqual(engine.isLoopBlocked(), false);
+});
+
+test("get_phase_state reports safeguards LIVE, not the cached (stale) status", () => {
+  toPhase5();
+  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
+  // Nothing refreshed the cached field — it is still the default "ok".
+  const cached = engine.getPhaseState()!.safeguards.find((s) => s.id === "S6")!;
+  assert.strictEqual(cached.status, "ok", "the cached status is stale — this is the bug the panel used to show");
+  // The handler computes live, so it reflects the active S6 block.
+  const out = JSON.parse(handleGetPhaseState(engine)) as { safeguards: Array<{ id: string; status: string }> };
+  const s6 = out.safeguards.find((s) => s.id === "S6")!;
+  assert.strictEqual(s6.status, "violated", "get_phase_state must reflect the live S6 block, not the cached ok");
 });
 
 test("S6 safeguard reports violated when blocked", () => {

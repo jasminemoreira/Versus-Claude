@@ -5,6 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { PhaseState } from "../state/types";
 import { getPhaseDefinition, getExitCriteriaForPhase } from "../rules/phases";
+import { validateSafeguard } from "../rules/safeguards";
 
 export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
   private _onDidChangeTreeData = new vscode.EventEmitter<StateItem | undefined | null>();
@@ -162,15 +163,21 @@ export class SidebarProvider implements vscode.TreeDataProvider<StateItem> {
     );
     items.push(decisionsItem);
 
-    // Safeguards
-    const violated = this.state.safeguards.filter((s) => s.status === "violated");
-    const warnings = this.state.safeguards.filter((s) => s.status === "warning");
+    // Safeguards — computed LIVE from the loaded state via validateSafeguard, not read
+    // from the cached state.safeguards[].status. That field is only refreshed when the
+    // agent calls check_all_safeguards (which the guidance triggers once, in Phase 4), so
+    // reading it made the panel a stale snapshot: an S6 loop block could be actively
+    // vetoing runs while the panel stayed green. Deriving at read makes it reflect exactly
+    // what advance_phase would enforce.
+    const sgLive = this.state.safeguards.map((s) => validateSafeguard(s.id, this.state!));
+    const violated = sgLive.filter((s) => s.status === "violated");
+    const warnings = sgLive.filter((s) => s.status === "warning");
     const sgIcon = violated.length > 0 ? "error" : warnings.length > 0 ? "warning" : "pass";
     const sgItem = new StateItem(
       `Safeguards`,
       `${violated.length} violated, ${warnings.length} warnings`,
       sgIcon,
-      this.state.safeguards.map(
+      sgLive.map(
         (s) => new StateItem(
           `${s.id}: ${s.status}`,
           s.details || "",

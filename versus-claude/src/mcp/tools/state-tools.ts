@@ -2,6 +2,7 @@
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
+import { validateSafeguard } from "../../rules/safeguards";
 
 export const getPhaseStateTool: Tool = {
   name: "get_phase_state",
@@ -96,7 +97,10 @@ export function handleGetPhaseState(engine: StateEngine): string {
     phase0Score: state.phase0Score,
     decisionsCount: state.decisions.length,
     recentDecisions,
-    safeguards: state.safeguards.map((s) => ({ id: s.id, status: s.status })),
+    // Computed LIVE (not the cached state.safeguards[].status, refreshed only by
+    // check_all_safeguards) so the reported status reflects what advance_phase would
+    // enforce right now — e.g. an S6 loop block shows even if no one re-checked.
+    safeguards: state.safeguards.map((s) => ({ id: s.id, status: validateSafeguard(s.id, state).status })),
     // What the test-outcome hook last witnessed (I.2). Without this a stuck
     // tests_passing gate was undiagnosable through the MCP interface — the agent had
     // to read .versus/state.json directly, bypassing the interface the methodology offers.
