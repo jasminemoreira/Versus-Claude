@@ -10,6 +10,7 @@ import { getCompleteGuidance } from "../rules/full-guidance";
 import { validateSafeguard } from "../rules/safeguards";
 import { detectOutcome, detectExitCode } from "../hooks/test-outcome";
 import { handleGetPhaseState, handleGetDecisions } from "../mcp/tools/state-tools";
+import { handleGetPhaseGuidance } from "../mcp/tools/guidance-tools";
 import { CONDITIONAL_LENSES, UNIVERSAL_LENS_DEFS, CONDITIONAL_LENS_DEFS } from "../rules/lenses";
 
 const MATRIX_REL = path.join("specs", "design", "coverage-matrix.md");
@@ -1059,6 +1060,15 @@ test("get_decisions truncates a single oversized decision rather than spilling",
   assert.ok(out.length < 6000, `even one huge decision must stay inline; got ${out.length}`);
   const o = JSON.parse(out) as any;
   assert.ok(o.decisions[0].content.includes("truncated"), "the lone oversized decision is truncated, not spilled");
+});
+
+test("get_phase_guidance returns a pointer, not the full ~8KB text (no spill)", () => {
+  toPhase5();
+  const out = handleGetPhaseGuidance(engine, {});
+  const o = JSON.parse(out) as any;
+  assert.ok(out.length < 1000, `must be a small pointer, not the full phase text; got ${out.length}`);
+  assert.ok(o.guidancePointer && o.guidancePointer.includes("## Phase 5"), "points at the injected phase section");
+  assert.ok(!("guidance" in o), "no longer carries the full guidance inline");
 });
 
 test("S6 safeguard reports violated when blocked", () => {

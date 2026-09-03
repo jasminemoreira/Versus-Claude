@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.8] - 2026-08-13
+
+### Changed — get_phase_guidance points to the injected guidance instead of repeating it (last spiller closed)
+`get_phase_guidance` returned the full phase section (~7,840 chars for the current phase on Goitacaz/Tools) — over the host's inline threshold, so it spilled to disk. But the complete methodology (every phase, global rules, anti-patterns) is injected into every message by inject-context, so returning the phase text again in the tool result was pure redundancy. It now returns a short pointer to the `## Phase N — <name>` section the model already has in context (7,840 → 368 chars). Behavior consistent with the architecture, which already relies on the per-message injection for the guidance; if that injection is present (it is), nothing is lost.
+
+A full sweep of the read tools on Goitacaz/Tools confirms all are now inline: get_phase_state 4,628 · get_decisions 3,880 · get_exit_criteria 3,586 · get_phase_guidance 368 · check_all_safeguards 214 · check_specs_status 441 — none over the ~5,700 threshold. The spill class (get_phase_guidance → get_phase_state → get_decisions, found in that order across 0.16.6–0.16.8) is closed. 106 tests. Watch for regressions with `find ~/.vscode-server/data/User/workspaceStorage -path '*chat-session-resources*' -name '*.json' -newermt '<date>'`.
+
 ## [0.16.7] - 2026-08-13
 
 ### Fixed — get_decisions spilled 144 KB, and get_phase_state now points there
