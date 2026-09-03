@@ -3,6 +3,52 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
 import { validateSafeguard } from "../../rules/safeguards";
+import { ProjectSpec, Decision, specEntryValue } from "../../state/types";
+
+// get_phase_state is the gateway-guard call — the one the model is told to make before
+// anything. The chat host paginates a large tool result to disk, so if this spills, the
+// model operates WITHOUT seeing project state. Measured on Goitacaz/Tools it was 49 KB
+// (39 KB recentDecisions, 7 KB projectSpec, 2 KB from a heredoc test command) — well past
+// the host's ~5.7 KB inline threshold. These budgets keep the snapshot lean. The full
+// spec is injected into every message by inject-context, and full decisions are one
+// get_decisions() away, so trimming here loses the model nothing it cannot recover.
+const SPEC_PER_LIST = 6;          // newest N kept per list; older discarded WHOLE and counted
+const DECISION_MAXLEN = 200;      // per-decision content cap before discarding any
+const DECISION_BUDGET = 2200;     // total chars for recentDecisions
+
+/** Newest SPEC_PER_LIST values per list, normalized to plain strings (the {value,phase,at}
+ *  stamp is metadata for external analysis in state.json, never read by the model). Whole
+ *  entries are discarded from the OLDER side and counted — a spec entry is a distinct
+ *  commitment (a lone constraint), so it is not truncated into another one; each list is
+ *  capped independently so a 200-item stack cannot crowd two constraints out of the snapshot. */
+function budgetSpec(spec: ProjectSpec | undefined): { spec: Record<string, string[]>; omitted: number } {
+  const out: Record<string, string[]> = { stack: [], outOfScope: [], patterns: [], constraints: [] };
+  let omitted = 0;
+  for (const key of ["stack", "outOfScope", "patterns", "constraints"] as const) {
+    const values = ((spec?.[key] ?? []) as ProjectSpec[typeof key]).map(specEntryValue);
+    if (values.length > SPEC_PER_LIST) { omitted += values.length - SPEC_PER_LIST; out[key] = values.slice(-SPEC_PER_LIST); }
+    else out[key] = values;
+  }
+  return { spec: out, omitted };
+}
+
+/** Most-recent decisions, each content SHORTENED before any whole decision is dropped, up
+ *  to a char budget. Returns how many were shown so the caller can point at get_decisions. */
+function budgetDecisions(decisions: Decision[]): { shown: Array<{ phase: number; category: string; content: string }>; shownCount: number } {
+  const shown: Array<{ phase: number; category: string; content: string }> = [];
+  let used = 0;
+  for (let i = decisions.length - 1; i >= 0; i--) {
+    const d = decisions[i];
+    const content = d.content.length > DECISION_MAXLEN ? d.content.slice(0, DECISION_MAXLEN).trimEnd() + "…" : d.content;
+    const entry = { phase: d.phase, category: d.category, content };
+    const cost = JSON.stringify(entry).length;
+    if (used + cost > DECISION_BUDGET && shown.length > 0) break;
+    shown.push(entry);
+    used += cost;
+  }
+  shown.reverse();
+  return { shown, shownCount: shown.length };
+}
 
 export const getPhaseStateTool: Tool = {
   name: "get_phase_state",
@@ -61,12 +107,14 @@ export function handleGetPhaseState(engine: StateEngine): string {
   // Mark that the model loaded context (gateway guard)
   engine.touchPhaseStateCheck();
 
-  // Include projectSpec and latest decisions so any model has full context
-  const recentDecisions = state.decisions.slice(-10).map((d) => ({
-    phase: d.phase,
-    category: d.category,
-    content: d.content,
-  }));
+  // Budgeted so the gateway-guard result stays inline (does not spill to disk).
+  const { spec: specBudgeted, omitted: specOmitted } = budgetSpec(state.projectSpec);
+  const { shown: recentDecisions, shownCount } = budgetDecisions(state.decisions);
+  const lastTestOutcome = state.lastTestOutcome
+    ? { ...state.lastTestOutcome, command: state.lastTestOutcome.command && state.lastTestOutcome.command.length > DECISION_MAXLEN
+        ? state.lastTestOutcome.command.slice(0, DECISION_MAXLEN).trimEnd() + "…"
+        : state.lastTestOutcome.command }
+    : null;
 
   // Detect Phase 7 completion → hint to offer new cycle
   let phase7Hint: string | undefined;
@@ -91,7 +139,7 @@ export function handleGetPhaseState(engine: StateEngine): string {
   const result: Record<string, any> = {
     projectName: state.projectName,
     projectDescription: state.projectDescription,
-    projectSpec: state.projectSpec ?? { stack: [], outOfScope: [], patterns: [], constraints: [] },
+    projectSpec: specBudgeted,
     currentPhase: state.currentPhase,
     currentIteration: state.currentIteration,
     phase0Score: state.phase0Score,
@@ -104,9 +152,16 @@ export function handleGetPhaseState(engine: StateEngine): string {
     // What the test-outcome hook last witnessed (I.2). Without this a stuck
     // tests_passing gate was undiagnosable through the MCP interface — the agent had
     // to read .versus/state.json directly, bypassing the interface the methodology offers.
-    lastTestOutcome: state.lastTestOutcome ?? null,
+    lastTestOutcome,
     updatedAt: state.updatedAt,
   };
+
+  if (specOmitted > 0) {
+    result._specNote = `projectSpec shows the newest ${SPEC_PER_LIST} per list; ${specOmitted} older entries omitted here. The FULL spec is injected into every message.`;
+  }
+  if (state.decisions.length > shownCount || recentDecisions.some((d) => d.content.endsWith("…"))) {
+    result._decisionsNote = `recentDecisions: newest ${shownCount} of ${state.decisions.length}, content trimmed. Call get_decisions(phase?) for the full text.`;
+  }
 
   if (phase7Hint) {
     result._phase7Action = phase7Hint;

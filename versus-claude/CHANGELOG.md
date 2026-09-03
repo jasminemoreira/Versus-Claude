@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.16.6] - 2026-08-13
+
+### Fixed — get_phase_state spilled to disk (the gateway-guard call the model runs before everything), diagnosed in the LocalQwen build
+The chat host paginates a large tool result to disk (`chat-session-resources`). `get_phase_state` is the gateway-guard — the call the model is instructed to make before anything — so when it spills, the model operates **without seeing project state**. Measured on Goitacaz/Tools (a real Versus_Claude project): **49,095 chars**, ~9× the host's ~5,700-char inline threshold. The three costs, by measurement:
+
+- **recentDecisions — 39,328 chars** (10 decisions of ~4–6 KB each). Now budgeted: each content is shortened before any whole decision is dropped, up to a char budget, newest first, with a note giving the total and pointing at `get_decisions()`.
+- **projectSpec — 6,982 chars** (100 entries). Normalized to plain strings — the `{value, phase, at}` stamp (v0.7.0) is metadata for external analysis to date the spec from `state.json`, never read by the model, and it stays there. Each list is capped to the newest 6 independently (so a 200-item stack cannot crowd two constraints out) and older entries are discarded whole and counted — a spec entry is a distinct commitment, not truncated into another. The full spec is injected into every message anyway.
+- **lastTestOutcome.command — ~1.7 KB** from a heredoc test command. Capped. (This one was self-inflicted: v0.15.0's I.2 began exposing `lastTestOutcome`, command included.)
+
+Result on Goitacaz/Tools: **49,095 → 4,628 chars**, inline. New test drives a large state (100 spec entries, 20 big decisions, a 2 KB heredoc command) and asserts the result stays under budget with the spec as strings, decisions trimmed + counted, and the command capped. 103 tests. To watch for regressions of the class: `find ~/.vscode-server/data/User/workspaceStorage -path '*chat-session-resources*' -name '*.json' -newermt '<date>'` — if files reappear, some other tool grew, and the same per-field measurement says which.
+
 ## [0.16.5] - 2026-08-13
 
 ### Fixed — the safeguard panel showed a stale snapshot, never the live state

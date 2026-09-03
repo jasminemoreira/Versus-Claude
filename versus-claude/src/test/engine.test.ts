@@ -1018,6 +1018,29 @@ test("get_phase_state reports safeguards LIVE, not the cached (stale) status", (
   assert.strictEqual(s6.status, "violated", "get_phase_state must reflect the live S6 block, not the cached ok");
 });
 
+test("get_phase_state stays inline — spec, decisions, and heredoc command are budgeted", () => {
+  toPhase5();
+  const many = (p: string, n: number) => Array.from({ length: n }, (_, i) => `${p}-${i}-${"x".repeat(40)}`);
+  engine.updateProjectSpec({ stack: many("s", 30), outOfScope: many("o", 30), patterns: many("p", 30), constraints: many("c", 30) });
+  for (let i = 0; i < 20; i++) engine.recordDecision(5, "architecture", `D${i} ${"y".repeat(500)}`);
+  engine.recordTestOutcome("python3 - <<'PY'\n" + "z".repeat(2000) + "\nPY", "pass", { source: "harness", exitCode: 0, exitSource: "echo" });
+
+  const out = handleGetPhaseState(engine);
+  const o = JSON.parse(out) as any;
+  assert.ok(out.length < 6000, `gateway-guard result must stay inline; got ${out.length}`);
+  // projectSpec: normalized to plain strings (no {value,phase,at} stamp), capped, noted.
+  assert.strictEqual(typeof o.projectSpec.constraints[0], "string", "spec entries are strings, stamps dropped");
+  assert.ok(o.projectSpec.stack.length <= 6 && o.projectSpec.constraints.length <= 6, "each list capped independently");
+  assert.ok(o._specNote && o._specNote.includes("omitted"));
+  // recentDecisions: content trimmed before any dropped, with a count note pointing at get_decisions.
+  assert.strictEqual(o.decisionsCount, 20);
+  assert.ok(o.recentDecisions.length < 20, "not all 20 decisions carried inline");
+  assert.ok(o.recentDecisions.some((d: { content: string }) => d.content.endsWith("…")), "long content trimmed");
+  assert.ok(o._decisionsNote && o._decisionsNote.includes("get_decisions"));
+  // The heredoc test command is capped, not carried whole.
+  assert.ok((o.lastTestOutcome.command || "").length <= 210, "heredoc command capped");
+});
+
 test("S6 safeguard reports violated when blocked", () => {
   toPhase5();
   for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
