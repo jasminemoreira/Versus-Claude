@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.7] - 2026-08-13
+
+### Fixed — get_decisions spilled 144 KB, and get_phase_state now points there
+Following the get_phase_state fix (0.16.6), measuring the tool it redirects to for full decision text: `get_decisions()` on Goitacaz/Tools returned **144,555 chars** (72 decisions dumped whole) — 25× the host's inline threshold, so it spills, and having get_phase_state point at a bigger spill would have been worse than the original. Now budgeted: newest first, full content per decision up to a char budget, a note giving the total and how to narrow by phase; a single decision that alone exceeds the budget is truncated with a marker (with its size and the narrow-by-phase hint) rather than spilling. 144,555 → 3,880 chars. Two tests: a 40-decision state stays inline with a count note; one 9 KB decision is truncated, not spilled. 105 tests.
+
+Still measured over threshold, not yet changed: `get_phase_guidance` (7,840 chars for the current phase). It is redundant with the full guidance injected into every message, so the model is not blind when it spills — a separate call on how to handle it (pointer vs pagination).
+
 ## [0.16.6] - 2026-08-13
 
 ### Fixed — get_phase_state spilled to disk (the gateway-guard call the model runs before everything), diagnosed in the LocalQwen build

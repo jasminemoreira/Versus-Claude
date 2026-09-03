@@ -9,7 +9,7 @@ import { ScoreBreakdown, SpecEntry } from "../state/types";
 import { getCompleteGuidance } from "../rules/full-guidance";
 import { validateSafeguard } from "../rules/safeguards";
 import { detectOutcome, detectExitCode } from "../hooks/test-outcome";
-import { handleGetPhaseState } from "../mcp/tools/state-tools";
+import { handleGetPhaseState, handleGetDecisions } from "../mcp/tools/state-tools";
 import { CONDITIONAL_LENSES, UNIVERSAL_LENS_DEFS, CONDITIONAL_LENS_DEFS } from "../rules/lenses";
 
 const MATRIX_REL = path.join("specs", "design", "coverage-matrix.md");
@@ -1039,6 +1039,26 @@ test("get_phase_state stays inline — spec, decisions, and heredoc command are 
   assert.ok(o._decisionsNote && o._decisionsNote.includes("get_decisions"));
   // The heredoc test command is capped, not carried whole.
   assert.ok((o.lastTestOutcome.command || "").length <= 210, "heredoc command capped");
+});
+
+test("get_decisions stays inline too (get_phase_state points here for full text)", () => {
+  engine.initProject("t", "d");
+  for (let i = 0; i < 40; i++) engine.recordDecision(5, "architecture", `D${i} ${"y".repeat(600)}`);
+  const out = handleGetDecisions(engine, {});
+  const o = JSON.parse(out) as any;
+  assert.ok(out.length < 6000, `get_decisions must stay inline; got ${out.length}`);
+  assert.strictEqual(o.count, 40);
+  assert.ok(o.shown < 40, "budgeted — not all 40 carried inline");
+  assert.ok(o._note && o._note.includes("Narrow with get_decisions(phase)"));
+});
+
+test("get_decisions truncates a single oversized decision rather than spilling", () => {
+  engine.initProject("t", "d");
+  engine.recordDecision(5, "architecture", "X".repeat(9000));
+  const out = handleGetDecisions(engine, {});
+  assert.ok(out.length < 6000, `even one huge decision must stay inline; got ${out.length}`);
+  const o = JSON.parse(out) as any;
+  assert.ok(o.decisions[0].content.includes("truncated"), "the lone oversized decision is truncated, not spilled");
 });
 
 test("S6 safeguard reports violated when blocked", () => {

@@ -174,8 +174,33 @@ export function handleGetPhaseState(engine: StateEngine): string {
 }
 
 export function handleGetDecisions(engine: StateEngine, args: { phase?: number }): string {
-  const decisions = engine.getDecisions(args.phase);
-  return JSON.stringify({ count: decisions.length, decisions });
+  const all = engine.getDecisions(args.phase);
+  // Budget to stay inline (a full dump was 144 KB on Goitacaz/Tools — it spills, and
+  // get_phase_state now points here for full text, so this call must not spill in turn).
+  // Newest first, full content per decision, up to a char budget; a single decision that
+  // alone exceeds the budget is truncated with a marker rather than spilling. Narrowing by
+  // phase returns fewer, so the full text of any one decision is reachable that way.
+  const BUDGET = 5000;
+  const shown: Decision[] = [];
+  let used = 0;
+  for (let i = all.length - 1; i >= 0; i--) {
+    let d = all[i];
+    let cost = JSON.stringify(d).length;
+    if (shown.length === 0 && cost > BUDGET) {
+      const keep = Math.max(0, BUDGET - (cost - d.content.length));
+      d = { ...d, content: d.content.slice(0, keep).trimEnd() + `… [truncated; ${d.content.length} chars — narrow by phase]` };
+      cost = JSON.stringify(d).length;
+    }
+    if (used + cost > BUDGET && shown.length > 0) break;
+    shown.push(d);
+    used += cost;
+  }
+  shown.reverse();
+  const result: Record<string, unknown> = { count: all.length, shown: shown.length, decisions: shown };
+  if (shown.length < all.length) {
+    result._note = `Showing the newest ${shown.length} of ${all.length}${args.phase !== undefined ? ` in Phase ${args.phase}` : ""}. Narrow with get_decisions(phase) for the rest.`;
+  }
+  return JSON.stringify(result);
 }
 
 export function handleGetExitCriteria(engine: StateEngine, args: { phase: number }): string {
