@@ -1,5 +1,60 @@
 # Changelog
 
+## [0.17.0] - 2026-11-25
+
+### Fixed — seven defects found by the first external study of Versus (ESJUD, Zenodo 10.5281/zenodo.22664296)
+A third-party team (Almeida, Ferreira, Costa) used Versus 0.16.4 with Sonnet 5 on macOS to re-engineer an institutional app from Android to iOS (Kotlin → Swift). They took it through all 8 phases, logged 96 decisions and recorded 7 transitions, none of them rejected. They published the research log, decisions, gates and findings. It was the first run on a non-npm, non-Linux stack, and it surfaced defects our own corpus never triggered. Each fix below is checked against the code as of 0.16.8, and all were still present.
+
+1. **test-outcome classified text that MENTIONS a test command as a test run.**
+   - **Study evidence:** ART-07 l.298, lesson 7. `advance_phase(7)` failed because a `cat >> GATES.md <<EOF … npm test … EOF` was recorded as a run with outcome `unknown`, overwriting the witnessed green `lastTestOutcome`.
+   - **Cause:** `isTestCommand` ran its regexes over the whole command string, heredoc body included. The inverse was also possible: `grep VERSUS_TEST_EXIT research/LOG.md` would have recorded a forged **pass** from logged text.
+   - **Fix:** commands are now read structurally by a new `hooks/shell-parse.ts`. It drops heredoc bodies, tokenizes with quotes respected, and splits on `; && || | &`. A runner is recognized only at the start of a simple command, after `cd x &&`, env assignments, `time` or `bash -c '…'`.
+
+2. **Only npm-world runners were recognized, so S6 was blind on other stacks.**
+   - **Study evidence:** F-PROC-06. The study wrapped `xcodebuild test` in a root `package.json`, and the red Xcode rounds ran outside the hook. S6 read 0/3 for all of Phases 5–6.
+   - **Fix:**
+     - One shared runner list, replacing the copy duplicated in test-outcome and loop-detector. It adds xcodebuild test/test-without-building, swift test, gradle(w) test/check/connected…Test, mvn(w) test/verify, dotnet test, flutter/dart test, make test/check, ctest, rspec, phpunit, mix test, deno/bun/yarn/pnpm test, uv/poetry run pytest, and tox.
+     - Builds (`xcodebuild build`, `swift build`, `gradlew assembleDebug`) are deliberately not runs.
+     - Unlisted runners can be added in `.versus/test-commands`, one regex per line.
+
+3. **stop-verify reported a timeout as "TESTS FAILED".**
+   - **Study evidence:** ART-05 ~l.2846. The suite took 120–185 s, the hook killed it at 60 s, and the output had no error line. Two manual re-runs were green.
+   - **Fix:** a timeout now yields a "not verified — timed out" warning naming the check, not a block. All checks share a 110 s budget that stays under the harness's 120 s hook timeout, so a slow toolchain degrades to a clear note instead of a killed hook.
+
+4. **phase-gate could be bypassed via Bash, and over-blocked non-code writes.**
+   - **Study evidence:** P0001/D0002. The gate covered Edit/Write only, so the study wrote every `research/` file with `cat <<EOF` as standard practice, a route that would equally have let code through in Phases 0–4. Its trigger was over-blocking: `research/` and even the session scratchpad, outside the project, were refused. The allowlist was also a substring match, so `src/specs/Impl.swift` passed as if it were `specs/`.
+   - **Fix:**
+     - The matcher is now `Edit|Write|MultiEdit|NotebookEdit|Bash`.
+     - Bash writes are gated through redirection, `tee`, `sed -i`/`perl -i`, and the `cp`/`mv`/`install` destination. Targets with shell expansion are skipped rather than guessed.
+     - Allowed before Phase 5:
+       - anything outside the project;
+       - `specs/`, `.versus/` and `.claude/`, anchored at the root;
+       - root config files;
+       - documentation and data files anywhere: `.md .txt .csv .tsv .rst .adoc .log`.
+
+5. **mark_exit_criterion accepted any phase.**
+   - **Study evidence:** G2-01/G2-02 and G3-01/G3-02 carry the same timestamp. Phase 3 was done, and its criteria marked, while Versus still said Phase 2.
+   - **Fix:** the MCP handler refuses a criterion of any phase other than the current one, with a message saying what to do. The engine method stays unrestricted, so tests and internal code can still drive it.
+
+6. **The Phase 4 criterion "Safeguards S1-S5 met" did not match the safeguards.** `check_all_safeguards` evaluated only S2 and S4 in Phase 4 (ART-07 l.126). The fix aligns Versus with the methodology text (SKILL.md, guidance) rather than the reverse:
+   - S1, S3 and S5 now apply in Phase 4.
+   - S1 and S5 carry Phase-4 review prompts: did the simplification keep every feature, and is the converged design within Phase 0 scope?
+
+7. **Small fixes:**
+   - **advance_phase without target_phase:** it came back as "Phase undefined". It now returns an error naming the next phase, and from Phase 3 the 2↔3 loop as well. It is not defaulted, because from Phase 3 the target is the caller's choice.
+   - **Next-action hints:** the tool hints and the guidance now spell out `advance_phase(target_phase=N)`. The hints used to suggest the bare `advance_phase()`.
+   - **nextStep:** advance_phase's nextStep points at the injected `## Phase N` section, not at get_phase_guidance (a pointer since 0.16.8).
+   - **S6 and S7 status:** S6 is `ok` at 0 undiagnosed failures and `warning` only once failures accumulate. S7 is behavioral (`ok`, like S2–S4). The permanent "warning" carried no information.
+   - **Guidance (Phase 6 and the I.3 refusal):** names the runners, tells the agent to call them directly with no wrapper, and documents `.versus/test-commands`.
+
+**Not changed: the Phase 5 Scope Inventory is still guidance-only.** The study never ran the formal inventory and 5→6 passed anyway (ART-05 l.1285). Whether it should become an evidence gate is a separate decision.
+
+117 tests (+11). End-to-end checks against the bundled hooks:
+- the study's heredoc payload leaves the green `lastTestOutcome` intact;
+- a red `cd "aplicativo ios" && xcodebuild test …; echo VERSUS_TEST_EXIT=$?` records `fail`;
+- in Phase 2, `cat > src/App.swift <<EOF` and `src/specs/Impl.swift` are denied, while `research/LOG.md` and a path outside the project are allowed;
+- a 75 s test script yields the timeout warning, not a block.
+
 ## [0.16.8] - 2026-08-13
 
 ### Changed — get_phase_guidance points to the injected guidance instead of repeating it (last spiller closed)

@@ -1,34 +1,63 @@
 #!/usr/bin/env node
 
-// Layer 2: Tool blocking — PreToolUse (Edit|Write)
+// Layer 2: Tool blocking — PreToolUse (Edit|Write|MultiEdit|NotebookEdit|Bash)
 // Blocks code editing in Phases 0-4.
-// Exceptions: specs/, .versus/, .claude/, package.json, tsconfig.json, README
+//
+// What is ALLOWED in Phases 0-4 (everything else inside the project is blocked):
+//   - anything OUTSIDE the project (scratchpad, /tmp, ~/...): not the project's code;
+//   - the methodology/config roots: specs/, .versus/, .claude/ (anchored at the project
+//     root — a `src/specs/Impl.swift` is code, the old substring match let it through);
+//   - root config files: package.json, tsconfig*, README*, .gitignore, .mcp.json, .env*;
+//   - documentation/data files anywhere (.md, .txt, .csv, .rst, .adoc): research notes,
+//     decision logs and reports are not code. The first external study (ESJUD) had its
+//     research/ log blocked and fell back to writing it through Bash heredocs.
+//
+// Bash: the gate used to cover Edit/Write only, so `cat > src/App.swift <<EOF` walked
+// straight past it — and the ESJUD study adopted Bash writes as standard practice (D0002)
+// because the allowed route was blocked. Now the obvious Bash write routes (redirection,
+// tee, sed -i/perl -i, cp/mv/install destination) are checked against the same rules.
 
+import * as path from "path";
 import { StateEngine } from "../state/engine";
+import { writeTargets } from "./shell-parse";
 
 interface HookInput {
   tool_name: string;
   tool_input: {
     file_path?: string;
+    notebook_path?: string;
     command?: string;
     content?: string;
   };
+  cwd?: string;
 }
 
-function isAllowedPath(filePath: string): boolean {
-  const normalized = filePath.replace(/\\/g, "/").toLowerCase();
-  const allowed = [
-    "/specs/",
-    "/.versus/",
-    "/.claude/",
-    "/package.json",
-    "/tsconfig",
-    "/readme",
-    "/.gitignore",
-    "/.mcp.json",
-    "/.env",
-  ];
-  return allowed.some((p) => normalized.includes(p));
+const ALLOWED_ROOT_DIRS = ["specs", ".versus", ".claude"];
+const ALLOWED_ROOT_FILES = [/^package\.json$/, /^tsconfig.*\.json$/, /^readme/i, /^\.gitignore$/, /^\.mcp\.json$/, /^\.env/];
+const DOC_EXTENSIONS = new Set([".md", ".markdown", ".txt", ".csv", ".tsv", ".rst", ".adoc", ".log"]);
+
+/** Whether writing `filePath` is allowed before Phase 5. Relative paths resolve against `cwd`. */
+export function isAllowedPath(filePath: string, workspace: string, cwd: string = workspace): boolean {
+  if (!filePath) return true;
+  const abs = path.resolve(cwd, filePath.replace(/^~(?=\/|$)/, process.env.HOME || "~"));
+  const rel = path.relative(path.resolve(workspace), abs);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return true;           // outside the project
+  const parts = rel.split(path.sep).filter(Boolean);
+  if (parts.length === 0) return true;
+  if (ALLOWED_ROOT_DIRS.includes(parts[0])) return true;
+  if (parts.length === 1 && ALLOWED_ROOT_FILES.some((re) => re.test(parts[0]))) return true;
+  if (DOC_EXTENSIONS.has(path.extname(abs).toLowerCase())) return true;
+  return false;
+}
+
+/** Paths a tool call would write that the gate refuses in Phases 0-4. */
+export function blockedTargets(hookInput: HookInput, workspace: string): string[] {
+  const cwd = hookInput.cwd || workspace;
+  if (hookInput.tool_name === "Bash") {
+    return writeTargets(hookInput.tool_input?.command || "").filter((t) => !isAllowedPath(t, workspace, cwd));
+  }
+  const fp = hookInput.tool_input?.file_path || hookInput.tool_input?.notebook_path || "";
+  return isAllowedPath(fp, workspace, cwd) ? [] : [fp];
 }
 
 function deny(reason: string): void {
@@ -78,14 +107,18 @@ function main() {
     clearTimeout(timeoutId);
     try {
       const hookInput: HookInput = JSON.parse(input);
-      const filePath = hookInput.tool_input?.file_path || "";
+      const blocked = blockedTargets(hookInput, workspacePath);
 
-      if (isAllowedPath(filePath)) {
+      if (blocked.length === 0) {
         allow();
       } else {
+        const viaBash = hookInput.tool_name === "Bash";
         deny(
           `[Versus] Blocked: Phase ${state.currentPhase} does not allow code editing. ` +
-          `File: ${filePath}. ` +
+          `${viaBash ? "This shell command writes" : "File"}: ${blocked.join(", ")}. ` +
+          (viaBash ? `Writing through the shell is gated the same as Edit/Write. ` : "") +
+          `Allowed before Phase 5: specs/, .versus/, .claude/, root config files, documentation ` +
+          `files (.md/.txt/.csv), and anything outside the project. ` +
           `Complete Phases 0→4 before implementing. ` +
           `Use get_exit_criteria() to see what is missing.`
         );
@@ -97,4 +130,7 @@ function main() {
   });
 }
 
-main();
+// Only run as a hook process — isAllowedPath()/blockedTargets() are imported by the test suite.
+if (require.main === module) {
+  main();
+}
