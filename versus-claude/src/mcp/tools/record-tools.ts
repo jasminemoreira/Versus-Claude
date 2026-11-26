@@ -130,6 +130,16 @@ export function handleRecordDecision(
       result._s6 = "Diagnosis recorded — S6 loop counter cleared. The next test run will go through.";
     }
 
+    // 0.18.2: the Phase 7 approval closes the cycle whether or not a new one follows. A project
+    // that ENDS at Phase 7 (MoonPatrolClone: "Projeto concluído") never calls start_new_cycle,
+    // so its readable record was never written. Write it here. start_new_cycle rewrites it from
+    // the archive if the project goes on.
+    const st = engine.getPhaseState();
+    if (decision.approvedBy && args.phase === 7 && st?.currentPhase === 7) {
+      const ex = engine.exportCycle(undefined, true);
+      if (ex.ok) result._export = `Cycle ${ex.value.cycle} record written to ${ex.value.path} (${ex.value.bytes} bytes).`;
+    }
+
     return JSON.stringify(result);
   } catch (err) {
     return JSON.stringify({ success: false, error: String(err) });

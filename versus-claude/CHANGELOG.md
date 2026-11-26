@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.18.2] - 2026-11-26
+
+### Fixed: what the first complete 0.18 cycle (MoonPatrolClone, 0→7 in ~1h20) left open
+The delivery audit of that cycle is clean. Every hook and MCP result that targets the model arrived; the stop-verify notice went to the user, as designed. This is the first Versus cycle on record where the methodology actually reached the model from start to finish. The approvals (3→4, 6→7, Phase 7) were recorded with grounded `approvedBy`, quoting the user. `tests_passing` was nominal, via `${PIPESTATUS[0]}` through a pipe. The cycle also left five gaps:
+
+- **A project that ends at Phase 7 left no readable record.** The archive and export ran only in `start_new_cycle`, and MoonPatrolClone ended at "Projeto concluído". Now the **Phase 7 approval decision writes `.versus/cycles/cycle-N.md`**: that is when the cycle closes, whether or not another one follows. `start_new_cycle` rewrites the file from the archive if the project goes on.
+- **Which Versus was running was invisible.** MoonPatrolClone ran 0.18.0 for the whole cycle with 0.18.1 installed: the window was never reloaded, so `.versus/` was never redeployed. Neither the user nor the model could see it. Now:
+  - the state header ends with `| vX.Y.Z` (model context and transcript), and the audit reports the version per session;
+  - `deployServer` writes `.versus/VERSION` and **reports bundles missing from the extension**. They used to be skipped silently, so their hooks failed without notice;
+  - the running extension listens to `vscode.extensions.onDidChange`. When a different Versus is installed, it warns that this window still runs the old one and offers **Reload Window**. This takes effect from 0.18.2 on: the old build must have the listener.
+- **The banner is now mechanical.** "Start your first response with 📍 Versus ativo" was delivered from 0.18.0 on and **followed in 0 of 3 real sessions**: a behavioural instruction with no gate. SessionStart now emits JSON. `hookSpecificOutput.additionalContext` carries the model's context, and a `systemMessage` shows the banner (`📍 Versus 0.18.2 ativo — Fase X (name), iteração Y, ciclo Z`) to the user directly. The model is no longer asked for it.
+- **S6 under-counted when the plumbing varied.** The command pattern came from a regex over the whole command, so `; echo "VERSUS_TEST_EXIT=$?"` and `| grep …` became part of the "suite" (`test:js:; echo "versus_test_exit=$?"`). An agent that switched from `$?` to `${PIPESTATUS[0]}`, as MoonPatrolClone's did, restarted the count. Now the pattern comes from the runner's own simple command via the structural reader: flags, `cd`, pipes and echo are dropped, and the suite argument is kept (`npm test consent`). Projects' `.versus/test-commands` runners are honoured.
+- **The audit script miscounted a user-facing `systemMessage` as "lost".** It now has a "to user" column, skips the harness's `hook_system_message` record, and shows version and banner per session.
+
+Untested in the real harness: post-compaction recovery (SessionStart `compact` + PreCompact), because no compaction happened in the cycle. The channel tests cover their output contract.
+
+145 tests (+3; the SessionStart tests now check the JSON contract).
+
 ## [0.18.1] - 2026-11-26
 
 ### Added — 4→5 requires the convergence confirmation on the record

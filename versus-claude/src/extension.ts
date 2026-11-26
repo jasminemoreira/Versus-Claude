@@ -7,6 +7,7 @@ import * as fs from "fs";
 import { spawnSync } from "child_process";
 import { SidebarProvider } from "./views/sidebar";
 import { ensureSettings, ensureGlobalPermissions, ensureSpecsReadme } from "./setup";
+import { VERSUS_VERSION } from "./version";
 
 let sidebarProvider: SidebarProvider | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -176,6 +177,25 @@ export function activate(context: vscode.ExtensionContext) {
       log("No Versus project in this workspace — nothing to do on activation.");
     }
 
+    // 0.18.2: a window keeps running the Versus it activated with. Installing a new version
+    // does not redeploy .versus/ in already-open windows (MoonPatrolClone ran 0.18.0 for a
+    // whole cycle with 0.18.1 installed). VS Code tells the running extension when the
+    // installed set changes, so offer the reload that deploys the new build.
+    context.subscriptions.push(
+      vscode.extensions.onDidChange(() => {
+        const installed = vscode.extensions.getExtension("JasmineMoreira.versus-claude")?.packageJSON?.version;
+        if (installed && installed !== VERSUS_VERSION && fs.existsSync(statePath)) {
+          vscode.window
+            .showWarningMessage(
+              `Versus Claude ${installed} is installed, but this window is still running ${VERSUS_VERSION}: this ` +
+              `project's .versus/ hooks and server stay on ${VERSUS_VERSION} until the window reloads.`,
+              "Reload Window"
+            )
+            .then((a) => { if (a === "Reload Window") vscode.commands.executeCommand("workbench.action.reloadWindow"); });
+        }
+      })
+    );
+
     log("Activation completed successfully.");
   } catch (err) {
     log(`ACTIVATION ERROR: ${String(err)}`);
@@ -222,15 +242,24 @@ function deployServer(extensionPath: string, workspacePath: string) {
     fs.writeFileSync(pkgPath, pkgContent);
   }
 
+  const missing: string[] = [];
   for (const file of files) {
     const src = path.join(bundleDir, file);
     const dest = path.join(targetDir, file);
-    if (!fs.existsSync(src)) continue;
+    if (!fs.existsSync(src)) { missing.push(file); continue; }   // was a silent skip
 
     const srcContent = fs.readFileSync(src);
     if (fs.existsSync(dest) && srcContent.equals(fs.readFileSync(dest))) continue;
 
     fs.writeFileSync(dest, srcContent);
+  }
+  // Which Versus is deployed in this project, readable by people and by the audit (0.18.2).
+  fs.writeFileSync(path.join(targetDir, "VERSION"), VERSUS_VERSION + "\n");
+  if (missing.length) {
+    vscode.window.showErrorMessage(
+      `Versus Claude ${VERSUS_VERSION}: ${missing.length} bundle(s) missing from the extension, NOT deployed to this ` +
+      `project: ${missing.join(", ")}. Their hooks will fail silently. Reinstall the extension.`
+    );
   }
 }
 

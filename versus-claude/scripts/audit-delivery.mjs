@@ -39,14 +39,21 @@ const hookKey = (a) => {
   return `${a.hookEvent ?? "?"} · ${script}`;
 };
 const stat = (m, k) => {
-  if (!m.has(k)) m.set(k, { runs: 0, inline: 0, preview: 0, lost: 0, silent: 0, errors: 0, maxEmitted: 0, maxDelivered: 0, errorText: "" });
+  if (!m.has(k)) m.set(k, { runs: 0, inline: 0, toUser: 0, preview: 0, lost: 0, silent: 0, errors: 0, maxEmitted: 0, maxDelivered: 0, errorText: "" });
   return m.get(k);
+};
+/** stdout that is JSON carrying only user-facing fields (systemMessage), nothing for the model. */
+const isUserOnly = (stdout) => {
+  try {
+    const j = JSON.parse(stdout ?? "");
+    return typeof j.systemMessage === "string" && !j.hookSpecificOutput && !j.reason && !j.additionalContext;
+  } catch { return false; }
 };
 const textOf = (c) =>
   typeof c === "string" ? c : Array.isArray(c) ? c.map((x) => (typeof x === "string" ? x : x?.text ?? "")).join("\n") : "";
 
 for (const f of fs.readdirSync(dir).filter((n) => n.endsWith(".jsonl"))) {
-  const s = { file: f, first: "", guidanceCalls: 0, banner: false, injections: 0 };
+  const s = { file: f, first: "", guidanceCalls: 0, banner: false, injections: 0, version: "" };
   const toolNames = new Map();
   for (const line of fs.readFileSync(path.join(dir, f), "utf-8").split("\n")) {
     if (!line.trim()) continue;
@@ -59,6 +66,8 @@ for (const f of fs.readdirSync(dir).filter((n) => n.endsWith(".jsonl"))) {
     if (o.type === "attachment") {
       const a = o.attachment ?? {};
       if (!a.hookEvent) continue;
+      // The harness's own record that a systemMessage was shown to the user — not a hook run.
+      if (a.type === "hook_system_message") continue;
       const st = stat(hooks, hookKey(a));
       st.runs++;
       const emitted = (a.stdout ?? "").length;
@@ -69,6 +78,8 @@ for (const f of fs.readdirSync(dir).filter((n) => n.endsWith(".jsonl"))) {
         st.errorText ||= (a.stderr ?? "").split("\n")[0].slice(0, 160);
       } else if (content.includes("persisted-output") || content.includes("Output too large")) {
         st.preview++;
+      } else if (emitted > 0 && content.length === 0 && isUserOnly(a.stdout)) {
+        st.toUser++;        // a systemMessage: meant for the USER, shown in the UI, not model context
       } else if (emitted > 0 && content.length === 0) {
         st.lost++;          // emitted something, nothing reached the model
       } else if (emitted === 0) {
@@ -78,6 +89,12 @@ for (const f of fs.readdirSync(dir).filter((n) => n.endsWith(".jsonl"))) {
         st.maxDelivered = Math.max(st.maxDelivered, content.length);
       }
       if (a.hookEvent === "UserPromptSubmit") s.injections++;
+      // 0.18.2+: the running Versus is in the header ("| vX.Y.Z"); the banner is a systemMessage.
+      const ver = /\| v(\d+\.\d+\.\d+)/.exec(content);
+      if (ver && !s.version) s.version = ver[1];
+      if (a.hookEvent === "SessionStart") {
+        try { if (/📍 Versus/.test(JSON.parse(a.stdout ?? "").systemMessage ?? "")) s.banner = true; } catch { /* plain text: pre-0.18.2 */ }
+      }
       continue;
     }
 
@@ -111,10 +128,10 @@ console.log(`# Versus delivery audit — ${project}`);
 console.log(`\nTranscripts: ${dir}\nSessions: ${sessions.length}${since ? ` (since ${since})` : ""} · Claude Code versions: ${[...versions].sort().join(", ") || "?"}\n`);
 
 console.log("## Hooks (what reached the model)\n");
-console.log("| channel | runs | inline | ⚠ preview (over 10K cap) | ⚠ lost (emitted, not delivered) | ⚠ errors | silent | max emitted | max delivered |");
-console.log("|---|---|---|---|---|---|---|---|---|");
+console.log("| channel | runs | inline (model) | to user | ⚠ preview (over 10K cap) | ⚠ lost (emitted, not delivered) | ⚠ errors | silent | max emitted | max delivered |");
+console.log("|---|---|---|---|---|---|---|---|---|---|");
 for (const [k, v] of rows(hooks)) {
-  console.log(`| ${k} | ${v.runs} | ${v.inline} | ${v.preview} | ${v.lost} | ${v.errors} | ${v.silent} | ${v.maxEmitted} | ${v.maxDelivered} |`);
+  console.log(`| ${k} | ${v.runs} | ${v.inline} | ${v.toUser} | ${v.preview} | ${v.lost} | ${v.errors} | ${v.silent} | ${v.maxEmitted} | ${v.maxDelivered} |`);
 }
 const errs = rows(hooks).filter(([, v]) => v.errorText);
 if (errs.length) {
@@ -131,10 +148,10 @@ console.log("\n## Gate / warning texts seen by the model (tool results)\n");
 for (const [k, n] of [...gates.entries()].sort((a, b) => b[1] - a[1])) console.log(`- ${n}× "[Versus] ${k}…"`);
 
 console.log("\n## Sessions\n");
-console.log("| session | started | injections | get_phase_guidance calls | banner |");
-console.log("|---|---|---|---|---|");
+console.log("| session | started | Versus | injections | get_phase_guidance calls | banner |");
+console.log("|---|---|---|---|---|---|");
 for (const s of sessions.sort((a, b) => a.first.localeCompare(b.first))) {
-  console.log(`| ${s.file.slice(0, 8)} | ${s.first.slice(0, 16)} | ${s.injections} | ${s.guidanceCalls} | ${s.banner ? "yes" : "⚠ no"} |`);
+  console.log(`| ${s.file.slice(0, 8)} | ${s.first.slice(0, 16)} | ${s.version || "<0.18.2"} | ${s.injections} | ${s.guidanceCalls} | ${s.banner ? "yes" : "⚠ no"} |`);
 }
 
 const bad = rows(hooks).some(([, v]) => v.preview || v.lost || v.errors) || rows(mcp).some(([, v]) => v.preview);

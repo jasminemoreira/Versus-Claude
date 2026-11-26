@@ -15,6 +15,8 @@
 import { StateEngine } from "../state/engine";
 import { buildInjection } from "./state-block";
 import { capText, writeAndExit } from "./hook-output";
+import { getPhaseDefinition } from "../rules/phases";
+import { VERSUS_VERSION } from "../version";
 
 /** Budget for the embedded state block; the instructions around it are ~1.6K. */
 const STATE_BUDGET = 7_200;
@@ -50,14 +52,33 @@ export function sessionStartText(engine: StateEngine, source: string): string {
       : "[Versus] Versus manages the IACDM methodology in this project. Before reading files or exploring the codebase, run:\n") +
     steps.join("\n") +
     "\nDO NOT read .versus/state.json or .versus/server.js directly: use the MCP tools (record_decision, update_score, " +
-    "mark_exit_criterion, advance_phase). " +
-    (compact
-      ? "VISIBILITY: start your first response with a one-line banner, e.g. '📍 Versus retomado — Fase X (name), iteração Y. Continuando: <one line>.'"
-      : "VISIBILITY: start your first response with a one-line banner so the user knows Versus is active, e.g. " +
-        "'📍 Versus ativo — Fase X (name), iteração Y. Próximo passo: <one line>.'");
+    "mark_exit_criterion, advance_phase).";
 
   const stateBlock = buildInjection(engine, STATE_BUDGET) ?? "";
   return capText(`${head}\n\nCurrent state (snapshot at session ${compact ? "recovery" : "start"}):\n${stateBlock}`);
+}
+
+/** The banner, shown to the USER by the harness (systemMessage). It used to be an instruction
+ *  to the model ("start your first response with a banner"). That was delivered from 0.18.0 on
+ *  and never followed in 3 real sessions, so it is now mechanical. */
+export function sessionBanner(engine: StateEngine, source: string): string | null {
+  const st = engine.getPhaseState();
+  if (!st) return null;
+  const p = st.currentPhase;
+  return (
+    `📍 Versus ${VERSUS_VERSION} ${source === "compact" ? "retomado após compactação" : "ativo"} — ` +
+    `Fase ${p} (${getPhaseDefinition(p)?.name ?? "?"}), iteração ${st.currentIteration}, ciclo ${engine.currentCycle()}.`
+  );
+}
+
+/** SessionStart output: context for the model (additionalContext) + the banner for the user. */
+export function sessionStartOutput(engine: StateEngine, source: string): string {
+  const text = sessionStartText(engine, source);
+  const banner = sessionBanner(engine, source);
+  return JSON.stringify({
+    ...(banner ? { systemMessage: banner } : {}),
+    hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: text },
+  });
 }
 
 function main() {
@@ -74,7 +95,7 @@ function main() {
   });
   function finish(source: string) {
     try {
-      writeAndExit(sessionStartText(new StateEngine(workspacePath), source));
+      writeAndExit(sessionStartOutput(new StateEngine(workspacePath), source));
     } catch {
       process.exit(0);
     }

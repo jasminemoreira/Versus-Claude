@@ -6,6 +6,7 @@
 import { StateEngine, LOOP_FAILURE_THRESHOLD } from "../state/engine";
 import { getPhaseDefinition } from "../rules/phases";
 import { specEntryValue, Decision } from "../state/types";
+import { VERSUS_VERSION } from "../version";
 
 /** Hard budget for the whole injection: under Claude Code's 10,000-char hook cap, with margin. */
 export const INJECT_BUDGET = 9_000;
@@ -21,7 +22,9 @@ export function buildInjection(engine: StateEngine, budget: number = INJECT_BUDG
 
   // --- Must-see lines, in priority order (never budget-trimmed) ---
   const head: string[] = [
-    `[Versus] Phase ${phase} — ${phaseName} | Iteration ${state.currentIteration} | Cycle ${cycle}`,
+    // The running build's version (0.18.2): visible to the model and recorded in the transcript,
+    // so "which Versus served this session" is a fact, not an inference from file dates.
+    `[Versus] Phase ${phase} — ${phaseName} | Iteration ${state.currentIteration} | Cycle ${cycle} | v${VERSUS_VERSION}`,
   ];
 
   const upd = engine.noteVersion();

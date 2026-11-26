@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { randomUUID, createHash } from "crypto";
 import { VERSUS_VERSION } from "../version";
+import { parseShell, TEST_COMMAND_PATTERNS, loadExtraTestPatterns } from "../hooks/shell-parse";
 import {
   PhaseState,
   Decision,
@@ -1116,28 +1117,20 @@ export class StateEngine {
    * Normalizes a test command into a pattern. The suite/target argument is kept:
    * S6 talks about iterations on the same MODULE, so `npm test -- consent` and
    * `npm test -- link` must not collapse into the same pattern.
+   *
+   * 0.18.2: only the RUNNER's own simple command counts. A regex over the whole command used to
+   * fold `; echo "VERSUS_TEST_EXIT=$?"` and `| grep …` into the "target"
+   * (`test:js:; echo "versus_test_exit=$?"`). An agent varying the plumbing (adding a pipe,
+   * switching to PIPESTATUS) therefore restarted the count, and S6 under-counted.
    */
   private normalizeCommandPattern(cmd: string): string {
-    const trimmed = cmd.trim().toLowerCase();
-
-    let runner = "";
-    if (/\b(npm\s+test|npm\s+run\s+test|npx\s+jest|jest|vitest|mocha)\b/.test(trimmed)) runner = "test:js";
-    else if (/\b(pytest|python\s+-m\s+pytest|unittest)\b/.test(trimmed)) runner = "test:py";
-    else if (/\bcargo\s+test\b/.test(trimmed)) runner = "test:rust";
-    else if (/\bgo\s+test\b/.test(trimmed)) runner = "test:go";
-    else if (/\bnpm\s+run\s+build\b/.test(trimmed)) runner = "build";
-    else if (/\btsc\b/.test(trimmed)) runner = "compile";
-    else return trimmed.substring(0, 50);
-
-    // Target = the suite/file/pattern being exercised, if any. Strips flags and
-    // the runner words themselves; what remains identifies the module under test.
-    const target = trimmed
-      .replace(/^.*?\b(npm\s+run\s+test|npm\s+test|npx\s+jest|jest|vitest|mocha|pytest|python\s+-m\s+pytest|unittest|cargo\s+test|go\s+test|npm\s+run\s+build|tsc)\b/, "")
-      .replace(/(^|\s)--?[\w-]+(=\S+)?/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return target ? `${runner}:${target}` : runner;
+    const patterns = [...TEST_COMMAND_PATTERNS, ...loadExtraTestPatterns(this.workspacePath)];
+    for (const seg of parseShell(cmd)) {
+      if (!patterns.some((p) => p.test(seg.words.join(" ")))) continue;
+      const kept = seg.words.filter((w) => w !== "--" && !/^--?[\w-]+(=.*)?$/.test(w)).map((w) => w.toLowerCase());
+      return kept.join(" ").slice(0, 80);
+    }
+    return cmd.trim().toLowerCase().substring(0, 50);
   }
 
   // --- Meta-iteration (v1.0 → v2.0) ---
@@ -1394,7 +1387,7 @@ export class StateEngine {
   }
 
   /** export_cycle: an archived cycle by number, or the cycle in progress (default). */
-  exportCycle(cycle?: number): Result<{ path: string; bytes: number; cycle: number; inProgress: boolean }, string> {
+  exportCycle(cycle?: number, final = false): Result<{ path: string; bytes: number; cycle: number; inProgress: boolean }, string> {
     if (!this.state) return { ok: false, error: "Project not initialized." };
     const cur = this.currentCycle();
     const target = cycle ?? cur;
@@ -1411,8 +1404,9 @@ export class StateEngine {
       };
     }
     const md = this.renderCycleMarkdown(rec);
-    const p = this.writeCycleExport(md, target, target === cur ? "-in-progress" : "");
-    return { ok: true, value: { path: p, bytes: Buffer.byteLength(md, "utf-8"), cycle: target, inProgress: target === cur } };
+    const inProgress = target === cur && !final;
+    const p = this.writeCycleExport(md, target, inProgress ? "-in-progress" : "");
+    return { ok: true, value: { path: p, bytes: Buffer.byteLength(md, "utf-8"), cycle: target, inProgress } };
   }
 
   /**

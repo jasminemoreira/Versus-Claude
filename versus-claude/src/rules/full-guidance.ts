@@ -845,7 +845,7 @@ After completing all Phase 7 steps, you MUST offer the user the option to start 
 - Option 2: "Project complete" — no further action, methodology concludes
 
 If the user chooses to start a new cycle:
-1. Record the close approval — \`record_decision(phase=7, category='approval', content='<what the user reviewed and accepted>', approvedBy='<who>')\` (start_new_cycle is BLOCKED without it) — then call start_new_cycle(). It preserves decisions, projectSpec, history, and specs/, and ARCHIVES this cycle (exit criteria, transitions, test run) with a readable export in .versus/cycles/cycle-N.md
+1. Record the close approval — \`record_decision(phase=7, category='approval', content='<what the user reviewed and accepted>', approvedBy='<who>')\` (start_new_cycle is BLOCKED without it; recording it also writes the cycle's readable record to .versus/cycles/cycle-N.md, which is the record if the project ends here) — then call start_new_cycle(). It preserves decisions, projectSpec, history, and specs/, and ARCHIVES this cycle (exit criteria, transitions, test run) with a readable export in .versus/cycles/cycle-N.md
 2. specs/ from the previous cycle is the BASELINE — knowledge is NOT lost between cycles
 3. Phase 0 of the new cycle starts from existing specs/ (doesn't restart from zero)
 4. Previous decisions (get_decisions) serve as context — what was discarded and why

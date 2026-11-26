@@ -11,7 +11,7 @@ import { validateSafeguard } from "../rules/safeguards";
 import { detectOutcome, detectExitCode } from "../hooks/test-outcome";
 import { handleGetPhaseState, handleGetDecisions, handleUpdateProjectSpec } from "../mcp/tools/state-tools";
 import { handleGetPhaseGuidance } from "../mcp/tools/guidance-tools";
-import { handleMarkExitCriterion } from "../mcp/tools/record-tools";
+import { handleMarkExitCriterion, handleRecordDecision } from "../mcp/tools/record-tools";
 import { handleAdvancePhase } from "../mcp/tools/transition-tools";
 import { isTestCommand, writeTargets, loadExtraTestPatterns, stripHeredocs } from "../hooks/shell-parse";
 import { isAllowedPath, blockedTargets } from "../hooks/phase-gate";
@@ -1860,22 +1860,30 @@ test("UserPromptSubmit: plain text under the cap, even on a huge project", () =>
   assert.ok(r.stdout.startsWith("[Versus] Phase 5"));
 });
 
-test("SessionStart (startup and compact): plain text under the cap, telling the model to load the guidance", () => {
+test("SessionStart (startup and compact): context for the model + the banner for the user, under the cap", () => {
   toPhase5();
   for (let i = 0; i < 80; i++) engine.recordDecision(5, "implementation", `d${i} ` + "z".repeat(6000));
   for (const source of ["startup", "compact"]) {
     const r = runHook("session-start", { source, hook_event_name: "SessionStart" });
     assert.strictEqual(r.status, 0);
-    assert.ok(r.stdout.length <= HOOK_CAP, `${source}: got ${r.stdout.length}`);
-    assert.ok(r.stdout.includes("get_phase_guidance()"), `${source}: must say where the methodology comes from`);
-    assert.ok(r.stdout.includes("[Versus] Phase 5"), `${source}: carries the state itself`);
+    const o = assertJsonContract(r.stdout, "SessionStart");
+    const ctx = String(o.hookSpecificOutput.additionalContext);
+    assert.ok(ctx.length <= HOOK_CAP, `${source}: got ${ctx.length}`);
+    assert.ok(ctx.includes("get_phase_guidance()"), `${source}: must say where the methodology comes from`);
+    assert.ok(ctx.includes("[Versus] Phase 5"), `${source}: carries the state itself`);
+    assert.ok(/^📍 Versus \d+\.\d+\.\d+ /.test(String(o.systemMessage)), `${source}: the banner goes to the USER mechanically (the model never showed it)`);
+    assert.ok(!ctx.includes("VISIBILITY"), "no longer asks the model for the banner");
   }
-  assert.ok(runHook("session-start", { source: "compact" }).stdout.includes("compacted"));
+  const c = JSON.parse(runHook("session-start", { source: "compact" }).stdout);
+  assert.ok(String(c.hookSpecificOutput.additionalContext).includes("compacted"));
+  assert.ok(String(c.systemMessage).includes("retomado"));
 });
 
 test("SessionStart without a project gives the init protocol", () => {
   const r = runHook("session-start", { source: "startup" });
-  assert.ok(r.stdout.includes("init_project"));
+  const o = assertJsonContract(r.stdout, "SessionStart");
+  assert.ok(String(o.hookSpecificOutput.additionalContext).includes("init_project"));
+  assert.ok(!("systemMessage" in o), "no banner without a project");
 });
 
 test("PreCompact: plain text for the compaction summary, under the cap", () => {
@@ -1958,4 +1966,38 @@ test("4→5 needs the convergence confirmation recorded in Phase 4 (0.18.1)", ()
   assert.ok(r.error.missingCriteria.some((m) => m.includes("[Phase 4] approval") && m.includes("report")));
   approve(4);
   assert.strictEqual(engine.advancePhase(5).ok, true);
+});
+
+// --- 0.18.2: pending items from the first full 0.18 cycle (MoonPatrolClone) ---
+
+console.log("\n=== 0.18.2 — pending items from MoonPatrolClone ===\n");
+
+test("S6 pattern ignores the plumbing: pipes and the exit echo do not restart the count", () => {
+  toPhase5();
+  engine.recordTestOutcome('npx playwright test; echo "VERSUS_TEST_EXIT=$?"', "fail");
+  engine.recordTestOutcome('npx playwright test 2>&1 | grep -E "passed|failed"; echo "VERSUS_TEST_EXIT=${PIPESTATUS[0]}"', "fail");
+  assert.strictEqual(engine.getLoopCounter().count, 2, "same suite, different plumbing: one count");
+  assert.strictEqual(engine.getLoopCounter().pattern, "npx playwright test");
+  engine.recordTestOutcome("cd app && npx playwright test --reporter=line", "fail");
+  assert.strictEqual(engine.getLoopCounter().count, 3, "a cd and a flag do not change the suite either");
+  assert.ok(engine.isLoopBlocked());
+});
+
+test("the state header names the running Versus version", () => {
+  toPhase5();
+  const t = buildInjection(engine)!;
+  assert.ok(t.split("\n")[0].endsWith(`| v${VERSUS_VERSION}`), t.split("\n")[0]);
+});
+
+test("the Phase 7 approval writes the cycle record even if no new cycle follows", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true, `P6 ${c.criterion}`);
+  engine.recordTestOutcome("npm test", "pass");
+  assert.ok(engine.advancePhase(7).ok);
+  const r = JSON.parse(handleRecordDecision(engine, { phase: 7, category: "approval", content: "Projeto concluído — atende o MVP", approvedBy: "user ('Projeto concluído')" }));
+  assert.ok(String(r._export).includes(".versus/cycles/cycle-1.md"), "a project that ENDS at Phase 7 still leaves its record");
+  const md = fs.readFileSync(path.join(workspace, ".versus", "cycles", "cycle-1.md"), "utf-8");
+  assert.ok(md.includes("**tests_passing** — P6 tests_passing") && md.includes("Projeto concluído"));
+  const plain = JSON.parse(handleRecordDecision(engine, { phase: 7, category: "process", content: "note" }));
+  assert.ok(!("_export" in plain), "only an approval closes the cycle");
 });
