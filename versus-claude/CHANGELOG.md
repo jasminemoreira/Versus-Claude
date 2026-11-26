@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.19.1] - 2026-11-26
+
+### Fixed: "Init Project" failed with "Cannot find module '../hooks/shell-parse'" (broken since 0.18.2)
+In 0.18.2, `state/engine.ts` started importing `../hooks/shell-parse`, to derive the S6 command pattern. The hook bundles were unaffected, because esbuild inlines the module. But `.vscodeignore` excludes `out/hooks/**` (hooks ship as bundles), so the **extension's own** `out/state/engine.js` could not load it, and everything in the extension host that loads the engine failed. The first visible symptom was `Versus Claude: Error initializing project` on Init Project.
+
+- **The move:** `shell-parse` is not a hook. It moved to `src/shell/`, which ships, and hooks, engine and tests import it from there.
+- **Guard test (`=== Packaging ===`):** it reads `.vscodeignore` and fails when code that ships imports from a directory the package excludes.
+- **Clean build:** `npm run build` now cleans `out/` first. The package had been carrying compiled files of modules deleted in March and May (`rules/guidance`, `rules/compact-guidance`).
+- **Verified on the package itself:** the 0.19.1 `.vsix` was unpacked, and its `out/state/engine.js` was loaded to initialize a project, the path that failed.
+
+156 tests (+1).
+
 ## [0.19.0] - 2026-11-26
 
 ### Added: the deferred report items (RELATORIO-MELHORIAS-VERSUS 2, 4, 6, 9, 12) + the Phase 5 Scope Inventory record

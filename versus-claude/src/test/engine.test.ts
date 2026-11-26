@@ -13,10 +13,10 @@ import { handleGetPhaseState, handleGetDecisions, handleUpdateProjectSpec } from
 import { handleGetPhaseGuidance } from "../mcp/tools/guidance-tools";
 import { handleMarkExitCriterion, handleRecordDecision } from "../mcp/tools/record-tools";
 import { handleAdvancePhase } from "../mcp/tools/transition-tools";
-import { isTestCommand, writeTargets, loadExtraTestPatterns, stripHeredocs } from "../hooks/shell-parse";
+import { isTestCommand, writeTargets, loadExtraTestPatterns, stripHeredocs } from "../shell/shell-parse";
 import { isAllowedPath, blockedTargets } from "../hooks/phase-gate";
 import { buildInjection, INJECT_BUDGET } from "../hooks/inject-context";
-import { testRunLocation } from "../hooks/shell-parse";
+import { testRunLocation } from "../shell/shell-parse";
 import { VERSUS_VERSION } from "../version";
 import { buildOrchestratorHooks } from "../setup";
 import { spawnSync } from "child_process";
@@ -2158,4 +2158,35 @@ test("lessons accumulated across cycles: only the CURRENT cycle's section is ask
     "# Ciclo 2 — v2\n\n## Lição 1 — nova\nguard: T-03\n\n## Referências acumuladas\n- doc X\n");
   const ls = engine.lessons();
   assert.deepStrictEqual(ls.map((l) => l.guard), ["T-03"], "cycle 1's pre-0.19 lessons and the metrics/references sections are not asked");
+});
+
+// --- Packaging: shipped code must not import from directories the .vsix excludes ---
+// 0.18.2 made state/engine.ts import ../hooks/shell-parse. The hook BUNDLES were fine (esbuild
+// inlines it), but .vscodeignore excludes out/hooks/**, so the extension's own engine.js failed
+// at runtime ("Cannot find module '../hooks/shell-parse'" on initProject) through 0.19.0.
+
+console.log("\n=== Packaging ===\n");
+
+test("code that ships in the .vsix imports nothing from a directory the .vsix excludes", () => {
+  const root = path.join(__dirname, "..", "..");
+  const ignore = fs.readFileSync(path.join(root, ".vscodeignore"), "utf-8").split(/\r?\n/);
+  const excluded = new Set(ignore.map((l) => /^out\/([\w-]+)\/\*\*$/.exec(l.trim())?.[1]).filter((x): x is string => !!x));
+  assert.ok(excluded.has("hooks"), "sanity: out/hooks is excluded (hooks ship as bundles)");
+  const src = path.join(root, "src");
+  const bad: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { walk(full); continue; }
+      if (!e.name.endsWith(".ts")) continue;
+      const rel = path.relative(src, full).split(path.sep);
+      if (rel.length > 1 && excluded.has(rel[0])) continue;          // excluded code may import anything
+      for (const m of fs.readFileSync(full, "utf-8").matchAll(/from\s+"(\.{1,2}\/[^"]+)"/g)) {
+        const target = path.relative(src, path.resolve(path.dirname(full), m[1])).split(path.sep);
+        if (target.length > 1 && excluded.has(target[0])) bad.push(`${rel.join("/")} → ${m[1]}`);
+      }
+    }
+  };
+  walk(src);
+  assert.deepStrictEqual(bad, [], "these imports resolve to files that are not in the .vsix");
 });

@@ -13,7 +13,7 @@
 import { createHash } from "crypto";
 import { StateEngine, LOOP_FAILURE_THRESHOLD } from "../state/engine";
 import { TestProvenance } from "../state/types";
-import { isTestCommand, loadExtraTestPatterns, testRunLocation } from "./shell-parse";
+import { isTestCommand, loadExtraTestPatterns, testRunLocation } from "../shell/shell-parse";
 import { postToolUseContext, writeAndExit } from "./hook-output";
 
 interface HookInput {
