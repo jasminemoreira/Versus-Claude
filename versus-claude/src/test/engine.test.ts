@@ -284,7 +284,8 @@ function writeArchitectureDoc(ws: string): void {
     "|------|--------|----------------|-----------|------------|\n" +
     "| M-01 | auth | authenticate users | login(user, pass) -> Session | db |\n" +
     "| M-02 | ui   | render views | render(state) -> DOM | auth |\n\n" +
-    "## Assumptions\n- single-threaded runtime\n";
+    "## Assumptions\n- single-threaded runtime\n\n" +
+    "## Desvios\nnenhum\n";   // 6→7 requires the deviations record (0.19.0)
   fs.writeFileSync(path.join(ws, "specs", "technical", "architecture.md"), content);
 }
 
@@ -705,6 +706,7 @@ function writeCriticalCoverage(ws: string): void {
 function toPhase6() {
   toPhase5();
   for (const c of engine.getExitCriteriaWithDefs(5)) engine.markExitCriterion(5, c.criterion, true);
+  engine.recordDecision(5, "scope-inventory", "P1 modules ✅ · specs/validation ✅ · UI runnable ✅ (fixture)");
   engine.advancePhase(6);
   assert.strictEqual(engine.getPhaseState()!.currentPhase, 6);
   writeCriticalCoverage(workspace); // III.1: leaving Phase 6 requires every 🔴 finding traced
@@ -777,7 +779,7 @@ test("start_new_cycle BLOCKED until lessons.md is persisted", () => {
 
   fs.writeFileSync(
     path.join(workspace, "specs", "references", "lessons.md"),
-    "# Lessons\n\n- The auth module's session TTL assumption from P0 was wrong; refreshed tokens broke it.\n- The chosen ORM lacked batch upsert; had to hand-roll it.\n"
+    "# Lessons\n\n- The auth module's session TTL assumption from P0 was wrong; refreshed tokens broke it.\n  guard: T-07\n- The chosen ORM lacked batch upsert; had to hand-roll it.\n  guard: none\n"
   );
   const r = engine.startNewCycle();
   assert.strictEqual(r.ok, true);
@@ -846,7 +848,7 @@ test("Phase 6 requires premise coverage when premises are NUMBERED (III.2)", () 
     path.join(workspace, "specs", "technical", "architecture.md"),
     "# Architecture\n\n| id | module | responsibility | interface | depends-on |\n|---|---|---|---|---|\n" +
     "| M-01 | auth | a | l() | db |\n| M-02 | ui | r | r() | auth |\n\n" +
-    "## Premissas\n| id | premissa | consequência |\n|---|---|---|\n| A-1 | single-thread | races |\n| A-2 | streaming migration | memory spike |\n"
+    "## Premissas\n| id | premissa | consequência |\n|---|---|---|\n| A-1 | single-thread | races |\n| A-2 | streaming migration | memory spike |\n\n## Desvios\nnenhum\n"
   );
   const r = engine.advancePhase(7);
   assert.strictEqual(r.ok, false, "numbered premises A-1/A-2 must be traced to tests");
@@ -1005,6 +1007,7 @@ test("different suites are different patterns (S6 speaks of modules)", () => {
 test("a blocked S6 vetoes the phase transition, and says why", () => {
   toPhase5();
   for (const c of engine.getExitCriteriaWithDefs(5)) engine.markExitCriterion(5, c.criterion, true);
+  engine.recordDecision(5, "scope-inventory", "modules ✅ validation ✅ UI ✅ (fixture)");
   for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
 
   // Advancing must not be an escape from a blind loop — but the refusal must be legible.
@@ -1019,6 +1022,7 @@ test("a blocked S6 vetoes the phase transition, and says why", () => {
 test("advancePhase clears the counter (after the loop is diagnosed)", () => {
   toPhase5();
   for (const c of engine.getExitCriteriaWithDefs(5)) engine.markExitCriterion(5, c.criterion, true);
+  engine.recordDecision(5, "scope-inventory", "modules ✅ validation ✅ UI ✅ (fixture)");
   for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
 
   engine.recordDecision(5, "diagnosis", "Named the cause.");
@@ -1195,13 +1199,13 @@ test("a pass classified by markers alone (no observed exit) is NON-nominal (II)"
   assert.ok(ec.verifiedBy!.note && ec.verifiedBy!.note.includes("VERSUS_TEST_EXIT"), "the record names the missing observed-exit path");
 });
 
-// --- projectSpec entries are timestamped (item 4), back-compat with strings ---
+// --- projectSpec entries: plain strings (0.19.0 dropped the research-only timestamp), legacy forms still read ---
 
-test("updateProjectSpec timestamps new entries and dedups by value", () => {
+test("updateProjectSpec stores plain strings and dedups by value", () => {
   engine.initProject("Test", "Desc");
   engine.updateProjectSpec({ stack: ["TypeScript"] });
   const e = engine.getPhaseState()!.projectSpec.stack[0];
-  assert.ok(typeof e === "object" && e.value === "TypeScript" && !!e.at, "new entry carries value + timestamp");
+  assert.strictEqual(e, "TypeScript", "no {value, phase, at} stamp: it was instrumentation no gate read");
 
   engine.updateProjectSpec({ stack: ["TypeScript", "Node 18"] }); // TS repeated
   assert.strictEqual(engine.getPhaseState()!.projectSpec.stack.length, 2, "dedup by value — no duplicate TypeScript");
@@ -1710,7 +1714,7 @@ test("the cycle close needs a Phase 7 approval decision", () => {
   engine.recordTestOutcome("npm test", "pass");
   engine.advancePhase(7);
   for (const c of engine.getExitCriteriaWithDefs(7)) engine.markExitCriterion(7, c.criterion, true);
-  fs.writeFileSync(path.join(workspace, "specs", "references", "lessons.md"), "# Lessons\n\n" + "- a real lesson about the domain that is long enough. ".repeat(3));
+  fs.writeFileSync(path.join(workspace, "specs", "references", "lessons.md"), "# Lessons\n\n" + "- a real lesson about the domain that is long enough. ".repeat(3) + "\n  guard: none\n");
   const r = engine.startNewCycle();
   assert.strictEqual(r.ok, false);
   if (r.ok) return;
@@ -2000,4 +2004,158 @@ test("the Phase 7 approval writes the cycle record even if no new cycle follows"
   assert.ok(md.includes("**tests_passing** — P6 tests_passing") && md.includes("Projeto concluído"));
   const plain = JSON.parse(handleRecordDecision(engine, { phase: 7, category: "process", content: "note" }));
   assert.ok(!("_export" in plain), "only an approval closes the cycle");
+});
+
+// --- 0.19.0: report items 2, 4, 6, 9, 12 + the Phase 5 Scope Inventory record ---
+
+console.log("\n=== 0.19.0 — declared checks, promised tests, deviations, scope inventory, lesson guards ===\n");
+
+/** Phase 6 with everything but the gate under test satisfied. */
+function toPhase6Ready() {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "pass", { source: "harness", exitCode: 0, exitSource: "echo" });
+}
+
+test("a declared check is EXECUTED, not attested: blocked until witnessed with the expected result", () => {
+  toPhase6Ready();
+  const d = JSON.parse(handleMarkExitCriterion(engine, {
+    phase: 6, criterion: "edge_cases", met: true, details: "OAuth removed from all 4 services",
+    check_command: "grep -rli oauth services/ | wc -l", check_expect: "output:^\\s*0\\s*$",
+  }));
+  assert.strictEqual(d.success, true);
+  assert.ok(String(d._check).includes("run it through Bash"));
+  let r = engine.advancePhase(7);
+  assert.strictEqual(r.ok, false, "the audit's case: 'grep = 0' attested, never run");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("has not seen it run")));
+  engine.witnessChecks("cd /x && grep -rli oauth services/ | wc -l", "1\n");     // one service still has it
+  r = engine.advancePhase(7);
+  assert.strictEqual(r.ok, false);
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("did NOT give")));
+  engine.witnessChecks("grep -rli oauth services/ | wc -l", "0\n");
+  assert.strictEqual(engine.advancePhase(7).ok, true);
+});
+
+test("an exit-code check uses the VERSUS_EXIT echo; a bad expectation is refused at declaration", () => {
+  toPhase6Ready();
+  assert.strictEqual(engine.declareCheck(6, "edge_cases", "make lint", "exit:0").ok, true);
+  assert.strictEqual(detectExitCode("ok\nVERSUS_EXIT=0"), 0, "the general token is read like the test one");
+  engine.witnessChecks('make lint; echo "VERSUS_EXIT=$?"', "lint ok\nVERSUS_EXIT=0", detectExitCode("lint ok\nVERSUS_EXIT=0"));
+  assert.strictEqual(engine.advancePhase(7).ok, true);
+  assert.strictEqual(engine.declareCheck(6, "x", "true", "zero please").ok, false);
+});
+
+test("the hook witnesses a declared check in ANY phase (not only 5+)", () => {
+  engine.initProject("Test", "Desc");
+  engine.declareCheck(0, "user_confirmed", "ls specs | wc -l", "output:\\d+");
+  const r = runHook("test-outcome", {
+    tool_name: "Bash", tool_input: { command: "ls specs | wc -l" },
+    tool_response: { stdout: "9\n", stderr: "" }, cwd: workspace,
+  });
+  const o = assertJsonContract(r.stdout, "PostToolUse");
+  assert.ok(String(o.hookSpecificOutput.additionalContext).includes("user_confirmed"));
+  const ck = new StateEngine(workspace).getPhaseState()!.exitCriteria.find((c) => c.criterion === "user_confirmed")!.check!;
+  assert.strictEqual(ck.witnessed?.ok, true);
+});
+
+test("6→7: every T-xx promised by the CURRENT architecture version must appear in a test file", () => {
+  toPhase6Ready();
+  const arch = path.join(workspace, "specs", "technical", "architecture.md");
+  fs.writeFileSync(arch,
+    "# Architecture\n\n## V(1)\n| id | module | responsibility | interface | depends-on |\n|---|---|---|---|---|\n| M-01 | auth | a | l() | db |\n| M-02 | ui | r | r() | auth |\n" +
+    "Promised: T-09 (dropped later)\n\n## V(2)\n| id | module | responsibility | interface | depends-on |\n|---|---|---|---|---|\n| M-01 | auth | a | l() | db |\n| M-02 | ui | r | r() | auth |\n" +
+    "Promised tests: T-01 fast double-tap; T-02 ready flag only with hashed run id\n\n## Desvios\nnenhum\n");
+  fs.mkdirSync(path.join(workspace, "tests"), { recursive: true });
+  fs.writeFileSync(path.join(workspace, "tests", "input.test.js"), "test('T-01 fast double-tap', () => {})\n");
+  const r = engine.advancePhase(7);
+  assert.strictEqual(r.ok, false);
+  if (r.ok) return;
+  const m = r.error.missingCriteria.find((x) => x.includes("promised tests"))!;
+  assert.ok(m.includes("T-02") && !m.includes("T-01") && !m.includes("T-09"), "only the current version's unimplemented promise");
+  fs.writeFileSync(path.join(workspace, "tests", "ready.test.js"), "// T-02\ntest('ready', () => {})\n");
+  assert.strictEqual(engine.advancePhase(7).ok, true);
+});
+
+test("6→7: the current architecture version records its deviations (or 'nenhum')", () => {
+  toPhase6Ready();
+  const arch = path.join(workspace, "specs", "technical", "architecture.md");
+  const base = "# Architecture\n\n## V(1)\n| id | module | responsibility | interface | depends-on |\n|---|---|---|---|---|\n| M-01 | auth | a | l() | db |\n| M-02 | ui | r | r() | auth |\n";
+  fs.writeFileSync(arch, base + "\n## Desvios\nV0 note\n\n## V(2)\n| id | module | responsibility | interface | depends-on |\n|---|---|---|---|---|\n| M-01 | auth | a | l() | db |\n| M-02 | ui | r | r() | auth |\n");
+  let r = engine.advancePhase(7);
+  assert.strictEqual(r.ok, false, "a Desvios section of an OLD version does not cover the current one");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("Desvios")));
+  fs.appendFileSync(arch, "\n## Desvios\n\n## Notes\nx\n");
+  assert.strictEqual(engine.advancePhase(7).ok, false, "an empty Desvios section is not a record");
+  fs.writeFileSync(arch, fs.readFileSync(arch, "utf-8").replace("## Desvios\n\n## Notes", "## Desvios\n- iframe removed instead of src=about:blank — leak on reopen\n\n## Notes"));
+  assert.strictEqual(engine.advancePhase(7).ok, true);
+});
+
+test("5→6: the Scope Inventory leaves a record", () => {
+  toPhase5();
+  for (const c of engine.getExitCriteriaWithDefs(5)) engine.markExitCriterion(5, c.criterion, true);
+  const r = engine.advancePhase(6);
+  assert.strictEqual(r.ok, false, "MUST DISPLAY was never a record (ESJUD crossed 5→6 without it)");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("scope-inventory")));
+  engine.recordDecision(5, "scope-inventory", "all good");
+  assert.strictEqual(engine.advancePhase(6).ok, false, "an inventory without ✅/❌ items is not an inventory");
+  engine.recordDecision(5, "scope-inventory", "M-01 auth ✅\nM-02 ui ✅\nUC-1 end-to-end ✅");
+  assert.strictEqual(engine.advancePhase(6).ok, true);
+});
+
+test("lessons: each says whether it became a guard; 'none' ones are listed for the human", () => {
+  engine.initProject("Test", "Desc");
+  const lp = path.join(workspace, "specs", "references", "lessons.md");
+  // heading form (the ESJUD lessons file's shape), with a backlog section that is NOT a lesson
+  fs.writeFileSync(lp,
+    "# Lições\n\n## 1. Domínio — dependências externas\ntexto\nguard: T-07\n\n## 2. Stack — ViewModel recriado\ntexto\n\n" +
+    "## 3. mTLS\ntexto\nguard: none\n\n## Backlog para o ciclo v2.0\n1. item\n");
+  const ls = engine.lessons();
+  assert.deepStrictEqual(ls.map((l) => l.guard), ["T-07", null, "none"], "3 lessons; the backlog is not one");
+  // bullet form
+  fs.writeFileSync(lp, "# Lessons\n\n- first lesson\n  guard: T-01\n- second lesson\nguard: none\n");
+  assert.deepStrictEqual(engine.lessons().map((l) => l.guard), ["T-01", "none"]);
+});
+
+test("start_new_cycle is blocked while a lesson lacks its guard line", () => {
+  toPhase6Ready();
+  assert.ok(engine.advancePhase(7).ok);
+  for (const c of engine.getExitCriteriaWithDefs(7)) engine.markExitCriterion(7, c.criterion, true);
+  approve(7);
+  const lp = path.join(workspace, "specs", "references", "lessons.md");
+  fs.writeFileSync(lp, "# Lessons\n\n- The session TTL assumption from P0 was wrong; refreshed tokens broke it.\n- The ORM lacked batch upsert; had to hand-roll it.\n  guard: none\n");
+  const r = engine.startNewCycle();
+  assert.strictEqual(r.ok, false);
+  if (r.ok) return;
+  assert.ok(String(r.error).includes("guard") && String(r.error).includes("session TTL"));
+  const m = JSON.parse(handleMarkExitCriterion(engine, { phase: 7, criterion: "lessons_documented", met: true }));
+  assert.ok(m._lessonsWithoutGuard.lessons.some((t: string) => t.includes("ORM")), "guard: none lessons go to the human");
+  assert.ok(m._lessonsMissingGuardLine.lessons.some((t: string) => t.includes("session TTL")));
+  fs.writeFileSync(lp, fs.readFileSync(lp, "utf-8").replace("broke it.\n", "broke it.\n  guard: T-07\n"));
+  assert.strictEqual(engine.startNewCycle().ok, true);
+});
+
+test("guidance teaches the new records before the gates fire (items 4, 6, 9, 12, scope inventory, checks)", () => {
+  const g5 = handleGetPhaseGuidance(engine, { phase: 5 });
+  engine.initProject("Test", "Desc");
+  const get = (p: number) => JSON.parse(handleGetPhaseGuidance(engine, { phase: p })).guidance as string;
+  assert.ok(get(1).includes("T-01"), "Phase 1: promised tests get ids");
+  assert.ok(get(5).includes("scope-inventory") && get(5).includes("undiscussed-choices"), "Phase 5: inventory record + undiscussed choices");
+  assert.ok(get(6).includes("## Desvios") && get(6).includes("check_command"), "Phase 6: deviations + declared checks");
+  assert.ok(get(7).includes("guard: <test id>"), "Phase 7: lesson guards");
+  void g5;
+});
+
+test("lessons accumulated across cycles: only the CURRENT cycle's section is asked for guards", () => {
+  engine.initProject("Test", "Desc");
+  const st = engine.getPhaseState()!;
+  st.history.push({ from: 7, to: 0, timestamp: new Date().toISOString(), criteriaMet: [] });   // now in cycle 2
+  fs.writeFileSync(path.join(workspace, "specs", "references", "lessons.md"),
+    "# Lições\n\n# Ciclo 1 — MVP\n\n## Lição 1 — antiga, sem guard\ntexto\n\n## Métricas do ciclo\n- 12 testes\n\n" +
+    "# Ciclo 2 — v2\n\n## Lição 1 — nova\nguard: T-03\n\n## Referências acumuladas\n- doc X\n");
+  const ls = engine.lessons();
+  assert.deepStrictEqual(ls.map((l) => l.guard), ["T-03"], "cycle 1's pre-0.19 lessons and the metrics/references sections are not asked");
 });

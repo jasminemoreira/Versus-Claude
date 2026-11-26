@@ -123,7 +123,7 @@ function dispatch(
     case "update_score":
       return handleUpdateScore(engine, args as { score: number; breakdown: any });
     case "mark_exit_criterion":
-      return handleMarkExitCriterion(engine, args as { phase: number; criterion: string; met: boolean; details?: string });
+      return handleMarkExitCriterion(engine, args as { phase: number; criterion: string; met: boolean; details?: string; check_command?: string; check_expect?: string });
     case "check_safeguard":
       return handleCheckSafeguard(engine, args as { id: string });
     case "check_all_safeguards":

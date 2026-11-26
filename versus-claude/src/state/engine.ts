@@ -237,7 +237,7 @@ export class StateEngine {
         const v = m[1].trim().toLowerCase();
         if (v) out.add(v);
       }
-    } catch { /* telemetry never blocks */ }
+    } catch { /* an unreadable artifact reads as empty — the gate that needs it reports it */ }
     return out;
   }
 
@@ -313,7 +313,7 @@ export class StateEngine {
         if (!idRe.test(cells[0])) continue;
         out.push({ id: cells[0], lens: cells[2], severity: cells[3] ?? "", iteration: currentIter });
       }
-    } catch { /* telemetry never blocks */ }
+    } catch { /* an unreadable artifact reads as empty — the gate that needs it reports it */ }
     return out;
   }
 
@@ -356,8 +356,8 @@ export class StateEngine {
       if (sev.length !== 1) {
         errs.push(
           `[Phase 2] coverage_matrix row ${f.id}: severity "${f.severity || "(empty)"}" must be exactly one of ` +
-          `🔴 (Critical) / 🟡 (Important) / 🟢 (Suggestion). The analysis counts criticals vs important on this ` +
-          `column — a word, a code like "P1", or an empty cell cannot be counted.`
+          `🔴 (Critical) / 🟡 (Important) / 🟢 (Suggestion). Phase 6 traces every 🔴 to a test (critical-coverage.md), so this ` +
+          `column must be machine-readable — a word, a code like "P1", or an empty cell cannot be read.`
         );
       }
       // Lens 2.1 — canonical name or NENHUMA.
@@ -366,7 +366,7 @@ export class StateEngine {
       if (!canon) {
         errs.push(
           `[Phase 2] coverage_matrix row ${f.id}: lens "${f.lens}" is not one of the 19 canonical lens names (nor NENHUMA). ` +
-          `Use the EXACT canonical name — an abbreviation or a translation breaks cross-project analysis, which groups on this column.`
+          `Use the EXACT canonical name — the gate matches each finding's lens against the lenses declared for its iteration, and an abbreviation or a translation cannot be matched.`
         );
         continue;
       }
@@ -564,7 +564,7 @@ export class StateEngine {
         ? `"${raw}" is a UNIVERSAL lens. Universals always run and are not passed here — this ` +
           `field records the CONDITIONAL set, and counting a universal among them corrupts it.`
         : `"${raw}" is not one of the 12 conditional lenses. Use the exact canonical name — ` +
-          `abbreviations and translations break cross-project analysis, which groups on this value.`;
+          `abbreviations and translations cannot be matched against the coverage matrix's lens column.`;
 
     const canon: string[] = [];
     for (const raw of conditional) {
@@ -585,7 +585,7 @@ export class StateEngine {
       if (canon.includes(c)) {
         return { ok: false, error: { message:
           `Lens "${c}" appears as BOTH activated and not-activated. The record would contradict ` +
-          `itself, and a later analysis has no way to tell which was meant.` } };
+          `itself, and the matrix gate could not tell whether findings of that lens are expected.` } };
       }
       if (no.some((x) => x.lens === c)) {
         return { ok: false, error: { message: `Lens "${c}" is listed twice as not-activated.` } };
@@ -647,6 +647,26 @@ export class StateEngine {
    */
   private missingEvidence(phase: number): string[] {
     const out: string[] = [];
+    // Declared mechanical checks (0.19.0): any criterion of this phase that declared one needs
+    // a witnessed run, after the declaration, with the expected result.
+    for (const ec of this.state?.exitCriteria ?? []) {
+      if (ec.phase !== phase || !ec.check) continue;
+      const w = ec.check.witnessed;
+      const exitHint = ec.check.expect.startsWith("exit:") ? `; echo "VERSUS_EXIT=$?"` : "";
+      if (!w || w.at < ec.check.declaredAt) {
+        out.push(
+          `[Phase ${phase}] ${ec.criterion}: declares the check \`${ec.check.command}\` (expect ${ec.check.expect}) but the ` +
+          `engine has not seen it run. Run it through Bash, exactly: \`${ec.check.command}${exitHint}\`. ` +
+          `A declared check is executed, not attested.`
+        );
+      } else if (!w.ok) {
+        out.push(
+          `[Phase ${phase}] ${ec.criterion}: the declared check \`${ec.check.command}\` ran at ${w.at} and did NOT give ` +
+          `${ec.check.expect}${typeof w.exitCode === "number" ? ` (exit ${w.exitCode})` : ""}. Output tail: ` +
+          `${JSON.stringify(w.outputTail.slice(-200))}. Fix the cause and run it again.`
+        );
+      }
+    }
     for (const def of getExitCriteriaForPhase(phase)) {
       if (!def.required) continue;
       if (def.artifact && !this.artifactPresent(def.artifact)) {
@@ -661,6 +681,17 @@ export class StateEngine {
           `(needs at least ${def.artifactRows.count} table row(s) with an id${eg}). ` +
           `A prose or id-less file cannot be machine-read — each row needs its own id.`
         );
+      }
+      if (def.criterion === "lessons_documented" && this.artifactPresent("references/lessons.md")) {
+        const unguarded = this.lessons().filter((l) => !l.guard);
+        if (unguarded.length) {
+          out.push(
+            `[Phase ${phase}] lessons_documented: ${unguarded.length} lesson(s) in specs/references/lessons.md do not say whether ` +
+            `they became a guard: ${unguarded.map((l) => `"${l.title.slice(0, 60)}"`).join(", ")}. Add a line ` +
+            `\`guard: <test id>\` (the test that now catches it) or \`guard: none\` to each. A lesson kept only as text did ` +
+            `not stop a recurrence before; the test did.`
+          );
+        }
       }
       if (def.verify === "test-pass" && !this.witnessedTestPass(phase)) {
         const t = this.state?.lastTestOutcome;
@@ -748,8 +779,11 @@ export class StateEngine {
     // Phase 6 re-verifies what earlier phases decided survived the code (III.1/III.2):
     // every critical finding, and every numbered premise, traced to a test or a reason.
     const coverageDrift = from === 6
-      ? [...this.criticalCoverageErrors(), ...this.premiseCoverageErrors()]
+      ? [...this.criticalCoverageErrors(), ...this.premiseCoverageErrors(), ...this.testPromiseErrors(), ...this.deviationsErrors()]
       : [];
+    // 0.19.0: the Phase 5 Scope Inventory leaves a record (it was MUST DISPLAY only, and the
+    // ESJUD study crossed 5→6 without ever running the formal inventory).
+    if (from === 5 && targetPhase === 6) coverageDrift.push(...this.scopeInventoryMissing());
 
     // Human sign-off on the record (0.18.0): convergence (3→4) and test sign-off (6→7)
     // need an approval DECISION of this phase naming who approved. Audits found these
@@ -877,15 +911,15 @@ export class StateEngine {
       this.state.projectSpec = { stack: [], outOfScope: [], patterns: [], constraints: [] };
     }
     const ps = this.state.projectSpec;
-    const at = new Date().toISOString();
-    const phase = this.state.currentPhase;
-    // New entries are timestamped; existing ones (string or object) are kept as-is.
-    // Dedup is by VALUE, so a string and its timestamped form don't both survive.
+    // 0.19.0: new entries are plain strings again. The {value, phase, at} stamp (v0.7.0) was
+    // research instrumentation ("metadata for external analysis"), read by no gate and never
+    // shown to the model. Existing stamped entries are kept as they are and read normally.
+    // Dedup is by VALUE.
     const merge = (existing: SpecEntry[], added: string[]): SpecEntry[] => {
       const have = new Set(existing.map(specEntryValue));
       const out = [...existing];
       for (const v of added) {
-        if (!have.has(v)) { out.push({ value: v, phase, at }); have.add(v); }
+        if (!have.has(v)) { out.push(v); have.add(v); }
       }
       return out;
     };
@@ -914,6 +948,59 @@ export class StateEngine {
     this.state.phase0Score = score;
     this.state.phase0Breakdown = breakdown;
     this.save();
+  }
+
+  /** Declares (or replaces) the mechanical check of a criterion. A new declaration clears any
+   *  earlier witness: the check must be seen to run AFTER it was declared. */
+  declareCheck(phase: number, criterion: string, command: string, expect?: string): Result<void, string> {
+    if (!this.state) return { ok: false, error: "Project not initialized." };
+    const cmd = command.trim();
+    if (!cmd) return { ok: false, error: "check_command is empty." };
+    const exp = (expect ?? "exit:0").trim();
+    if (!/^exit:\d+$/.test(exp) && !/^output:.+/s.test(exp)) {
+      return { ok: false, error: `check_expect must be "exit:<n>" or "output:<regex>"; got "${exp}".` };
+    }
+    if (exp.startsWith("output:")) {
+      try { new RegExp(exp.slice(7)); } catch (e) { return { ok: false, error: `check_expect regex is invalid: ${String(e)}` }; }
+    }
+    let ec = this.state.exitCriteria.find((c) => c.phase === phase && c.criterion === criterion);
+    if (!ec) { ec = { phase, criterion, met: false }; this.state.exitCriteria.push(ec); }
+    ec.check = { command: cmd, expect: exp, declaredAt: new Date().toISOString() };
+    this.save();
+    return { ok: true, value: undefined };
+  }
+
+  /**
+   * Called by the PostToolUse hook for EVERY Bash run, in any phase: if the command contains a
+   * declared check's command, record what happened. Returns the criteria whose check this run
+   * witnessed (empty when none matched).
+   */
+  witnessChecks(command: string, output: string, exitCode?: number): { criterion: string; phase: number; ok: boolean }[] {
+    if (!this.state) return [];
+    const norm = (x: string) => x.replace(/\s+/g, " ").trim();
+    const ran = norm(command);
+    const hits: { criterion: string; phase: number; ok: boolean }[] = [];
+    for (const ec of this.state.exitCriteria) {
+      const ck = ec.check;
+      if (!ck || !ran.includes(norm(ck.command))) continue;
+      let ok: boolean;
+      if (ck.expect.startsWith("exit:")) ok = typeof exitCode === "number" && exitCode === parseInt(ck.expect.slice(5), 10);
+      else {
+        // match against the output with the exit-echo line removed
+        const body = output.replace(/^.*VERSUS_(?:TEST_)?EXIT=\d+.*$/gm, "").trim();
+        try { ok = new RegExp(ck.expect.slice(7), "m").test(body); } catch { ok = false; }
+      }
+      ck.witnessed = {
+        at: new Date().toISOString(),
+        ok,
+        exitCode,
+        outputTail: output.slice(-600),
+        outputSha256: createHash("sha256").update(output).digest("hex"),
+      };
+      hits.push({ criterion: ec.criterion, phase: ec.phase, ok });
+    }
+    if (hits.length) this.save();
+    return hits;
   }
 
   markExitCriterion(phase: number, criterion: string, met: boolean, details?: string): void {
@@ -1223,6 +1310,158 @@ export class StateEngine {
     return { ok: true, value: { cycle: cycle + 1, archived: cycle, exportPath: record.exportPath } };
   }
 
+  // --- Promised tests, deviations, scope inventory, lessons (0.19.0) ---
+
+  /** Text of the architecture's latest version section (after the last `## V(N)`), or the whole file. */
+  private latestArchitectureSection(): string {
+    try {
+      const full = path.join(this.specsPath, "technical", "architecture.md");
+      if (!fs.existsSync(full)) return "";
+      const text = fs.readFileSync(full, "utf-8");
+      const idx = [...text.matchAll(/^##\s*V\(\d+\)/gm)].map((m) => m.index ?? 0);
+      return idx.length ? text.slice(idx[idx.length - 1]) : text;
+    } catch { return ""; }
+  }
+
+  /** Test-promise ids (T-01…) the CURRENT design version names. */
+  promisedTestIds(): string[] {
+    return dedupe([...this.latestArchitectureSection().matchAll(/\bT-\d+\b/g)].map((m) => m[0]));
+  }
+
+  /** Concatenated text of the project's test files (bounded walk; build/vendor dirs skipped). */
+  private testFilesText(): string {
+    const SKIP = new Set(["node_modules", ".git", ".versus", "specs", "dist", "build", "out", ".next", "coverage",
+      "DerivedData", "Pods", "vendor", ".venv", "venv", "target", ".gradle", ".idea", ".vscode"]);
+    const TESTY = /(^|\/)(tests?|__tests__|spec|e2e|[\w-]*Tests?)(\/|$)|\.(test|spec)\.[\w]+$|_test\.[\w]+$|Tests?\.(swift|kt|java|cs)$/i;
+    const chunks: string[] = [];
+    let files = 0;
+    const walk = (dir: string, rel: string) => {
+      if (files > 5000) return;
+      let entries: fs.Dirent[] = [];
+      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      for (const e of entries) {
+        if (e.name.startsWith(".") && e.name !== ".github") { if (e.isDirectory()) continue; }
+        const r = rel ? `${rel}/${e.name}` : e.name;
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) { if (!SKIP.has(e.name)) walk(full, r); continue; }
+        if (!e.isFile() || !TESTY.test(r)) continue;
+        try {
+          if (fs.statSync(full).size > 1_000_000) continue;
+          chunks.push(fs.readFileSync(full, "utf-8"));
+          files++;
+        } catch { /* skip */ }
+      }
+    };
+    walk(this.workspacePath, "");
+    return chunks.join("\n");
+  }
+
+  /** 6→7: every test the current design promises (T-xx) must exist in a test file (0.19.0). */
+  private testPromiseErrors(): string[] {
+    const ids = this.promisedTestIds();
+    if (!ids.length) return [];
+    const text = this.testFilesText();
+    const missing = ids.filter((id) => !new RegExp(`\\b${escapeRegExp(id)}\\b`).test(text));
+    if (!missing.length) return [];
+    return [
+      `[Phase 6] promised tests: the current architecture version promises ${missing.join(", ")}, but no test file names ` +
+      `${missing.length === 1 ? "it" : "them"}. Put the id in the test that implements the promise (its name or a comment), ` +
+      `or, if the promise was dropped, say so in the architecture's Desvios section and remove the id. A promise that ` +
+      `exists only in the design is not a test.`,
+    ];
+  }
+
+  /** 6→7: the current design version records how the code deviated from it, or says "nenhum" (0.19.0). */
+  private deviationsErrors(): string[] {
+    const sec = this.latestArchitectureSection();
+    if (!sec) return [];   // architecture.md absence is reported by its own gate
+    const lines = sec.split(/\r?\n/);
+    const h = lines.findIndex((l) => /^#{2,4}\s*(Desvios|Deviations)\b/i.test(l));
+    const body: string[] = [];
+    if (h >= 0) {
+      for (let i = h + 1; i < lines.length && !/^#{1,4}\s/.test(lines[i]); i++) if (lines[i].trim()) body.push(lines[i]);
+    }
+    if (h >= 0 && body.length) return [];
+    return [
+      `[Phase 6] deviations: the current version of specs/technical/architecture.md has no ${h >= 0 ? "content under its" : ""} ` +
+      `"## Desvios" section. Before leaving Phase 6, record every way the code departed from this design, one line each with ` +
+      `the reason (a timing that changed, a mechanism replaced, a state removed), or write "nenhum". Design drift left out of ` +
+      `the record makes the architecture lie to the next cycle.`,
+    ];
+  }
+
+  /** 5→6: a Scope Inventory decision of the current pass of Phase 5 (0.19.0). */
+  private scopeInventoryMissing(): string[] {
+    const ok = this.decisionsSincePhaseEntry().some(
+      (d) => d.phase === 5 && d.category.trim().toLowerCase() === "scope-inventory" && /[✅❌]/.test(d.content)
+    );
+    return ok ? [] : [
+      `[Phase 5] scope inventory: no Scope Inventory on record for this pass of Phase 5. Run it (P1 modules present? ` +
+      `specs/validation covered? UI runnable?) and record it: record_decision(phase=5, category='scope-inventory', ` +
+      `content='<each item with ✅/❌>'). Displaying it in chat is not a record.`,
+    ];
+  }
+
+  /** Lessons in specs/references/lessons.md: `##` sections (minus backlog/next-cycle) or top-level bullets. */
+  lessons(): { title: string; guard: string | null }[] {
+    let text = "";
+    try { text = fs.readFileSync(path.join(this.specsPath, "references", "lessons.md"), "utf-8"); } catch { return []; }
+    let lines = text.split(/\r?\n/);
+    // A file that accumulates cycles ("# Ciclo 5 — …", "# Lessons — X (Cycle 2)") is scoped to
+    // the CURRENT cycle's section, or to the last cycle section if none carries its number.
+    // Lessons written before 0.19.0 in earlier cycles are not asked for a guard line.
+    const cycleHeads = lines
+      .map((l, i) => { const m = /^#\s.*\b(?:ciclo|cycle)\s*(\d+)/i.exec(l); return m ? { i, n: parseInt(m[1], 10) } : null; })
+      .filter((x): x is { i: number; n: number } => x !== null);
+    if (cycleHeads.length) {
+      const cur = this.currentCycle();
+      const idx = cycleHeads.findIndex((c) => c.n === cur);
+      const k = idx >= 0 ? idx : cycleHeads.length - 1;
+      const start = cycleHeads[k].i;
+      const nextH1 = lines.findIndex((l, i) => i > start && /^#\s/.test(l));
+      lines = lines.slice(start + 1, nextH1 === -1 ? lines.length : nextH1);
+    }
+    // Word-initial: "dependências" is a lesson title, "Pendências" is not a lesson. Reference,
+    // metric, debt and process-cost sections hold no project lessons either.
+    const NOT_LESSON = /\bbacklog|\bpr[óo]ximo ciclo|\bnext cycle|\bv2(\.0)?\b|\bcarry|(^|[\s—–-])pend[eê]ncias?\b|\brefer[eê]ncias|\breferences\b|\bm[ée]tricas|\bmetrics\b|\bd[íi]vidas|\bdebts?\b|\bprocess cost|\bcusto do processo/i;
+    const blocks: { title: string; body: string[] }[] = [];
+    const ITEM = /^(?:[-*]|\d+[.)])\s+\S/;
+    // Top-level list items of a run of lines, each with its indented continuation (and an
+    // unindented `guard:` line right under it).
+    const items = (ls: string[]): { title: string; body: string[] }[] => {
+      const out: { title: string; body: string[] }[] = [];
+      let cur: { title: string; body: string[] } | null = null;
+      for (const l of ls) {
+        if (ITEM.test(l)) { cur = { title: l.replace(/^(?:[-*]|\d+[.)])\s+/, "").trim(), body: [l] }; out.push(cur); }
+        else if (cur && (/^\s+\S/.test(l) || /^guard:/i.test(l))) cur.body.push(l);
+        else if (!l.trim()) continue;
+        else cur = null;
+      }
+      return out;
+    };
+    const heads = lines.map((l, i) => (/^##\s+\S/.test(l) && !/^###/.test(l) ? i : -1)).filter((i) => i >= 0);
+    if (heads.length) {
+      heads.forEach((h, k) => {
+        const end = k + 1 < heads.length ? heads[k + 1] : lines.length;
+        const title = lines[h].replace(/^##\s+/, "").trim();
+        if (NOT_LESSON.test(title)) return;
+        const section = lines.slice(h + 1, end);
+        // "## 1. …" / "## Lição 3 — …" is ONE lesson (its bullets are details). A category heading
+        // ("## Domain", "## Stack") groups lessons: each top-level item is one.
+        const numbered = /^(?:\d+[.)]|li[cç][ãa]o\s*\d+|lesson\s*\d+|L\d+\b)/i.test(title);
+        const its = numbered ? [] : items(section);
+        if (its.length) blocks.push(...its);
+        else blocks.push({ title, body: lines.slice(h, end) });
+      });
+    } else {
+      blocks.push(...items(lines));
+    }
+    return blocks.map((b) => {
+      const m = /\bguard:\s*([^\s,;)]+)/i.exec(b.body.join("\n"));
+      return { title: b.title, guard: m ? m[1] : null };
+    });
+  }
+
   // --- Cycles, approvals, fingerprints, version (0.18.0) ---
 
   /** The cycle in progress: closed cycles (7→0 boundaries) + 1. */
@@ -1430,6 +1669,12 @@ export class StateEngine {
     }
     if (cur <= 6 && this.criticalCoverageErrors().length > 0 && !this.artifactPresent("validation/critical-coverage.md")) {
       pending.push("specs/validation/critical-coverage.md — required at 6→7 (the matrix has 🔴 findings)");
+    }
+    if (from === null || from.startsWith("0.18.")) {
+      if (cur <= 5) pending.push("5→6 now needs record_decision(phase=5, category='scope-inventory', content='<items with ✅/❌>') (0.19.0)");
+      if (cur <= 6) pending.push("6→7 now needs a '## Desvios' section in the current architecture version, and every promised test id (T-xx) present in a test file (0.19.0)");
+      const unguarded = this.lessons().filter((l) => !l.guard).length;
+      if (unguarded) pending.push(`specs/references/lessons.md — ${unguarded} lesson(s) without 'guard: <test id>' or 'guard: none' (required to close the cycle, 0.19.0)`);
     }
     if (from === "0.18.0" && cur <= 4) {
       pending.push("approval decision at 4→5 — record_decision(phase=4, category='approval', approvedBy='<who>') after presenting the convergence report (new in 0.18.1)");

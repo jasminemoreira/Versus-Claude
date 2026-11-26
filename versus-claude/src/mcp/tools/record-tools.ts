@@ -106,6 +106,20 @@ export const markExitCriterionTool: Tool = {
         type: "string",
         description: "Optional details about how it was met.",
       },
+      check_command: {
+        type: "string",
+        description:
+          "When the criterion is MECHANICALLY checkable (e.g. 'OAuth removed from all 4 services' → " +
+          "`grep -rli oauth services/ | wc -l`), declare the command here instead of attesting it. The gate " +
+          "then requires the engine to SEE that command run through Bash, after this declaration, with the " +
+          "expected result. A check declared in details prose is not executed by anyone.",
+      },
+      check_expect: {
+        type: "string",
+        description:
+          "What the check must give: 'exit:<n>' (default 'exit:0'; append `; echo \"VERSUS_EXIT=$?\"` to the run) " +
+          "or 'output:<regex>' matched against the output (e.g. 'output:^\\s*0\\s*$' for a count of zero).",
+      },
     },
     required: ["phase", "criterion", "met"],
   },
@@ -168,7 +182,7 @@ export const recordActivatedLensesTool: Tool = {
     "Phase 2, STEP 1 — records which conditional lenses this project activates, and why each " +
     "of the others does not. Replaces recording the same thing as free-text prose: names are " +
     "validated against the canonical 12, so an abbreviation or a translation is rejected at the " +
-    "call instead of silently poisoning a later cross-project analysis. " +
+    "call, instead of silently failing the coverage-matrix lens check later. " +
     "All 12 conditional lenses must be accounted for — activated, or not-activated WITH a reason. " +
     "Leaving one out is refused: 'I did not activate it' and 'I forgot it' must not look the same. " +
     "The 7 universal lenses are always active and are not passed here. " +
@@ -229,7 +243,7 @@ export function handleRecordActivatedLenses(
 
 export function handleMarkExitCriterion(
   engine: StateEngine,
-  args: { phase: number; criterion: string; met: boolean; details?: string }
+  args: { phase: number; criterion: string; met: boolean; details?: string; check_command?: string; check_expect?: string }
 ): string {
   try {
     // Only the CURRENT phase's criteria can be marked. advance_phase reads only those, so a
@@ -248,6 +262,15 @@ export function handleMarkExitCriterion(
         currentPhase: current,
       });
     }
+    let checkNote: string | undefined;
+    if (typeof args.check_command === "string" && args.check_command.trim()) {
+      const d = engine.declareCheck(args.phase, args.criterion, args.check_command, args.check_expect);
+      if (!d.ok) return JSON.stringify({ success: false, error: d.error });
+      const exp = args.check_expect?.trim() || "exit:0";
+      checkNote =
+        `Check declared. Now run it through Bash, exactly: \`${args.check_command.trim()}` +
+        `${exp.startsWith("exit:") ? `; echo "VERSUS_EXIT=$?"` : ""}\`. The gate needs to SEE it give ${exp}.`;
+    }
     engine.markExitCriterion(args.phase, args.criterion, args.met, args.details);
     const criteria = engine.getExitCriteriaWithDefs(args.phase);
     const metCount = criteria.filter((c) => c.met).length;
@@ -261,6 +284,15 @@ export function handleMarkExitCriterion(
       totalMet: metCount,
       totalCriteria: criteria.length,
     };
+    if (checkNote) result._check = checkNote;
+    // 0.19.0: lessons that did not become a guard are listed for the HUMAN to decide on.
+    if (args.criterion === "lessons_documented") {
+      const ls = engine.lessons();
+      const none = ls.filter((l) => l.guard?.toLowerCase() === "none").map((l) => l.title.slice(0, 80));
+      const missing = ls.filter((l) => !l.guard).map((l) => l.title.slice(0, 80));
+      if (none.length) result._lessonsWithoutGuard = { lessons: none, action: "Show these to the user: each is a lesson kept only as text. Ask whether any should become a test now." };
+      if (missing.length) result._lessonsMissingGuardLine = { lessons: missing, action: "Add 'guard: <test id>' or 'guard: none' to each — start_new_cycle is blocked until every lesson says." };
+    }
 
     // When all criteria for any phase < 7 become met, force next action: advance_phase
     if (allMet && args.phase < 7 && args.met) {

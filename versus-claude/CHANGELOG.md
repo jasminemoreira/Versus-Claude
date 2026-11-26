@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.19.0] - 2026-11-26
+
+### Added: the deferred report items (RELATORIO-MELHORIAS-VERSUS 2, 4, 6, 9, 12) + the Phase 5 Scope Inventory record
+Each is a FORM gate: it checks that a record exists and is shaped right, not that it is true. Each was validated against real project artifacts before shipping.
+
+- **Item 2: a declared check is executed, not attested.**
+  - **What the agent does:** `mark_exit_criterion` takes `check_command` and `check_expect`. The expectation is `exit:<n>`, read from the new general `VERSUS_EXIT=$?` echo (`VERSUS_TEST_EXIT` still works), or `output:<regex>`. Then it runs that exact command through Bash.
+  - **What the gate checks:** the PostToolUse hook watches **every** Bash call, in any phase, for a declared command and records the result, the output's tail and its sha256. The transition is refused until the engine has seen the command run **after** the declaration, with the expected result. A re-declaration clears the old witness.
+  - **Why:** the audit found "OAuth removed from all 4 services (grep = 0)" attested while one service still used OAuth.
+  - **What it does not do:** the MCP server never executes commands; the run goes through Claude Code's own permissions and hooks.
+- **Item 4: promised tests exist (6→7).** Every `T-xx` in the **current** architecture version (after the last `## V(N)`) must appear in a test file, in a test's name or a comment. The walk is bounded and skips build and vendor directories. A promise dropped in an earlier version is not required. Phase 1 guidance tells the agent to give promised tests ids; Phase 3 tells it to carry them into V(N+1).
+- **Item 6: deviations on the record (6→7).** The current architecture version needs a `## Desvios` (or `## Deviations`) section that is not empty: each departure with its reason, or `nenhum`. A Desvios section under an older version does not count.
+- **Item 9: each lesson says whether it became a guard.**
+  - **The rule:** each lesson carries `guard: <test id>` or `guard: none`, and `start_new_cycle` is refused while any lesson lacks the line. Marking `lessons_documented` returns the `guard: none` lessons, for the human to decide whether any should become a test.
+  - **How lessons are recognized:** checked on 7 real files (ESJUD, Goitacaz, Transcriber, RestaUm, FlapGoat, MoonPatrolClone).
+    - A numbered heading ("## 1. …", "## Lição 3 — …") is one lesson.
+    - A category heading ("## Domain", "## Stack") holds one lesson per top-level item.
+    - Backlog, next-cycle, pending, references, metrics, debt and process-cost sections are not lessons. The filter is word-initial: a test caught "de**pendên**cias" being dropped as "pendências".
+    - A file that accumulates cycles ("# Ciclo 5 — …") is scoped to the current cycle's section, so lessons of earlier cycles written before 0.19 are not asked for guards.
+- **Item 12: undiscussed choices.** The Phase 5 guidance asks for one `record_decision(category='undiscussed-choices')` listing the implementation choices nobody discussed (tuning numbers, defensive guards, accessibility, visual details), one line each with the reason. **Guidance only, low expected effect**, as the report itself notes.
+- **Phase 5 Scope Inventory (open since 0.17.0).** It was "MUST DISPLAY" only, and ESJUD crossed 5→6 without ever running it. 5→6 now needs `record_decision(phase=5, category='scope-inventory')` from the current pass of Phase 5, with ✅/❌ items.
+- **Update notice:** a project last opened by 0.18.x (or older) is told of every new 0.19 gate it will meet. That includes how many of its current-cycle lessons lack a guard.
+
+### Removed: research instrumentation
+The pending review of what the extension carries only for research:
+- **The `projectSpec` stamp `{value, phase, at}` is gone.** It was added in v0.7.0 as "metadata for external analysis": no gate read it and the model never saw it. New entries are plain strings; existing stamped entries are kept and read as before.
+- **Model-facing texts no longer justify rules by "the analysis", "the batch" or "the corpus".** They now give the product reason, for example "the gate matches each finding's lens against its iteration's declared lenses". This covers 4 engine refusals, 1 tool description and 5 guidance passages. Two gate readers labelled `telemetry` in their comments were relabelled (they were never telemetry).
+- **Kept, because the product uses it:**
+  - `againstVersion`: it tells the agent the matrix heading;
+  - `verifiedBy.snapshot`: the frozen record of what satisfied a gate;
+  - the test outcome's `toolUseId`, `sessionId` and output hash: they tie a gate to the transcript, which is what the delivery audit reads;
+  - `agent`: the sidebar uses it.
+- Nothing from the deferred INSTRUMENTATION.md spec (baseline mode, heartbeat, rework log) was ever implemented.
+
+155 tests (+10).
+
 ## [0.18.2] - 2026-11-26
 
 ### Fixed: what the first complete 0.18 cycle (MoonPatrolClone, 0→7 in ~1h20) left open

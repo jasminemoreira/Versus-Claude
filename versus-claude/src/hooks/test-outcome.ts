@@ -100,7 +100,8 @@ export function detectOutcome(output: string): Outcome {
  * Returns the LAST occurrence (the final run in a multi-command block).
  */
 export function detectExitCode(output: string): number | undefined {
-  const ms = [...output.matchAll(/VERSUS_TEST_EXIT=(\d+)/g)];
+  // VERSUS_EXIT (0.19.0) is the general form, also used for declared checks; VERSUS_TEST_EXIT stays valid.
+  const ms = [...output.matchAll(/VERSUS_(?:TEST_)?EXIT=(\d+)/g)];
   return ms.length ? parseInt(ms[ms.length - 1][1], 10) : undefined;
 }
 
@@ -117,7 +118,9 @@ function main() {
   const engine = new StateEngine(workspacePath);
   const state = engine.getPhaseState();
 
-  if (!state || state.currentPhase < 5) {
+  // Every phase now: a declared check (0.19.0) can belong to any phase. The test-outcome
+  // part below still applies only from Phase 5 on.
+  if (!state) {
     emit();
     return;
   }
@@ -143,13 +146,26 @@ function main() {
       // overwrite a witnessed green lastTestOutcome (the ESJUD study's advance_phase(7) failure).
       const extra = loadExtraTestPatterns(workspacePath);
       isTest = isTestCommand(command, extra);
-      if (!isTest) {
-        emit();
-        return;
-      }
 
       const resp = hookInput.tool_response;
       const output = responseText(resp);
+
+      // Declared checks (0.19.0): a criterion that declared a mechanical check needs the engine to
+      // SEE that command run. Matched on every Bash call, in any phase.
+      const hx =
+        resp && typeof resp === "object" && typeof (resp as { exit_code?: unknown }).exit_code === "number"
+          ? (resp as { exit_code: number }).exit_code
+          : undefined;
+      const hits = engine.witnessChecks(command, output, hx ?? detectExitCode(output));
+      const checkNote = hits.length
+        ? `[Versus] Declared check witnessed: ` +
+          hits.map((h) => `${h.criterion} (Phase ${h.phase}) ${h.ok ? "✅ expected result" : "❌ NOT the expected result"}`).join("; ") + "."
+        : "";
+
+      if (!isTest || state.currentPhase < 5) {
+        emit(checkNote || undefined);
+        return;
+      }
 
       // The process exit code is the ONLY language-agnostic signal — a green suite exits 0
       // whatever language or format the runner prints in. Precedence:
@@ -221,11 +237,11 @@ function main() {
         return;
       }
 
-      emit();
+      emit(checkNote || undefined);
     } catch {
       // I.1 (pt.4): if we already knew this was a test command, a malformed payload or
       // downstream error must not make the run vanish — record it as unknown.
-      if (isTest) {
+      if (isTest && state.currentPhase >= 5) {
         try { engine.recordTestOutcome(command, "unknown", { source: "unknown" }); } catch { /* ignore */ }
       }
       emit();

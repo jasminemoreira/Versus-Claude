@@ -191,6 +191,17 @@ export interface ExitCriterionState {
    *  when the transition passes — not self-reported — so a post-mortem sees a degraded
    *  path (hook not nominal, legacy fallback) without depending on the agent having
    *  written a separate decision. Only the two verify-criteria carry it. */
+  /** A mechanical check DECLARED for this criterion (0.19.0), e.g. "OAuth gone from all 4 services"
+   *  → `grep -rl oauth services/ | wc -l` expecting output "0". The gate requires that the hook
+   *  WITNESSED that command run, after the declaration, with the expected result. An audit
+   *  found exactly such a criterion attested ("grep = 0") and never executed. */
+  check?: {
+    command: string;
+    /** "exit:<n>" (exit status via harness or the VERSUS_EXIT echo) or "output:<regex>". */
+    expect: string;
+    declaredAt: string;
+    witnessed?: { at: string; ok: boolean; exitCode?: number; outputTail: string; outputSha256: string };
+  };
   verifiedBy?: {
     path: "test-pass" | "lenses-recorded";
     nominal: boolean;                 // false = satisfied via a degraded path
