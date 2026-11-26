@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.18.1] - 2026-11-26
+
+### Added — 4→5 requires the convergence confirmation on the record
+The first real session on 0.18.0 (MoonPatrolClone) confirmed the delivery fixes:
+- SessionStart ran and arrived inline (986 chars);
+- the model's first two calls were `get_phase_state` and `get_phase_guidance`;
+- every injection and every guidance result arrived inline;
+- the 3→4 approval was recorded as designed, without the gate having to refuse: the model asked the user and recorded `approvedBy: "user, after reviewing the post-cycle table…"`.
+
+It also showed the one gap left. **Phase 4 ran in 28 s and advanced to Phase 5 without asking the user.** The convergence-verification report was displayed only *after* `advance_phase(5)`. The ESJUD study shows the same pattern (Phase 4 ≈ 2 min).
+
+S4 says that in Phase 4 the human confirms convergence. The 3→4 approval answers "shall we go verify?". It does not confirm the verification's result, and Phase 4 is the last gate before code.
+
+**Fix:**
+- **The gate.** 4→5 now requires an approval decision of the current pass of Phase 4, with `approvedBy` (same mechanism as 3→4, 6→7 and the cycle close).
+- **The guidance.** It orders the steps: display the report, ask for the confirmation in the same question as the model-switch choice, record it, then advance.
+- **The update notice.** Projects last opened by 0.18.0 that are still at or before Phase 4 are told of the new rule.
+
+142 tests (+1).
+
 ## [0.18.0] - 2026-11-25
 
 ### Fixed (critical): the methodology guidance was not reaching the model

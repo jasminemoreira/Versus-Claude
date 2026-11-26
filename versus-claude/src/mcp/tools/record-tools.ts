@@ -41,7 +41,7 @@ export const recordDecisionTool: Tool = {
         type: "string",
         description:
           "Who approved it, e.g. 'user', a name or a role, plus the basis when it matters ('user, after running it on the device'). " +
-          "REQUIRED on the approval decision that gates 3→4 (convergence), 6→7 (test sign-off) and the cycle close: " +
+          "REQUIRED on the approval decision that gates 3→4 (convergence), 4→5 (convergence confirmed after the Phase 4 report), 6→7 (test sign-off) and the cycle close: " +
           "those transitions are refused without a decision of the phase that names an approver.",
       },
     },

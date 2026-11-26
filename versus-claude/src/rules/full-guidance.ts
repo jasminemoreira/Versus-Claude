@@ -555,9 +555,10 @@ Inform the user: "The architecture is fully validated. From Phase 5 onward, you 
    - **"Switch model"** — close this chat, open a new one with the target model, type \`retomar Versus\`
 
    This is a DECISION, not a notice. Do NOT write "I am advancing to Phase 5; interrupt me if you want to switch" — announcing and proceeding puts the burden of interrupting on the user, at the one moment where the choice is cheapest to make. It is only free BEFORE any code exists: once Phase 5 has written files, switching means abandoning a session mid-implementation.
-3. Call advance_phase(target_phase=5) to move to Phase 5 — in BOTH cases. Phase 4's gate is already satisfied; a new session should resume at Phase 5, not re-run the convergence check.
-4. If the user chose "Switch model": call record_decision(phase=4, category='process', content='LLM SWITCH: user will resume Phase 5 in a new chat with <model>') and STOP your response. Do not start implementing.
-5. If the user chose "Continue here": call get_phase_guidance() and begin Phase 5 implementation immediately: read \`specs/technical/architecture.md\` (the Phase 1 artifact) for the first module — its interface, dependencies and assumptions — then consult the rest of specs/ and start coding. Work from the persisted doc, not chat recall.`;
+3. **Record the convergence confirmation** — the user's answer to the report you DISPLAYED (step 1 of this gate's checklist comes first; the report is shown BEFORE advancing, never after): \`record_decision(phase=4, category='approval', content='<report verdict ✅/❌ per item and what the user confirmed>', approvedBy='<who>')\`. **advance_phase(target_phase=5) is BLOCKED without it** (S4: in Phase 4 the human confirms convergence). Ask for this confirmation in the SAME AskUserQuestion as the model-switch choice.
+4. Call advance_phase(target_phase=5) to move to Phase 5 — in BOTH cases. Phase 4's gate is then satisfied; a new session should resume at Phase 5, not re-run the convergence check.
+5. If the user chose "Switch model": call record_decision(phase=4, category='process', content='LLM SWITCH: user will resume Phase 5 in a new chat with <model>') and STOP your response. Do not start implementing.
+6. If the user chose "Continue here": call get_phase_guidance() and begin Phase 5 implementation immediately: read \`specs/technical/architecture.md\` (the Phase 1 artifact) for the first module — its interface, dependencies and assumptions — then consult the rest of specs/ and start coding. Work from the persisted doc, not chat recall.`;
 
 // [G6] decoupled sessions + [G8] AV types
 const PHASE_5_GUIDANCE = `## Phase 5 — Code Implementation

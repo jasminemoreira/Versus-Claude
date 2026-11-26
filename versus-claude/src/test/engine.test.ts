@@ -918,7 +918,7 @@ function toPhase5() {
   for (let p = 0; p <= 4; p++) {
     for (const c of engine.getExitCriteriaWithDefs(p)) engine.markExitCriterion(p, c.criterion, true);
     if (p === 2) recordLenses(); // Phase 2 exit now needs the structured lens record
-    if (p === 3) approve(3);     // 3→4 needs a recorded convergence approval (0.18.0)
+    if (p === 3 || p === 4) approve(p);  // 3→4 and 4→5 need a recorded approval (0.18.0 / 0.18.1)
     engine.advancePhase(p + 1);
   }
   assert.strictEqual(engine.getPhaseState()!.currentPhase, 5, "should be in Phase 5");
@@ -1055,7 +1055,7 @@ test("get_phase_state stays inline — spec, decisions, and heredoc command are 
   assert.ok(o.projectSpec.stack.length <= 6 && o.projectSpec.constraints.length <= 6, "each list capped independently");
   assert.ok(o._specNote && o._specNote.includes("omitted"));
   // recentDecisions: content trimmed before any dropped, with a count note pointing at get_decisions.
-  assert.strictEqual(o.decisionsCount, 21, "20 fixture decisions + the 3→4 approval toPhase5 records");
+  assert.strictEqual(o.decisionsCount, 22, "20 fixture decisions + the 3→4 and 4→5 approvals toPhase5 records");
   assert.ok(o.recentDecisions.length < 20, "not all 20 decisions carried inline");
   assert.ok(o.recentDecisions.some((d: { content: string }) => d.content.endsWith("…")), "long content trimmed");
   assert.ok(o._decisionsNote && o._decisionsNote.includes("get_decisions"));
@@ -1938,4 +1938,24 @@ test("update_project_spec returns the delta and counts, not the whole (ever-grow
   assert.ok(out.length < 1000, `the audit measured 40,764 chars on a real project; got ${out.length}`);
   assert.deepStrictEqual(o.added, { stack: ["Swift 6"] });
   assert.strictEqual(o.counts.constraints, 300);
+});
+
+test("4→5 needs the convergence confirmation recorded in Phase 4 (0.18.1)", () => {
+  engine.initProject("Test", "Desc");
+  engine.updateScore(95, makeFullBreakdown(95));
+  writeArchitectureDoc(workspace);
+  writeCoverageMatrix(workspace);
+  for (let p = 0; p <= 3; p++) {
+    for (const c of engine.getExitCriteriaWithDefs(p)) engine.markExitCriterion(p, c.criterion, true);
+    if (p === 2) recordLenses();
+    if (p === 3) approve(3);
+    engine.advancePhase(p + 1);
+  }
+  for (const c of engine.getExitCriteriaWithDefs(4)) engine.markExitCriterion(4, c.criterion, true);
+  const r = engine.advancePhase(5);
+  assert.strictEqual(r.ok, false, "the 3→4 'shall we verify?' approval does not confirm the verification's result");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("[Phase 4] approval") && m.includes("report")));
+  approve(4);
+  assert.strictEqual(engine.advancePhase(5).ok, true);
 });

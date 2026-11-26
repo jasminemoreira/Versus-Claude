@@ -754,8 +754,13 @@ export class StateEngine {
     // need an approval DECISION of this phase naming who approved. Audits found these
     // gates crossed with only stamped criteria — the approval lived in a lessons file or
     // nowhere. Presence, not truth: approvedBy is still written by the agent.
+    // 0.18.1: also 4→5. Phase 4 is where "the human confirms convergence" (S4). The first
+    // 0.18.0 session (MoonPatrolClone) ran Phase 4 in 28 s and presented the convergence
+    // report only AFTER advance_phase(5). The 3→4 approval ("shall we go verify?") does not
+    // confirm the verification's RESULT.
     const approvalMissing =
-      (from === 3 && targetPhase === 4) || (from === 6 && targetPhase === 7) ? this.approvalMissing(from) : [];
+      (from === 3 && targetPhase === 4) || (from === 4 && targetPhase === 5) || (from === 6 && targetPhase === 7)
+        ? this.approvalMissing(from) : [];
 
     if (!validation.valid || artifactMissing.length > 0 || moduleDrift.length > 0 || rowDrift.length > 0 || coverageDrift.length > 0 || approvalMissing.length > 0) {
       return {
@@ -1261,6 +1266,7 @@ export class StateEngine {
     if (ok) return [];
     const what =
       phase === 3 ? "the convergence decision (why this design version is ready to be verified)"
+      : phase === 4 ? "the convergence confirmation (the Phase 4 verification report was PRESENTED and the user accepted it — before any code)"
       : phase === 6 ? "the test sign-off (what the user ran and saw, on which device/versions, and their verdict)"
       : "the cycle close (what the user reviewed and accepted)";
     return [
@@ -1431,9 +1437,12 @@ export class StateEngine {
     if (cur <= 6 && this.criticalCoverageErrors().length > 0 && !this.artifactPresent("validation/critical-coverage.md")) {
       pending.push("specs/validation/critical-coverage.md — required at 6→7 (the matrix has 🔴 findings)");
     }
+    if (from === "0.18.0" && cur <= 4) {
+      pending.push("approval decision at 4→5 — record_decision(phase=4, category='approval', approvedBy='<who>') after presenting the convergence report (new in 0.18.1)");
+    }
     if (from === null) {   // versusVersion is stamped from 0.18.0 on: null = an older Versus
       pending.push(
-        "approval decisions — 3→4, 6→7 and the cycle close now require record_decision(..., approvedBy='<who>') in that phase"
+        "approval decisions — 3→4, 4→5, 6→7 and the cycle close now require record_decision(..., approvedBy='<who>') in that phase"
       );
     }
     this.state.versusVersion = VERSUS_VERSION;

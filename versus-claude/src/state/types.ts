@@ -163,7 +163,7 @@ export interface Decision {
   /** Who proposed it — e.g. "Claude", "user". Explicit provenance (0.18.0+). */
   proposedBy?: string;
   /** Who approved it, and on what basis when it matters — e.g. "user (saw the demo on device)".
-   *  Required on the approval decision that gates 3→4, 6→7 and the cycle close. */
+   *  Required on the approval decision that gates 3→4, 4→5, 6→7 and the cycle close. */
   approvedBy?: string;
 }
 
