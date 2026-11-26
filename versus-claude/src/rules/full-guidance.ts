@@ -512,7 +512,7 @@ Present the recommendation and ask: accept recommendation / override (user choos
 The user validates the RECOMMENDATION, not the raw data.
 
 **Step 4 — Execute the agreed action (do NOT stop after confirmation):**
-- "→ Phase 4": call advance_phase(target_phase=4), then call get_phase_guidance() and begin Phase 4 convergence verification immediately.
+- "→ Phase 4": FIRST record the convergence approval — \`record_decision(phase=3, category='approval', content='<why this version is ready: what changed, what the user reviewed>', proposedBy='<who proposed converging>', approvedBy='<who approved>')\` — then call advance_phase(target_phase=4), then call get_phase_guidance() and begin Phase 4 convergence verification immediately. 3→4 is BLOCKED without an approval decision of this pass of Phase 3.
 - "1 more iteration" or "Multiple iterations": call start_iteration(), then return to Phase 2 critique with the updated architecture V(N+1). Announce: "Starting iteration N of the 2-3 loop. Returning to Phase 2 critique — apply all lenses to V(N+1)."
 
 **CAUTION AP8 (Perfectionism):** The stopping criterion is honesty — we know what works, what we assume, and what we don't know.
@@ -789,7 +789,7 @@ After each fix, record a testing decision noting: what was fixed, what still nee
 This ensures the NEXT session knows exactly what changed since the last test round.
 
 ### Next Step (MANDATORY when all testing is complete):
-Both automated and manual testing must be done before advancing. When both gates are ✅: call advance_phase(target_phase=7) to move to Phase 7. Then call get_phase_guidance() and begin Phase 7 post-review immediately.
+Both automated and manual testing must be done before advancing. When both gates are ✅: record the test sign-off — \`record_decision(phase=6, category='approval', content='<what the user ran and saw: device, versions, what they asked for, what they found, their verdict in their words>', approvedBy='<who>')\` (6→7 is BLOCKED without it; the manual_testing details are the model) — then call advance_phase(target_phase=7) to move to Phase 7. Then call get_phase_guidance() and begin Phase 7 post-review immediately.
 
 **tests_passing is engine-witnessed, not asserted (S4).** advance_phase() to Phase 7 is BLOCKED unless the test-outcome hook actually saw a GREEN run during Phase 6 — marking tests_passing met is not enough.
 
@@ -844,7 +844,7 @@ After completing all Phase 7 steps, you MUST offer the user the option to start 
 - Option 2: "Project complete" — no further action, methodology concludes
 
 If the user chooses to start a new cycle:
-1. Call start_new_cycle() — this preserves decisions, projectSpec, history, and specs/
+1. Record the close approval — \`record_decision(phase=7, category='approval', content='<what the user reviewed and accepted>', approvedBy='<who>')\` (start_new_cycle is BLOCKED without it) — then call start_new_cycle(). It preserves decisions, projectSpec, history, and specs/, and ARCHIVES this cycle (exit criteria, transitions, test run) with a readable export in .versus/cycles/cycle-N.md
 2. specs/ from the previous cycle is the BASELINE — knowledge is NOT lost between cycles
 3. Phase 0 of the new cycle starts from existing specs/ (doesn't restart from zero)
 4. Previous decisions (get_decisions) serve as context — what was discarded and why
@@ -922,6 +922,35 @@ export function getFullGuidance(phase: number): string {
  * LLM operates with the full methodology in context. Cost is bounded: ~10k
  * tokens per turn, mostly cache-hit after first injection of the phase.
  */
+/**
+ * What get_phase_guidance returns: the cross-cutting rules (global rules, activation
+ * triggers, anti-patterns) plus ONE phase's section. This is the delivery channel for the
+ * methodology since 0.18.0. The per-message injection cannot carry it: Claude Code caps
+ * hook output at 10,000 characters and replaces anything larger with a 2,000-character
+ * preview plus a file path. The full guidance (~73K) had been arriving as that preview,
+ * which is the phase header, the score and the start of the first decision. MCP results are
+ * inlined up to 50,000 characters, and one phase plus the cross-cutting part fits with room.
+ */
+export function getPhaseGuidanceText(phase: number): string {
+  const parts: string[] = [];
+  parts.push("## ACTIVE GLOBAL RULES");
+  parts.push(GLOBAL_RULES.R1);
+  parts.push(GLOBAL_RULES.R2);
+  parts.push(GLOBAL_RULES.R5);
+  const r4 = (GLOBAL_RULES.R4_TIMING as Record<string, string>)[String(phase)];
+  if (r4) parts.push(`R4 (Phase ${phase} timing): ${r4}`);
+  parts.push("");
+  parts.push(ACTIVATION_TRIGGERS);
+  parts.push("");
+  parts.push(ANTIPATTERNS);
+  const pg = FULL_GUIDANCE[phase];
+  if (pg) {
+    parts.push("");
+    parts.push(pg);
+  }
+  return parts.join("\n");
+}
+
 export function getCompleteGuidance(): string {
   const parts: string[] = [];
 

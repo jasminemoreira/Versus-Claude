@@ -1,108 +1,36 @@
 #!/usr/bin/env node
 
 // Layer 1: Context injection — UserPromptSubmit
-// Injects methodology state before EVERY user message.
+// Injects methodology STATE before every user message.
+//
+// 0.18.0: this used to inject the complete guidance (~73K) plus every decision of every
+// cycle in full (≈100–450K on real projects). Claude Code caps hook output at 10,000
+// characters (no setting raises it). Over the cap, the text goes to a file and the model
+// gets a 2,000-character preview. Measured in this machine's transcripts: all 73
+// injections from Oct–Nov 2026 arrived as that preview, so the model saw the phase header,
+// the score and the start of the first decision. The guidance, the Phase 0–4 restriction
+// and the S6 warning never reached it.
+//
+// Now: a state block budgeted under the cap, with the warnings first. The guidance comes
+// from get_phase_guidance(), an MCP result (inlined up to 50,000 characters).
 
-import { StateEngine, LOOP_FAILURE_THRESHOLD } from "../state/engine";
-import { getCompleteGuidance } from "../rules/full-guidance";
-import { getPhaseDefinition } from "../rules/phases";
-import { specEntryValue } from "../state/types";
+import { StateEngine } from "../state/engine";
+import { buildInjection } from "./state-block";
+import { writeAndExit } from "./hook-output";
+
+export { buildInjection, INJECT_BUDGET } from "./state-block";
 
 function main() {
   const workspacePath = process.env.CLAUDE_PROJECT_DIR || process.cwd();
   const engine = new StateEngine(workspacePath);
-  const state = engine.getPhaseState();
-
-  if (!state) {
-    // No project, no injection
-    process.exit(0);
-  }
-
-  const phase = state.currentPhase;
-  const phaseName = getPhaseDefinition(phase)?.name ?? "Unknown";
-
-  const lines: string[] = [
-    `[Versus] Phase ${phase} — ${phaseName} | Iteration ${state.currentIteration}`,
-  ];
-
-  // Detect "ready to advance" — all exit criteria met but phase not advanced
-  if (phase < 7) {
-    const phaseCriteria = engine.getExitCriteriaWithDefs(phase);
-    const allMet = phaseCriteria.length > 0 && phaseCriteria.every((c) => c.met);
-    if (allMet) {
-      lines.push(`⚠️ READY TO ADVANCE — Phase ${phase} exit criteria are ALL met. Your VERY NEXT tool call MUST be advance_phase() followed by get_phase_guidance(). Do NOT write summary text. Do NOT wait for user input. Continue work into Phase ${phase + 1} in the same turn.`);
-    }
-  }
-
-  if (state.phase0Score !== null) {
-    lines.push(`Score Phase 0: ${state.phase0Score}/100`);
-  }
-
-  // Full decision history (all phases, grouped)
-  if (state.decisions.length > 0) {
-    const byPhase: Record<number, typeof state.decisions> = {};
-    for (const d of state.decisions) {
-      if (!byPhase[d.phase]) byPhase[d.phase] = [];
-      byPhase[d.phase].push(d);
-    }
-    lines.push("Decision history (all phases):");
-    for (const p of Object.keys(byPhase).map(Number).sort((a, b) => a - b)) {
-      for (const d of byPhase[p]) {
-        lines.push(`  [P${d.phase}/${d.category}] ${d.content}`);
-      }
-    }
-  }
-
-  // Project spec (stack, patterns, constraints, out-of-scope)
-  const spec = state.projectSpec;
-  if (spec) {
-    if (spec.stack.length > 0) lines.push(`Approved stack: ${spec.stack.map(specEntryValue).join(", ")}`);
-    if (spec.outOfScope.length > 0) lines.push(`Out of scope: ${spec.outOfScope.map(specEntryValue).join(", ")}`);
-    if (spec.patterns.length > 0) lines.push(`Patterns: ${spec.patterns.map(specEntryValue).join(", ")}`);
-    if (spec.constraints.length > 0) lines.push(`Constraints: ${spec.constraints.map(specEntryValue).join(", ")}`);
-  }
-
-  // P2: warn if lens activation is missing (Step 1 not yet executed). The structured
-  // record is checked first; the legacy free-text markers are honoured only so a
-  // project mid-flight before v0.14.0 does not see this warning spuriously — and in
-  // both languages, since accepting only the English marker was the original bug.
-  if (phase === 2) {
-    const hasLensDecision =
-      (state.activatedLenses?.length ?? 0) > 0 ||
-      state.decisions.some((d) => {
-        const up = d.content.toUpperCase();
-        return up.includes("ACTIVATED LENSES") || up.includes("LENTES ATIVADAS");
-      });
-    if (!hasLensDecision) {
-      lines.push("⚠ P2 STEP 1 MISSING: No lens activation on record. Call record_activated_lenses(conditional=[...], notActivated=[{lens, reason}, ...]) — the structured tool — BEFORE applying any lens.");
-    }
-  }
-
-  // Code restriction in Phases 0-4
-  if (phase < 5) {
-    lines.push("RESTRICTION: Phases 0-4 — DO NOT implement code. Use the MCP tools to manage the methodology.");
-  }
-
-  // Complete methodology guidance (all phases + cross-cutting rules + antipatterns).
-  // Replaced compact-guidance to eliminate precision loss from summarization.
-  // Token cost is mitigated by prompt caching since this content is static.
-  lines.push(getCompleteGuidance());
-
-  // Loop counter warning (S6 — counts FAILED runs with no diagnosis between them)
-  const loop = engine.getLoopCounter();
-  if (loop.count >= LOOP_FAILURE_THRESHOLD - 1) {
-    const blocked = loop.count >= LOOP_FAILURE_THRESHOLD;
-    lines.push(
-      `⚠ S6: "${loop.pattern}" failed ${loop.count}x in a row with no diagnosis recorded ` +
-      `(threshold: ${LOOP_FAILURE_THRESHOLD}).` +
-      (blocked
-        ? ` Test runs are BLOCKED. Name the cause: record_decision(category='diagnosis', content='...') — that clears it.`
-        : ` Record the root cause with record_decision(category='diagnosis') before the next run.`)
-    );
-  }
-
-  process.stdout.write(lines.join("\n") + "\n");
-  process.exit(0);
+  const text = buildInjection(engine);
+  if (text === null) process.exit(0);
+  // Exit only after stdout drains: process.exit() right after write() truncates a piped
+  // write at 64 KB (observed when the injection was ~100K).
+  writeAndExit(text);
 }
 
-main();
+// Only run as a hook process — buildInjection() is imported by the test suite.
+if (require.main === module) {
+  main();
+}

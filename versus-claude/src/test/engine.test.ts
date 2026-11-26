@@ -9,12 +9,18 @@ import { ScoreBreakdown, SpecEntry } from "../state/types";
 import { getCompleteGuidance } from "../rules/full-guidance";
 import { validateSafeguard } from "../rules/safeguards";
 import { detectOutcome, detectExitCode } from "../hooks/test-outcome";
-import { handleGetPhaseState, handleGetDecisions } from "../mcp/tools/state-tools";
+import { handleGetPhaseState, handleGetDecisions, handleUpdateProjectSpec } from "../mcp/tools/state-tools";
 import { handleGetPhaseGuidance } from "../mcp/tools/guidance-tools";
 import { handleMarkExitCriterion } from "../mcp/tools/record-tools";
 import { handleAdvancePhase } from "../mcp/tools/transition-tools";
 import { isTestCommand, writeTargets, loadExtraTestPatterns, stripHeredocs } from "../hooks/shell-parse";
 import { isAllowedPath, blockedTargets } from "../hooks/phase-gate";
+import { buildInjection, INJECT_BUDGET } from "../hooks/inject-context";
+import { testRunLocation } from "../hooks/shell-parse";
+import { VERSUS_VERSION } from "../version";
+import { buildOrchestratorHooks } from "../setup";
+import { spawnSync } from "child_process";
+import { handleExportCycle } from "../mcp/tools/transition-tools";
 import { CONDITIONAL_LENSES, UNIVERSAL_LENS_DEFS, CONDITIONAL_LENS_DEFS } from "../rules/lenses";
 
 const MATRIX_REL = path.join("specs", "design", "coverage-matrix.md");
@@ -30,6 +36,11 @@ function recordLenses(activated: string[] = ["Resilience", "Mechanical Engineeri
     .map((l) => ({ lens: l as string, reason: "not applicable to this test fixture" }));
   const r = engine.recordActivatedLenses(activated, notActivated);
   assert.ok(r.ok, "fixture must record lenses: " + (r.ok ? "" : r.error.message));
+}
+
+/** Records the approval decision a gated transition (3→4, 6→7, cycle close) needs (0.18.0). */
+function approve(phase: number, approvedBy = "user") {
+  engine.recordDecision(phase, "approval", `Phase ${phase} reviewed and accepted (test fixture)`, { proposedBy: "Claude", approvedBy });
 }
 
 function createTempWorkspace(): string {
@@ -355,6 +366,7 @@ test("after a loop, the 3→4 gate re-requires Phase 3 (no stale iteration-1 sta
   assert.strictEqual(engine.advancePhase(4).ok, false, "3→4 must be blocked until iteration-2 criticals are confirmed addressed");
 
   for (const c of engine.getExitCriteriaWithDefs(3)) engine.markExitCriterion(3, c.criterion, true);
+  approve(3);
   assert.strictEqual(engine.advancePhase(4).ok, true, "…and passes once Phase 3 is redone");
 });
 
@@ -696,6 +708,7 @@ function toPhase6() {
   engine.advancePhase(6);
   assert.strictEqual(engine.getPhaseState()!.currentPhase, 6);
   writeCriticalCoverage(workspace); // III.1: leaving Phase 6 requires every 🔴 finding traced
+  approve(6);                       // 6→7 needs a recorded test sign-off (0.18.0)
 }
 
 test("tests_passing stamped but no witnessed green run BLOCKS P6→P7", () => {
@@ -743,6 +756,8 @@ test("a pass witnessed in an EARLIER phase does not satisfy Phase 6", () => {
   engine.recordTestOutcome("npm test", "pass"); // green run, but in phase 5
   for (const c of engine.getExitCriteriaWithDefs(5)) engine.markExitCriterion(5, c.criterion, true);
   engine.advancePhase(6);
+  approve(6);
+  writeCriticalCoverage(workspace);
   for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
   assert.strictEqual(engine.advancePhase(7).ok, false, "the pass must be witnessed IN phase 6");
 });
@@ -753,6 +768,7 @@ test("start_new_cycle BLOCKED until lessons.md is persisted", () => {
   engine.recordTestOutcome("npm test", "pass");
   engine.advancePhase(7);
   for (const c of engine.getExitCriteriaWithDefs(7)) engine.markExitCriterion(7, c.criterion, true);
+  approve(7);
 
   const blocked = engine.startNewCycle();
   assert.strictEqual(blocked.ok, false);
@@ -902,6 +918,7 @@ function toPhase5() {
   for (let p = 0; p <= 4; p++) {
     for (const c of engine.getExitCriteriaWithDefs(p)) engine.markExitCriterion(p, c.criterion, true);
     if (p === 2) recordLenses(); // Phase 2 exit now needs the structured lens record
+    if (p === 3) approve(3);     // 3→4 needs a recorded convergence approval (0.18.0)
     engine.advancePhase(p + 1);
   }
   assert.strictEqual(engine.getPhaseState()!.currentPhase, 5, "should be in Phase 5");
@@ -1038,7 +1055,7 @@ test("get_phase_state stays inline — spec, decisions, and heredoc command are 
   assert.ok(o.projectSpec.stack.length <= 6 && o.projectSpec.constraints.length <= 6, "each list capped independently");
   assert.ok(o._specNote && o._specNote.includes("omitted"));
   // recentDecisions: content trimmed before any dropped, with a count note pointing at get_decisions.
-  assert.strictEqual(o.decisionsCount, 20);
+  assert.strictEqual(o.decisionsCount, 21, "20 fixture decisions + the 3→4 approval toPhase5 records");
   assert.ok(o.recentDecisions.length < 20, "not all 20 decisions carried inline");
   assert.ok(o.recentDecisions.some((d: { content: string }) => d.content.endsWith("…")), "long content trimmed");
   assert.ok(o._decisionsNote && o._decisionsNote.includes("get_decisions"));
@@ -1066,13 +1083,20 @@ test("get_decisions truncates a single oversized decision rather than spilling",
   assert.ok(o.decisions[0].content.includes("truncated"), "the lone oversized decision is truncated, not spilled");
 });
 
-test("get_phase_guidance returns a pointer, not the full ~8KB text (no spill)", () => {
+test("get_phase_guidance returns the real phase text, under Claude Code's 50,000-char MCP inline limit", () => {
   toPhase5();
   const out = handleGetPhaseGuidance(engine, {});
   const o = JSON.parse(out) as any;
-  assert.ok(out.length < 1000, `must be a small pointer, not the full phase text; got ${out.length}`);
-  assert.ok(o.guidancePointer && o.guidancePointer.includes("## Phase 5"), "points at the injected phase section");
-  assert.ok(!("guidance" in o), "no longer carries the full guidance inline");
+  // 0.16.8 returned a pointer to guidance assumed to be injected every message; in Claude
+  // Code that injection arrives as a 2,000-char preview (10,000-char hook cap), so the
+  // pointer led nowhere. The text is delivered here now.
+  assert.ok(typeof o.guidance === "string" && o.guidance.includes("## Phase 5"), "carries the Phase 5 section");
+  assert.ok(o.guidance.includes("ANTI-PATTERNS"), "and the cross-cutting rules");
+  assert.ok(!o.guidance.includes("## Phase 3"), "but not the other phases");
+  for (let p = 0; p <= 7; p++) {
+    const n = handleGetPhaseGuidance(engine, { phase: p }).length;
+    assert.ok(n < 50_000, `Phase ${p} guidance must stay inline (got ${n})`);
+  }
 });
 
 test("S6 safeguard reports violated when blocked", () => {
@@ -1576,4 +1600,342 @@ test("S6 is ok (not warning) at 0 undiagnosed failures, warning once they accumu
   engine.recordTestOutcome("npm test", "fail");
   assert.strictEqual(validateSafeguard("S6", st()).status, "warning");
   assert.strictEqual(validateSafeguard("S7", st()).status, "ok");
+});
+
+// --- 0.18.0: memory that is lost or lies (RELATORIO-MELHORIAS-VERSUS, 25/11/2026) ---
+
+console.log("\n=== 0.18.0 — cycle archive, approvals, provenance, delivery ===\n");
+
+/** Phase 7 with every gate satisfied, ready for start_new_cycle. */
+function toPhase7Closable() {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true, `P6 ${c.criterion} details`);
+  engine.recordTestOutcome("npm test; echo VERSUS_TEST_EXIT=$?", "pass", { source: "harness", exitCode: 0, exitSource: "echo", cwd: workspace, runDir: workspace });
+  assert.ok(engine.advancePhase(7).ok, "6→7");
+  for (const c of engine.getExitCriteriaWithDefs(7)) engine.markExitCriterion(7, c.criterion, true, `P7 ${c.criterion} details`);
+  fs.writeFileSync(path.join(workspace, "specs", "references", "lessons.md"),
+    "# Lessons\n\n- The session TTL assumption from P0 was wrong; refreshed tokens broke it. guard: T-07\n- ORM lacked batch upsert. guard: none\n");
+  approve(7);
+}
+
+test("closing a cycle ARCHIVES its exit criteria (with details) instead of wiping them", () => {
+  toPhase7Closable();
+  const r = engine.startNewCycle();
+  assert.ok(r.ok, r.ok ? "" : String(r.error));
+  if (!r.ok) return;
+  assert.strictEqual(r.value.archived, 1);
+  assert.strictEqual(r.value.cycle, 2, "closing cycle 1 opens cycle 2 (was announced as 3 before 0.18.0)");
+  const st = engine.getPhaseState()!;
+  assert.strictEqual(st.exitCriteria.length, 0, "the live criteria still reset for the new cycle");
+  const rec = st.cycles![0];
+  assert.strictEqual(rec.cycle, 1);
+  assert.ok(rec.exitCriteria.some((c) => c.phase === 6 && c.criterion === "tests_passing" && c.details === "P6 tests_passing details"));
+  assert.ok(rec.exitCriteria.find((c) => c.criterion === "tests_passing")!.verifiedBy, "engine provenance survives too");
+  assert.ok(rec.transitions.some((t) => t.from === 6 && t.to === 7));
+  assert.ok(rec.transitions.some((t) => t.from === 7 && t.to === 0));
+  assert.strictEqual(rec.lastTestOutcome?.outcome, "pass");
+  assert.ok(rec.decisionCount >= 3, "the cycle's decisions are counted (approvals at 3, 6, 7)");
+  assert.strictEqual(engine.currentCycle(), 2);
+});
+
+test("the closed cycle is exported to readable Markdown", () => {
+  toPhase7Closable();
+  const r = engine.startNewCycle();
+  assert.ok(r.ok && r.value.exportPath);
+  if (!r.ok) return;
+  const md = fs.readFileSync(path.join(workspace, r.value.exportPath!), "utf-8");
+  assert.ok(md.includes("— Cycle 1"));
+  assert.ok(md.includes("**tests_passing** — P6 tests_passing details"), "criteria with details");
+  assert.ok(md.includes("approved by user"), "decision provenance");
+  assert.ok(md.includes("verified by engine"), "engine provenance");
+  assert.ok(md.includes("## Last witnessed test run"));
+});
+
+test("export_cycle writes the cycle in progress; refuses an unknown cycle with a reason", () => {
+  toPhase5();
+  const ok = JSON.parse(handleExportCycle(engine, {}));
+  assert.strictEqual(ok.success, true);
+  assert.strictEqual(ok.inProgress, true);
+  assert.ok(fs.existsSync(path.join(workspace, ok.path)) && ok.path.endsWith("cycle-1-in-progress.md"));
+  const bad = JSON.parse(handleExportCycle(engine, { cycle: 4 }));
+  assert.strictEqual(bad.success, false);
+  assert.ok(String(bad.error).includes("cycle 1"));
+});
+
+test("3→4 needs an approval decision naming the approver", () => {
+  engine.initProject("Test", "Desc");
+  engine.updateScore(95, makeFullBreakdown(95));
+  writeArchitectureDoc(workspace);
+  writeCoverageMatrix(workspace);
+  for (let p = 0; p <= 2; p++) {
+    for (const c of engine.getExitCriteriaWithDefs(p)) engine.markExitCriterion(p, c.criterion, true);
+    if (p === 2) recordLenses();
+    engine.advancePhase(p + 1);
+  }
+  for (const c of engine.getExitCriteriaWithDefs(3)) engine.markExitCriterion(3, c.criterion, true);
+  const r = engine.advancePhase(4);
+  assert.strictEqual(r.ok, false, "stamped criteria alone no longer cross the convergence gate");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("approval") && m.includes("approvedBy")));
+  engine.recordDecision(3, "approval", "converged", {});            // no approver → still refused
+  assert.strictEqual(engine.advancePhase(4).ok, false, "an approval without approvedBy is not an approval");
+  approve(3);
+  assert.strictEqual(engine.advancePhase(4).ok, true);
+});
+
+test("an approval recorded in an EARLIER pass of Phase 3 does not carry over the 2↔3 loop", () => {
+  engine.initProject("Test", "Desc");
+  engine.updateScore(95, makeFullBreakdown(95));
+  writeArchitectureDoc(workspace);
+  writeCoverageMatrix(workspace);
+  for (let p = 0; p <= 2; p++) {
+    for (const c of engine.getExitCriteriaWithDefs(p)) engine.markExitCriterion(p, c.criterion, true);
+    if (p === 2) recordLenses();
+    engine.advancePhase(p + 1);
+  }
+  approve(3);                                                     // pass 1 of Phase 3 approved…
+  assert.ok(engine.advancePhase(2).ok, "…but the user loops back for another critique round");
+  for (const c of engine.getExitCriteriaWithDefs(2)) engine.markExitCriterion(2, c.criterion, true);
+  recordLenses();
+  assert.ok(engine.advancePhase(3).ok);
+  for (const c of engine.getExitCriteriaWithDefs(3)) engine.markExitCriterion(3, c.criterion, true);
+  assert.strictEqual(engine.advancePhase(4).ok, false, "the pass-1 approval answered the OLD design");
+  approve(3);
+  assert.strictEqual(engine.advancePhase(4).ok, true);
+});
+
+test("the cycle close needs a Phase 7 approval decision", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("npm test", "pass");
+  engine.advancePhase(7);
+  for (const c of engine.getExitCriteriaWithDefs(7)) engine.markExitCriterion(7, c.criterion, true);
+  fs.writeFileSync(path.join(workspace, "specs", "references", "lessons.md"), "# Lessons\n\n" + "- a real lesson about the domain that is long enough. ".repeat(3));
+  const r = engine.startNewCycle();
+  assert.strictEqual(r.ok, false);
+  if (r.ok) return;
+  assert.ok(String(r.error).includes("[Phase 7] approval"));
+});
+
+test("a green run OUTSIDE the project does not satisfy tests_passing", () => {
+  toPhase6();
+  for (const c of engine.getExitCriteriaWithDefs(6)) engine.markExitCriterion(6, c.criterion, true);
+  engine.recordTestOutcome("node test.js", "pass", { source: "harness", cwd: "/tmp/scratch", runDir: "/tmp/scratch", outsideWorkspace: true });
+  const r = engine.advancePhase(7);
+  assert.strictEqual(r.ok, false, "a '24/24' from the scratchpad is not evidence about this project");
+  if (r.ok) return;
+  assert.ok(r.error.missingCriteria.some((m) => m.includes("OUTSIDE the project")));
+});
+
+test("testRunLocation follows cd and flags runs/scripts outside the workspace", () => {
+  const ws = workspace;
+  const at = (cmd: string, cwd = ws) => testRunLocation(cmd, cwd, ws);
+  assert.strictEqual(at("npm test")!.outsideWorkspace, false);
+  assert.strictEqual(at('cd "aplicativo ios" && xcodebuild test -scheme A')!.runDir, path.join(ws, "aplicativo ios"));
+  assert.strictEqual(at('cd "aplicativo ios" && xcodebuild test -scheme A')!.outsideWorkspace, false);
+  assert.strictEqual(at("cd /tmp/scratch && node test.js")!.outsideWorkspace, true, "cd out of the project");
+  assert.strictEqual(at("npm test", "/tmp/elsewhere")!.outsideWorkspace, true, "session cwd outside");
+  assert.strictEqual(at("node /tmp/scratch/check.test.js")!.outsideWorkspace, true, "script invoked by an outside path");
+  assert.strictEqual(at("xcodebuild test -derivedDataPath /tmp/dd -scheme A")!.outsideWorkspace, false, "an outside build dir is not a test script");
+  assert.strictEqual(at("ls -la"), undefined);
+});
+
+test("each transition fingerprints architecture.md (design existed, in that content, before the code)", () => {
+  toPhase5();
+  const t45 = engine.getPhaseState()!.history.find((h) => h.from === 4 && h.to === 5)!;
+  const a = t45.artifacts!.find((x) => x.path === "specs/technical/architecture.md")!;
+  const buf = fs.readFileSync(path.join(workspace, "specs", "technical", "architecture.md"));
+  assert.strictEqual(a.bytes, buf.length);
+  assert.strictEqual(a.sha256, require("crypto").createHash("sha256").update(buf).digest("hex"));
+});
+
+test("decisions carry proposedBy/approvedBy and the cycle", () => {
+  engine.initProject("Test", "Desc");
+  const d = engine.recordDecision(0, "scope", "x", { proposedBy: " Claude ", approvedBy: "" });
+  assert.strictEqual(d.proposedBy, "Claude");
+  assert.ok(!("approvedBy" in d), "an empty approver is not recorded as one");
+  assert.strictEqual(d.cycle, 1);
+});
+
+test("version notice: once, for a project last opened by an older Versus, listing what is missing", () => {
+  toPhase7Closable();
+  fs.rmSync(path.join(workspace, "specs", "references", "lessons.md"));
+  const st = engine.getPhaseState()!;
+  delete st.versusVersion;                                   // simulate a pre-0.18.0 project
+  const n = engine.noteVersion()!;
+  assert.strictEqual(n.from, null);
+  assert.ok(n.pending.some((p) => p.includes("references/lessons.md")), "the report's case: lessons.md missing at the close");
+  assert.ok(n.pending.some((p) => p.includes("approvedBy")));
+  assert.strictEqual(engine.getPhaseState()!.versusVersion, VERSUS_VERSION);
+  assert.strictEqual(engine.getPhaseState()!.migrations!.length, 1, "the migration is recorded");
+  assert.strictEqual(engine.noteVersion(), null, "and announced only once");
+});
+
+test("a new project carries the running version (no spurious notice)", () => {
+  engine.initProject("Test", "Desc");
+  assert.strictEqual(engine.getPhaseState()!.versusVersion, VERSUS_VERSION);
+  assert.strictEqual(engine.noteVersion(), null);
+});
+
+test("VERSUS_VERSION matches package.json", () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "package.json"), "utf-8"));
+  assert.strictEqual(pkg.version, VERSUS_VERSION);
+});
+
+test("the per-message injection fits Claude Code's 10,000-char hook cap even on a huge project", () => {
+  toPhase5();
+  // 2 earlier cycles worth of decisions + 150 big ones in this one, a big spec, an S6 warning
+  const st = engine.getPhaseState()!;
+  const old = new Date(Date.parse(st.createdAt) - 86_400_000).toISOString();
+  for (let i = 0; i < 60; i++) st.decisions.unshift({ id: `old-${i}`, phase: 2, category: "architecture", content: "OLD CYCLE " + "x".repeat(4000), timestamp: old });
+  for (let i = 0; i < 150; i++) engine.recordDecision(5, "implementation", `decision ${i} ` + "y".repeat(5000));
+  engine.updateProjectSpec({ stack: Array.from({ length: 80 }, (_, i) => `lib-${i}-with-a-long-name`) });
+  engine.recordTestOutcome("npm test", "fail");
+  engine.recordTestOutcome("npm test", "fail");
+  const text = buildInjection(engine)!;
+  assert.ok(text.length <= 10_000 && text.length <= INJECT_BUDGET + 200, `injection must stay under the hook cap; got ${text.length}`);
+  assert.ok(text.includes("⚠ S6:"), "the S6 warning is never trimmed away (it used to come after 73K of guidance)");
+  assert.ok(text.includes("get_phase_guidance()"), "points at where the methodology text is");
+  assert.ok(text.includes("decision 149"), "newest decision of the cycle shown");
+  assert.ok(!text.includes("OLD CYCLE"), "earlier cycles are not injected");
+  assert.ok(text.includes("export_cycle"), "but the way to reach them is");
+});
+
+// --- Delivery channels (0.18.0): what each hook emits must be a shape Claude Code honours ---
+// The audit that found these: prompt-type SessionStart/PreCompact hooks never ran, and a
+// top-level {additionalContext} reached nobody. Unit tests checked the EMITTER (the text exists),
+// never the channel. These run each compiled hook as a process and check its output against
+// the documented contract for its event.
+
+console.log("\n=== Delivery channels (hook contracts) ===\n");
+
+const HOOK_CAP = 10_000;
+const TOP_LEVEL_KEYS = new Set(["continue", "stopReason", "suppressOutput", "systemMessage", "decision", "reason", "hookSpecificOutput"]);
+
+function runHook(name: string, stdin: unknown): { stdout: string; status: number | null } {
+  // The BUNDLE: what deployServer() copies into projects. (out/hooks is tsc output, and
+  // tsconfig excludes three hooks, so it held April builds of them; the tests passed on stale code.)
+  const r = spawnSync(process.execPath, [path.join(__dirname, "..", "bundle", `${name}.js`)], {
+    input: JSON.stringify(stdin),
+    env: { ...process.env, CLAUDE_PROJECT_DIR: workspace },
+    encoding: "utf-8",
+    timeout: 20_000,
+  });
+  return { stdout: r.stdout ?? "", status: r.status };
+}
+
+function assertJsonContract(out: string, event: string) {
+  const o = JSON.parse(out);
+  for (const k of Object.keys(o)) assert.ok(TOP_LEVEL_KEYS.has(k), `${event}: top-level key "${k}" is not part of the hook output contract`);
+  if (o.hookSpecificOutput) assert.strictEqual(o.hookSpecificOutput.hookEventName, event, "hookEventName must name the event");
+  for (const v of [o.hookSpecificOutput?.additionalContext, o.systemMessage, o.reason, o.hookSpecificOutput?.permissionDecisionReason]) {
+    if (typeof v === "string") assert.ok(v.length <= HOOK_CAP, `${event}: a text field over ${HOOK_CAP} chars becomes a 2,000-char preview`);
+  }
+  return o;
+}
+
+test("every registered hook is a command hook, bundled AND deployed", () => {
+  const hooks = buildOrchestratorHooks(workspace);
+  const bundle = fs.readFileSync(path.join(__dirname, "..", "..", "scripts", "bundle.mjs"), "utf-8");
+  const ext = fs.readFileSync(path.join(__dirname, "..", "..", "src", "extension.ts"), "utf-8");
+  for (const [event, entries] of Object.entries(hooks)) {
+    for (const e of entries as { hooks: { type: string; command?: string }[] }[]) {
+      for (const h of e.hooks) {
+        assert.strictEqual(h.type, "command", `${event}: only command hooks deliver text (prompt hooks are LLM decisions, unsupported on SessionStart/PreCompact)`);
+        const script = /([\w-]+)\.js/.exec(h.command ?? "")![1];
+        assert.ok(bundle.includes(`out: "${script}"`), `${script} must be bundled (scripts/bundle.mjs)`);
+        assert.ok(ext.includes(`"${script}.js"`), `${script}.js must be in deployServer()'s file list — registered but not copied fails silently`);
+      }
+    }
+  }
+  assert.ok(hooks.SessionStart && hooks.PreCompact, "session recovery hooks are registered");
+});
+
+test("UserPromptSubmit: plain text under the cap, even on a huge project", () => {
+  toPhase5();
+  for (let i = 0; i < 120; i++) engine.recordDecision(5, "implementation", `d${i} ` + "z".repeat(6000));
+  const r = runHook("inject-context", { prompt: "hi" });
+  assert.strictEqual(r.status, 0);
+  assert.ok(r.stdout.length > 0 && r.stdout.length <= HOOK_CAP, `got ${r.stdout.length}`);
+  assert.ok(r.stdout.startsWith("[Versus] Phase 5"));
+});
+
+test("SessionStart (startup and compact): plain text under the cap, telling the model to load the guidance", () => {
+  toPhase5();
+  for (let i = 0; i < 80; i++) engine.recordDecision(5, "implementation", `d${i} ` + "z".repeat(6000));
+  for (const source of ["startup", "compact"]) {
+    const r = runHook("session-start", { source, hook_event_name: "SessionStart" });
+    assert.strictEqual(r.status, 0);
+    assert.ok(r.stdout.length <= HOOK_CAP, `${source}: got ${r.stdout.length}`);
+    assert.ok(r.stdout.includes("get_phase_guidance()"), `${source}: must say where the methodology comes from`);
+    assert.ok(r.stdout.includes("[Versus] Phase 5"), `${source}: carries the state itself`);
+  }
+  assert.ok(runHook("session-start", { source: "compact" }).stdout.includes("compacted"));
+});
+
+test("SessionStart without a project gives the init protocol", () => {
+  const r = runHook("session-start", { source: "startup" });
+  assert.ok(r.stdout.includes("init_project"));
+});
+
+test("PreCompact: plain text for the compaction summary, under the cap", () => {
+  toPhase5();
+  const r = runHook("pre-compact", { trigger: "auto" });
+  assert.strictEqual(r.status, 0);
+  assert.ok(r.stdout.length > 0 && r.stdout.length <= HOOK_CAP);
+  assert.ok(r.stdout.includes("Phase 5") && r.stdout.includes("get_phase_guidance()"));
+});
+
+test("PostToolUse test-outcome: the S6 escalation uses hookSpecificOutput (the top-level form reached nobody)", () => {
+  toPhase5();
+  const cmd = 'npm test; echo "VERSUS_TEST_EXIT=$?"';
+  engine.recordTestOutcome(cmd, "fail");          // same command: S6 counts failures per suite
+  const r = runHook("test-outcome", {
+    tool_name: "Bash", tool_input: { command: cmd },
+    tool_response: { stdout: "boom\nVERSUS_TEST_EXIT=1", stderr: "" }, cwd: workspace,
+  });
+  const o = assertJsonContract(r.stdout, "PostToolUse");
+  assert.ok(String(o.hookSpecificOutput.additionalContext).includes("S6"));
+});
+
+test("PostToolUse truncation-check: hookSpecificOutput too", () => {
+  const r = runHook("truncation-check", { tool_name: "Bash", tool_input: {}, tool_response: { stdout: "Output too large (204KB). Full output saved to: /x" } });
+  const o = assertJsonContract(r.stdout, "PostToolUse");
+  assert.ok(String(o.hookSpecificOutput.additionalContext).includes("truncated"));
+});
+
+test("PreToolUse phase-gate and loop-detector: deny via hookSpecificOutput.permissionDecision", () => {
+  engine.initProject("Test", "Desc");
+  const g = runHook("phase-gate", { tool_name: "Write", tool_input: { file_path: path.join(workspace, "src", "a.ts") } });
+  const go = assertJsonContract(g.stdout, "PreToolUse");
+  assert.strictEqual(go.hookSpecificOutput.permissionDecision, "deny");
+  teardown(); setup();
+  toPhase5();
+  for (let i = 0; i < LOOP_FAILURE_THRESHOLD; i++) engine.recordTestOutcome("npm test", "fail");
+  const l = runHook("loop-detector", { tool_name: "Bash", tool_input: { command: "npm test" } });
+  const lo = assertJsonContract(l.stdout, "PreToolUse");
+  assert.strictEqual(lo.hookSpecificOutput.permissionDecision, "deny");
+});
+
+test("Stop stop-verify: block = decision/reason; a warning goes to the USER as systemMessage", () => {
+  toPhase5();
+  fs.writeFileSync(path.join(workspace, "package.json"), JSON.stringify({ scripts: { test: "node -e process.exit(1)" } }));
+  const b = runHook("stop-verify", { stop_hook_active: false });
+  const bo = assertJsonContract(b.stdout, "Stop");
+  assert.strictEqual(bo.decision, "block");
+  assert.ok(String(bo.reason).includes("TESTS FAILED"));
+  fs.rmSync(path.join(workspace, "package.json"));
+  const w = runHook("stop-verify", { stop_hook_active: false });
+  const wo = assertJsonContract(w.stdout, "Stop");
+  assert.ok(typeof wo.systemMessage === "string" && !("additionalContext" in wo));
+});
+
+test("update_project_spec returns the delta and counts, not the whole (ever-growing) spec", () => {
+  engine.initProject("Test", "Desc");
+  engine.updateProjectSpec({ constraints: Array.from({ length: 300 }, (_, i) => `constraint ${i} ` + "c".repeat(120)) });
+  const out = handleUpdateProjectSpec(engine, { stack: ["Swift 6"] });
+  const o = JSON.parse(out);
+  assert.ok(out.length < 1000, `the audit measured 40,764 chars on a real project; got ${out.length}`);
+  assert.deepStrictEqual(o.added, { stack: ["Swift 6"] });
+  assert.strictEqual(o.counts.constraints, 300);
 });

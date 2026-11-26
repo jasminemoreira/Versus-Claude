@@ -13,7 +13,8 @@
 import { createHash } from "crypto";
 import { StateEngine, LOOP_FAILURE_THRESHOLD } from "../state/engine";
 import { TestProvenance } from "../state/types";
-import { isTestCommand, loadExtraTestPatterns } from "./shell-parse";
+import { isTestCommand, loadExtraTestPatterns, testRunLocation } from "./shell-parse";
+import { postToolUseContext, writeAndExit } from "./hook-output";
 
 interface HookInput {
   tool_name?: string;
@@ -23,6 +24,7 @@ interface HookInput {
   tool_response?: string | { stdout?: string; stderr?: string; exit_code?: number } | Record<string, unknown>;
   tool_use_id?: string;
   session_id?: string;
+  cwd?: string;
 }
 
 /** Text to classify from a Bash tool_response — stdout+stderr when structured, the
@@ -104,7 +106,8 @@ export function detectExitCode(output: string): number | undefined {
 
 function emit(msg?: string): void {
   if (msg) {
-    process.stdout.write(JSON.stringify({ additionalContext: msg }) + "\n");
+    writeAndExit(postToolUseContext(msg));   // hookSpecificOutput — the top-level form never reached the model
+    return;
   }
   process.exit(0);
 }
@@ -138,7 +141,8 @@ function main() {
       // Recognized per simple command, heredoc bodies and quoted text excluded — a
       // `cat >> LOG.md <<EOF … npm test … EOF` is a write, not a run, and must not
       // overwrite a witnessed green lastTestOutcome (the ESJUD study's advance_phase(7) failure).
-      isTest = isTestCommand(command, loadExtraTestPatterns(workspacePath));
+      const extra = loadExtraTestPatterns(workspacePath);
+      isTest = isTestCommand(command, extra);
       if (!isTest) {
         emit();
         return;
@@ -176,10 +180,27 @@ function main() {
         exitCode,
         exitSource,
       };
+      // 0.18.0: where the suite actually ran. A pass from outside the project does not
+      // satisfy tests_passing (witnessedTestPass) — and the record says so.
+      const cwd = hookInput.cwd || workspacePath;
+      const loc = testRunLocation(command, cwd, workspacePath, extra);
+      provenance.cwd = cwd;
+      if (loc) {
+        provenance.runDir = loc.runDir;
+        if (loc.outsideWorkspace) provenance.outsideWorkspace = true;
+      }
 
       // I.1: an `unknown` outcome is recorded like any other — it must not leave a
       // stale `fail` frozen in place. recordTestOutcome keeps it out of the S6 count.
       const { count } = engine.recordTestOutcome(command, outcome, provenance);
+
+      if (provenance.outsideWorkspace && outcome === "pass") {
+        emit(
+          `[Versus] This test run happened OUTSIDE the project (ran in ${provenance.runDir}). ` +
+          `It is recorded, but it does not count as a witnessed run for tests_passing: run the suite from inside the project.`
+        );
+        return;
+      }
 
       if (outcome === "fail" && count >= LOOP_FAILURE_THRESHOLD) {
         emit(

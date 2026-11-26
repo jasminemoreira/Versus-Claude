@@ -26,11 +26,23 @@ export const recordDecisionTool: Tool = {
         description:
           "Category: 'architecture', 'pattern', 'constraint', 'scope', 'technology', 'requirement', 'testing', " +
           "'process' (methodology/session decisions, e.g. an LLM switch or session renewal), " +
-          "'diagnosis' (root cause of a test failure — clears the S6 loop counter; 'bugfix' and 'root-cause' are aliases).",
+          "'diagnosis' (root cause of a test failure — clears the S6 loop counter; 'bugfix' and 'root-cause' are aliases), " +
+          "'approval' (a human sign-off — give approvedBy).",
       },
       content: {
         type: "string",
         description: "Decision content in free text.",
+      },
+      proposedBy: {
+        type: "string",
+        description: "Who proposed it, e.g. 'Claude' or 'user'. Explicit provenance: a recommendation the user agreed to is different from a request the user made.",
+      },
+      approvedBy: {
+        type: "string",
+        description:
+          "Who approved it, e.g. 'user', a name or a role, plus the basis when it matters ('user, after running it on the device'). " +
+          "REQUIRED on the approval decision that gates 3→4 (convergence), 6→7 (test sign-off) and the cycle close: " +
+          "those transitions are refused without a decision of the phase that names an approver.",
       },
     },
     required: ["phase", "category", "content"],
@@ -101,10 +113,13 @@ export const markExitCriterionTool: Tool = {
 
 export function handleRecordDecision(
   engine: StateEngine,
-  args: { phase: number; category: string; content: string }
+  args: { phase: number; category: string; content: string; proposedBy?: string; approvedBy?: string }
 ): string {
   try {
-    const decision = engine.recordDecision(args.phase, args.category, args.content);
+    const decision = engine.recordDecision(args.phase, args.category, args.content, {
+      proposedBy: typeof args.proposedBy === "string" ? args.proposedBy : undefined,
+      approvedBy: typeof args.approvedBy === "string" ? args.approvedBy : undefined,
+    });
     const result: Record<string, any> = {
       success: true,
       id: decision.id,
@@ -241,7 +256,7 @@ export function handleMarkExitCriterion(
     if (allMet && args.phase < 7 && args.met) {
       const state = engine.getPhaseState();
       if (state && state.currentPhase === args.phase) {
-        result._nextAction = `⚠️ ALL Phase ${args.phase} exit criteria are now met. Your VERY NEXT tool call MUST be advance_phase(target_phase=${args.phase + 1}) — no summary text, no closing prose. Then follow the \"## Phase ${args.phase + 1}\" section of the methodology already injected in your context and continue work in the same turn.`;
+        result._nextAction = `⚠️ ALL Phase ${args.phase} exit criteria are now met. Your VERY NEXT tool call MUST be advance_phase(target_phase=${args.phase + 1}) — no summary text, no closing prose. Then call get_phase_guidance() to load Phase ${args.phase + 1} instructions and continue work in the same turn.`;
       }
     }
 

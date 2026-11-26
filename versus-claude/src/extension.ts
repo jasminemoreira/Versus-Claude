@@ -199,6 +199,8 @@ function deployServer(extensionPath: string, workspacePath: string) {
     "test-outcome.js",
     "truncation-check.js",
     "block-destructive.js",
+    "session-start.js",
+    "pre-compact.js",
     "stop-verify.js",
     "server.js",
   ];

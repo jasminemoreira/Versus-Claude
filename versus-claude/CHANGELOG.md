@@ -1,5 +1,82 @@
 # Changelog
 
+## [0.18.0] - 2026-11-25
+
+### Fixed (critical): the methodology guidance was not reaching the model
+Claude Code caps hook output at **10,000 characters**, and no setting raises the cap (hooks docs, "JSON output"). Over the cap, the output is saved to a file and the model gets a **2,000-character preview**. `inject-context` emitted the complete guidance (~73K) plus every decision of every cycle in full, 100K–450K on real projects. Measured in this machine's transcripts: **all 73 injections recorded (28 Oct to 25 Nov 2026, Claude Code 2.1.31x–2.1.33x) arrived as that preview**. The model saw the phase header, the Phase 0 score and the first ~1,800 characters of the first decision. These never reached it:
+- the methodology (all phases, global rules, anti-patterns);
+- the Phase 0–4 RESTRICTION line;
+- the S6 warning (it was emitted *after* the guidance).
+
+I cannot tell from here when this began: the oldest surviving transcripts are from 28 Oct, and those are already affected.
+
+The 0.16.8 change made it worse. `get_phase_guidance` became a pointer to "the guidance already injected in your context", and that guidance had never arrived. The "~5,700-char inline threshold" behind 0.16.6–0.16.8 was measured on the VS Code chat host (the LocalQwen build). Claude Code inlines MCP results up to 50,000 characters (MCP docs, "MCP output limits").
+
+Separately, the hook's `process.exit()` right after `write()` truncated piped output at 64 KB.
+
+Fix:
+- **`inject-context` carries state only.** It is budgeted to 9,000 characters and the must-see lines come first: phase/iteration/cycle, the update notice, the READY hint, the RESTRICTION line, the S6 warning, the P2 lens warning, and a pointer to `get_phase_guidance()`. After those come the project spec (lists capped at 600 chars) and **this cycle's** decisions, newest first, each shortened to 280 chars, with a pointer to `get_decisions()`/`export_cycle()`. It exits only after stdout drains. Measured on copies of Goitacaz/Tools, Transcriber and RestaUm: 8,882–9,093 bytes.
+- **`get_phase_guidance` returns the real text again:** the global rules, activation triggers and anti-patterns, plus the requested phase's section. That is 9.0K–21.2K per phase, inline. Its description, `advance_phase`'s nextStep and the hints say to call it at session start, after compaction, and after every transition. The SessionStart/compact prompts already did.
+
+**Research note:** any conclusion about how the model followed the injected *instructions* in sessions on these Claude Code versions rests on instructions it did not receive. Gates were unaffected: their refusals are tool results, delivered in full.
+
+### Fixed (critical): the other delivery channels, from a channel-by-channel audit
+After the injection finding, every channel Versus uses to reach the model was checked against the docs (hooks, mcp, tools-reference) and against what the transcripts show actually arrived.
+
+| Channel | Was | Docs | Evidence | Now |
+|---|---|---|---|---|
+| **SessionStart** (session start + post-compaction recovery: "call get_phase_state / get_phase_guidance first", the banner) | `type: "prompt"` | only `command`/`mcp_tool` on SessionStart; a prompt hook is an LLM-evaluated decision, not injected text | **never ran**: `hook_non_blocking_error` ×9, *"prompt-type hooks are not supported for SessionStart events"*; banner in 1 of 7 real-project sessions | `session-start.js` command hook. Plain stdout ≤10K, carries the instructions **and** the state block, branches on `source` (startup/compact) |
+| **PreCompact** ("save state to MEMORY.md") | `type: "prompt"` | not supported; command stdout becomes instructions for the compaction summary | never ran | `pre-compact.js` tells the summarizer what Versus state to preserve, and that the agent must reload the guidance after compaction |
+| **test-outcome** (S6 escalation "1 more failure blocks", outside-project warning) | top-level `{additionalContext}` | only `hookSpecificOutput.additionalContext` | not delivered | `hookSpecificOutput` |
+| **truncation-check** | top-level `{additionalContext}` | same | not delivered | `hookSpecificOutput` |
+| **stop-verify**, non-blocking (no toolchain / timeout) | top-level `{additionalContext}` | Stop's `hookSpecificOutput.additionalContext` makes the model *continue*, which would turn every turn-end into another turn | recorded with `content: ''` | `systemMessage`, shown to the **user** |
+| **stop-verify**, block | `{decision:"block"}` + exit 2 | parsed on exit 2, but falls back to stderr if the JSON fails validation | — | exit 0 + `decision:"block"` |
+| PreToolUse denies (phase-gate, loop-detector, block-destructive) | `hookSpecificOutput.permissionDecision` | reason shown to the model | "Blocked: Phase …" appears in tool results | unchanged ✅ |
+| **update_project_spec** result | the whole spec, every call | MCP persists results >50,000 chars | **40,764** chars on QuantumCalc | the delta (`added`) + `counts` |
+
+So, in this period, everything that tried to **instruct without blocking** was lost: session start, compaction, S6 escalation, truncation, unverified completion. What survived were the gate refusals, the MCP results and tool descriptions, and the artifacts on disk.
+
+Also:
+- **The state block moved to `hooks/state-block.ts`.** In an esbuild bundle, `require.main === module` is true for every inlined module, so importing a hook module from another hook would run both `main()`s.
+- **Shared output helpers** live in `hooks/hook-output.ts`: shapes per event, `capText`, and `writeAndExit` (exit only after stdout drains).
+
+**Guard rails, so this cannot be silent again:**
+- **Channel tests** (`=== Delivery channels ===`) run each **bundled** hook as a process, the artifact that ships, and check:
+  - every registered hook is `type: "command"`, and is listed in `bundle.mjs` and in `deployServer()`;
+  - its JSON keys are in the event's contract, `hookEventName` matches, and every text field is ≤10,000.
+- **The tests run the bundles.** `npm test` now bundles first (`pretest`). Before this, `tsconfig` excluded stop-verify, truncation-check and block-destructive, so `out/hooks/` held **April** builds of them, and any test that executed them tested stale code. Those stale files were removed.
+- **`scripts/audit-delivery.mjs <project>`** reads a project's transcripts and reports, per hook and MCP tool, what was emitted vs what reached the model: inline / preview / lost / error. It also reports which gate texts the model saw, and per session the injections, `get_phase_guidance` calls and banner. It exits 2 if any channel failed. **Run it on a real project after every Claude Code update and before every Versus release.** On QuantumCalc (Claude Code 2.1.332), the results under the old build: inject-context **11/11 preview**, stop-verify **9/9 lost**, SessionStart **1/1 error**.
+
+### Added: memory that is lost or lies (RELATORIO-MELHORIAS-VERSUS, 25/11/2026, Priority 1 + items 7, 10, 11)
+- **Cycles are archived, not wiped (report item 1).** `start_new_cycle` used to reset `exitCriteria` and keep only the *names* of the Phase 7 criteria in history: details and engine provenance of every phase were lost when the next cycle began. Now the closing cycle is pushed to `state.cycles[]` with:
+  - its exit criteria (details and `verifiedBy`);
+  - its transitions;
+  - its last test outcome;
+  - its decision count.
+
+  Decisions are not copied: they are already preserved, and a cycle's decisions are those within `[startedAt, closedAt]`. New decisions also carry `cycle`.
+- **Readable export (item 11).** At close, `.versus/cycles/cycle-N.md` is written with transitions (and design fingerprints), criteria with details and provenance, all decisions with `proposedBy`/`approvedBy`, and the last witnessed run. The new tool `export_cycle(cycle?)` exports an archived cycle or the one in progress. `get_phase_state` reports `currentCycle` and `archivedCycles`.
+- **Approval on the record (items 5 and 8, plus "Manter": explicit provenance).**
+  - `record_decision` takes `proposedBy` and `approvedBy`.
+  - **3→4, 6→7 and the cycle close are refused without a decision of that phase naming an approver.** It must be recorded since the phase was last entered, so an approval from before a 2↔3 loop-back does not carry over. Ordering uses each transition's `decisionsAt` (the decision count at the transition), not the clock. A test caught two events in the same millisecond.
+  - This checks that the approval is present, not that it is true: `approvedBy` is still written by the agent. The point is that a missing approval can no longer go unnoticed.
+- **Runs outside the project don't count (item 3).**
+  - **Provenance:** `test-outcome` records the harness `cwd`, the directory the runner actually ran in (following `cd`/`pushd` in the command), and `outsideWorkspace`. The flag is set when that directory is outside the project, or when a test script is invoked by a path outside it.
+  - **The gate:** such a pass does not satisfy `tests_passing`. The hook says so on the spot, and the refusal names the directory. An outside build directory such as `-derivedDataPath /tmp/dd` is not a test script and does not trigger the flag.
+  - **Not done: `git ls-files` as proposed.** `npm test` and `xcodebuild test` name no test files, so there would be nothing to look up.
+- **Design fingerprint (item 7).** Every transition records `specs/technical/architecture.md`'s sha256 and size. This proves, without git, that the design existed in that exact content before the code that follows. It replaces "decision timestamp < first code change": within a session the phase-gate already orders design before code, and since 0.17.0 that includes shell writes. A commit timestamp says when things were committed, not when they were written.
+- **Update notice (item 10).** `state.versusVersion` is stamped (new `src/version.ts`, asserted equal to package.json). When a project was last opened by another version, the first injection carries a one-time notice telling the user what the running version requires from here on that the project lacks: artifacts of the current and later phases, critical coverage, and the approval rule. It is recorded in `state.migrations[]`. **Content is not created:** an empty `lessons.md` would pass the existence gate while saying nothing, which is worse than the gate firing.
+
+### Fixed
+- **Cycle numbering was off by one.** Closing cycle 1 announced "cycle 3": it counted arrivals at Phase 7 and added 2. Cycles are now the 7→0 boundaries + 1.
+- **Guidance text:** the READY hint in `inject-context` still said `advance_phase()` (missed in 0.17.0). The guidance for Phases 3, 6 and 7 now spells out the approval step.
+
+### Deferred to 0.19.0 (gates that change what the agent must write)
+- **Item 2 (a criterion's declared check runs).** It will go through the hook: the agent runs the command via Bash, PostToolUse captures it, and the gate requires the capture. The MCP server will not execute commands, because that would bypass Claude Code's permissions and `block-destructive`.
+- **Items 4 (`T-xx` test ids), 6 (`## Desvios` section, a form gate), 9 (`guard:` per lesson) and 12 (guidance only, low expected effect).**
+
+141 tests (+24): 14 for the report items, 9 delivery-channel contracts, 1 for update_project_spec.
+
 ## [0.17.0] - 2026-11-25
 
 ### Fixed — seven defects found by the first external study of Versus (ESJUD, Zenodo 10.5281/zenodo.22664296)

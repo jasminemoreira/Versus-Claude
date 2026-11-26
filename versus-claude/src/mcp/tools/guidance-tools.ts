@@ -3,15 +3,16 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { StateEngine } from "../../state/engine";
 import { getPhaseDefinition } from "../../rules/phases";
+import { getPhaseGuidanceText } from "../../rules/full-guidance";
 
 export const getPhaseGuidanceTool: Tool = {
   name: "get_phase_guidance",
   description:
-    "Confirms the current (or specified) phase and points you to its guidance, which is " +
-    "ALREADY in your injected context this turn — the complete methodology (every phase, " +
-    "global rules, anti-patterns) is injected before every message. Call it when entering a " +
-    "phase to focus on the right section; it no longer repeats the full text inline (that " +
-    "made the result spill to disk). Complements get_phase_state, which returns the state.",
+    "Returns the methodology guidance for the current (or specified) phase: the global rules, " +
+    "activation triggers and anti-patterns, plus that phase's full instructions. This is where " +
+    "the methodology text comes from. The per-message context carries only the state and does NOT " +
+    "include it. Call it at the start of every session, after every context compaction, and right " +
+    "after every advance_phase.",
   inputSchema: {
     type: "object" as const,
     properties: {
@@ -38,18 +39,15 @@ export function handleGetPhaseGuidance(engine: StateEngine, args: { phase?: numb
     return JSON.stringify({ error: `Invalid phase: ${phase}. Use 0-7.` });
   }
 
-  const heading = `## Phase ${phase} — ${getPhaseDefinition(phase)?.name ?? "Unknown"}`;
-
-  // Pointer, not the full text. The complete guidance (all phases) is injected into every
-  // message by inject-context, so repeating the ~8 KB phase section here was pure redundancy
-  // that spilled the tool result to disk. Point at the section the model already has.
+  // 0.18.0: the real text again. 0.16.8 had turned this into a pointer to guidance it
+  // assumed was injected every message. In Claude Code that injection arrives as a
+  // 2,000-character preview (the 10,000-character hook cap), so the pointer led nowhere.
+  // The "~5,700" inline limit that motivated the change was measured on the VS Code chat
+  // host (the LocalQwen build), not here: Claude Code inlines MCP results up to 50,000.
   return JSON.stringify({
     phase,
     currentPhase: state.currentPhase,
-    guidancePointer:
-      `Phase ${phase} guidance is already in your injected context this turn — read the ` +
-      `"${heading}" section and follow it. The full methodology (every phase, global rules, ` +
-      `anti-patterns) is injected before every message; this tool intentionally does not repeat ` +
-      `it inline, to stay within the host's inline size limit.`,
+    name: getPhaseDefinition(phase)?.name ?? "Unknown",
+    guidance: getPhaseGuidanceText(phase),
   });
 }

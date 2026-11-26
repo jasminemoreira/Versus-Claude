@@ -2,7 +2,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
+import { VERSUS_VERSION } from "../version";
 import {
   PhaseState,
   Decision,
@@ -18,10 +19,13 @@ import {
   specEntryValue,
   LensActivation,
   TestProvenance,
+  CycleRecord,
+  PhaseTransition,
 } from "./types";
 import {
   isValidTransition,
   getExitCriteriaForPhase,
+  getPhaseDefinition,
 } from "../rules/phases";
 import { CONDITIONAL_LENSES, UNIVERSAL_LENSES, canonicalLens } from "../rules/lenses";
 import {
@@ -525,7 +529,9 @@ export class StateEngine {
    *  tests_passing: the engine saw the green run, it was not merely asserted. */
   witnessedTestPass(phase: number): boolean {
     const t = this.state?.lastTestOutcome;
-    return !!t && t.outcome === "pass" && t.phase === phase;
+    // A pass that ran outside the project (from the scratchpad, or a script invoked by a
+    // path outside it) is not evidence about THIS project's suite (0.18.0).
+    return !!t && t.outcome === "pass" && t.phase === phase && !t.outsideWorkspace;
   }
 
   /**
@@ -665,7 +671,11 @@ export class StateEngine {
             `${t.command ? ` for \`${t.command}\`` : ""} at ${t.at}` +
             `${t.phase !== phase ? ` (in Phase ${t.phase}, not this phase)` : ""}` +
             `${typeof t.exitCode === "number" ? `, exit_code=${t.exitCode}` : ""}.` +
-            (t.outcome === "unknown" ? ` "unknown" means the hook could not classify the output.` : "")
+            (t.outcome === "unknown" ? ` "unknown" means the hook could not classify the output.` : "") +
+            (t.outsideWorkspace
+              ? ` That run happened OUTSIDE the project (ran in ${t.runDir ?? "?"}) — a suite run from the scratchpad or another ` +
+                `directory is not evidence about this project's tests. Run it from inside the project.`
+              : "")
           : `The engine has recorded NO test run in this phase.`;
         out.push(
           `[Phase ${phase}] ${def.criterion}: no witnessed passing test run in this phase. ${seen} ` +
@@ -740,12 +750,19 @@ export class StateEngine {
       ? [...this.criticalCoverageErrors(), ...this.premiseCoverageErrors()]
       : [];
 
-    if (!validation.valid || artifactMissing.length > 0 || moduleDrift.length > 0 || rowDrift.length > 0 || coverageDrift.length > 0) {
+    // Human sign-off on the record (0.18.0): convergence (3→4) and test sign-off (6→7)
+    // need an approval DECISION of this phase naming who approved. Audits found these
+    // gates crossed with only stamped criteria — the approval lived in a lessons file or
+    // nowhere. Presence, not truth: approvedBy is still written by the agent.
+    const approvalMissing =
+      (from === 3 && targetPhase === 4) || (from === 6 && targetPhase === 7) ? this.approvalMissing(from) : [];
+
+    if (!validation.valid || artifactMissing.length > 0 || moduleDrift.length > 0 || rowDrift.length > 0 || coverageDrift.length > 0 || approvalMissing.length > 0) {
       return {
         ok: false,
         error: {
           message: `Cannot advance from Phase ${from} to Phase ${targetPhase}.`,
-          missingCriteria: [...validation.missingCriteria, ...artifactMissing, ...moduleDrift, ...rowDrift, ...coverageDrift],
+          missingCriteria: [...validation.missingCriteria, ...artifactMissing, ...moduleDrift, ...rowDrift, ...coverageDrift, ...approvalMissing],
           safeguardViolations: validation.safeguardViolations,
           specsWarnings,
         },
@@ -757,14 +774,18 @@ export class StateEngine {
     this.stampVerificationProvenance(from);
 
     // Valid transition
-    this.state.history.push({
+    const transition: PhaseTransition = {
       from,
       to: targetPhase,
       timestamp: new Date().toISOString(),
       criteriaMet: Array.from(exitCriteriaMet.entries())
         .filter(([, met]) => met)
         .map(([criterion]) => criterion),
-    });
+    };
+    const fp = this.designFingerprint();
+    if (fp.length) transition.artifacts = fp;
+    transition.decisionsAt = this.state.decisions.length;
+    this.state.history.push(transition);
 
     this.state.currentPhase = targetPhase;
     this.state.currentIteration = 1;
@@ -812,7 +833,12 @@ export class StateEngine {
 
   // --- Recording ---
 
-  recordDecision(phase: number, category: string, content: string): Decision {
+  recordDecision(
+    phase: number,
+    category: string,
+    content: string,
+    provenance?: { proposedBy?: string; approvedBy?: string }
+  ): Decision {
     if (!this.state) throw new Error("Project not initialized.");
 
     const decision: Decision = {
@@ -821,7 +847,12 @@ export class StateEngine {
       category,
       content,
       timestamp: new Date().toISOString(),
+      cycle: this.currentCycle(),
     };
+    const proposedBy = provenance?.proposedBy?.trim();
+    const approvedBy = provenance?.approvedBy?.trim();
+    if (proposedBy) decision.proposedBy = proposedBy;
+    if (approvedBy) decision.approvedBy = approvedBy;
 
     this.state.decisions.push(decision);
     this.save();
@@ -1106,7 +1137,7 @@ export class StateEngine {
 
   // --- Meta-iteration (v1.0 → v2.0) ---
 
-  startNewCycle(): Result<{ cycle: number }, string> {
+  startNewCycle(): Result<{ cycle: number; archived: number; exportPath?: string }, string> {
     if (!this.state) {
       return { ok: false, error: "Project not initialized." };
     }
@@ -1129,16 +1160,47 @@ export class StateEngine {
       return { ok: false, error: missing.join(" ") };
     }
 
-    // Count completed cycles from history (how many times we've reached phase 7)
-    const cycleCount = this.state.history.filter((h) => h.to === 7).length + 1;
+    const approval = this.approvalMissing(7);
+    if (approval.length > 0) {
+      return { ok: false, error: approval.join(" ") };
+    }
 
-    // Record cycle boundary in history
-    this.state.history.push({
+    // Cycle numbering: closed cycles are the 7→0 boundaries in history. (Before 0.18.0
+    // this counted arrivals at Phase 7 and added 2, so closing cycle 1 announced cycle 3.)
+    const cycle = this.currentCycle();
+    const startedAt = this.cycleStartedAt();
+    const closedAt = new Date().toISOString();
+
+    const close: PhaseTransition = {
       from: 7,
       to: 0,
-      timestamp: new Date().toISOString(),
+      timestamp: closedAt,
       criteriaMet: p7Criteria.map((c) => c.criterion),
-    });
+    };
+    const fp = this.designFingerprint();
+    if (fp.length) close.artifacts = fp;
+    close.decisionsAt = this.state.decisions.length;
+
+    // Archive the cycle BEFORE the reset (0.18.0). The reset below used to be the end of
+    // this cycle's exit criteria — details, provenance and all — so the record lost its
+    // own history the moment the next cycle began.
+    const record: CycleRecord = {
+      cycle,
+      startedAt,
+      closedAt,
+      phase0Score: this.state.phase0Score,
+      exitCriteria: JSON.parse(JSON.stringify(this.state.exitCriteria)),
+      transitions: [...this.state.history.filter((h) => h.timestamp > startedAt), close],
+      lastTestOutcome: this.state.lastTestOutcome ? { ...this.state.lastTestOutcome } : undefined,
+      decisionCount: this.state.decisions.filter((d) => d.timestamp >= startedAt && d.timestamp <= closedAt).length,
+    };
+    try {
+      record.exportPath = this.writeCycleExport(this.renderCycleMarkdown(record), cycle);
+    } catch { /* the archive in state.json is the record; the export is a convenience */ }
+    if (!this.state.cycles) this.state.cycles = [];
+    this.state.cycles.push(record);
+
+    this.state.history.push(close);
 
     // Preserve: decisions, projectSpec, history
     // Reset: phase, iteration, score, exit criteria, safeguards, loop counter
@@ -1160,7 +1222,226 @@ export class StateEngine {
     this.resetLoopCounter();
 
     this.save();
-    return { ok: true, value: { cycle: cycleCount + 1 } };
+    return { ok: true, value: { cycle: cycle + 1, archived: cycle, exportPath: record.exportPath } };
+  }
+
+  // --- Cycles, approvals, fingerprints, version (0.18.0) ---
+
+  /** The cycle in progress: closed cycles (7→0 boundaries) + 1. */
+  currentCycle(): number {
+    return (this.state?.history ?? []).filter((h) => h.from === 7 && h.to === 0).length + 1;
+  }
+
+  /** When the cycle in progress began: the last 7→0 boundary, or project creation. */
+  cycleStartedAt(): string {
+    const closes = (this.state?.history ?? []).filter((h) => h.from === 7 && h.to === 0);
+    return closes.length ? closes[closes.length - 1].timestamp : (this.state?.createdAt ?? "");
+  }
+
+  /** Decisions recorded since the current phase was (last) entered. Ordered by the entry
+   *  transition's decisionsAt when present (0.18.0+), by timestamp for older history. */
+  private decisionsSincePhaseEntry(): Decision[] {
+    const st = this.state!;
+    const h = st.history;
+    for (let i = h.length - 1; i >= 0; i--) {
+      if (h[i].to === st.currentPhase) {
+        if (typeof h[i].decisionsAt === "number") return st.decisions.slice(h[i].decisionsAt);
+        return st.decisions.filter((d) => d.timestamp >= h[i].timestamp);
+      }
+    }
+    return st.decisions;
+  }
+
+  /** Message(s) when the current phase has no approval decision (approvedBy) since it was entered. */
+  private approvalMissing(phase: number): string[] {
+    if (!this.state) return [];
+    const ok = this.decisionsSincePhaseEntry().some(
+      (d) => d.phase === phase && !!d.approvedBy?.trim() && !!d.content?.trim()
+    );
+    if (ok) return [];
+    const what =
+      phase === 3 ? "the convergence decision (why this design version is ready to be verified)"
+      : phase === 6 ? "the test sign-off (what the user ran and saw, on which device/versions, and their verdict)"
+      : "the cycle close (what the user reviewed and accepted)";
+    return [
+      `[Phase ${phase}] approval: no decision recording who approved ${what} in this phase. ` +
+      `Call record_decision(phase=${phase}, category='approval', content='<what was presented and what the approver saw/said>', ` +
+      `proposedBy='<who proposed>', approvedBy='<who approved, e.g. the user by name or role>'). ` +
+      `A stamped criterion or a note in lessons.md is not a record of the approval.`,
+    ];
+  }
+
+  /** sha256 + size of the design artifacts at this instant (empty when absent). */
+  private designFingerprint(): { path: string; sha256: string; bytes: number }[] {
+    const out: { path: string; sha256: string; bytes: number }[] = [];
+    for (const rel of ["technical/architecture.md"]) {
+      try {
+        const full = path.join(this.specsPath, rel);
+        if (!fs.existsSync(full)) continue;
+        const buf = fs.readFileSync(full);
+        out.push({ path: `specs/${rel}`, sha256: createHash("sha256").update(buf).digest("hex"), bytes: buf.length });
+      } catch { /* ignore */ }
+    }
+    return out;
+  }
+
+  /** The cycle in progress, shaped like an archived record (closedAt empty). */
+  private liveCycleRecord(): CycleRecord {
+    const startedAt = this.cycleStartedAt();
+    return {
+      cycle: this.currentCycle(),
+      startedAt,
+      closedAt: "",
+      phase0Score: this.state!.phase0Score,
+      exitCriteria: this.state!.exitCriteria,
+      transitions: this.state!.history.filter((h) => h.timestamp > startedAt),
+      lastTestOutcome: this.state!.lastTestOutcome,
+      decisionCount: this.state!.decisions.filter((d) => d.timestamp >= startedAt).length,
+    };
+  }
+
+  /** Readable Markdown of one cycle: transitions, exit criteria with provenance, decisions. */
+  renderCycleMarkdown(rec: CycleRecord): string {
+    const st = this.state!;
+    const name = (p: number) => getPhaseDefinition(p)?.name ?? `Phase ${p}`;
+    const end = rec.closedAt || "\uffff";
+    const decisions = st.decisions.filter((d) => d.timestamp >= rec.startedAt && d.timestamp <= end);
+    const L: string[] = [];
+    L.push(`# ${st.projectName} — Cycle ${rec.cycle}`);
+    L.push("");
+    L.push(
+      `Exported by Versus ${VERSUS_VERSION} · started ${rec.startedAt || "?"} · ` +
+      (rec.closedAt ? `closed ${rec.closedAt}` : `in progress (Phase ${st.currentPhase} — ${name(st.currentPhase)})`) +
+      (rec.phase0Score !== null ? ` · Phase 0 score ${rec.phase0Score}/100` : "")
+    );
+    const closedBefore = rec.cycle - 1 - (st.cycles?.filter((c) => c.cycle < rec.cycle).length ?? 0);
+    if (closedBefore > 0) {
+      L.push("");
+      L.push(`> ${closedBefore} earlier cycle(s) closed before Versus 0.18.0 archived cycles: their exit criteria were not kept; their transitions remain in state.json history.`);
+    }
+    L.push("");
+    L.push("## Transitions");
+    L.push("");
+    if (!rec.transitions.length) L.push("_None yet._");
+    else {
+      L.push("| from → to | at | criteria met | design fingerprint |");
+      L.push("|---|---|---|---|");
+      for (const t of rec.transitions) {
+        const fp = (t.artifacts ?? []).map((a) => `${a.path} ${a.sha256.slice(0, 12)} (${a.bytes} B)`).join("; ") || "—";
+        L.push(`| ${t.from} → ${t.to} | ${t.timestamp} | ${t.criteriaMet.join(", ") || "—"} | ${fp} |`);
+      }
+    }
+    L.push("");
+    L.push("## Exit criteria");
+    for (let p = 0; p <= 7; p++) {
+      const cs = rec.exitCriteria.filter((c) => c.phase === p);
+      if (!cs.length) continue;
+      L.push("");
+      L.push(`### Phase ${p} — ${name(p)}`);
+      L.push("");
+      for (const c of cs) {
+        L.push(`- [${c.met ? "x" : " "}] **${c.criterion}**${c.details ? ` — ${c.details}` : ""}`);
+        if (c.verifiedBy) {
+          const v = c.verifiedBy;
+          L.push(`  - verified by engine: ${v.path}, ${v.nominal ? "nominal" : "DEGRADED path"}, ${v.at}${v.note ? ` — ${v.note}` : ""}`);
+        }
+      }
+    }
+    L.push("");
+    L.push(`## Decisions (${decisions.length})`);
+    for (let p = 0; p <= 7; p++) {
+      const ds = decisions.filter((d) => d.phase === p);
+      if (!ds.length) continue;
+      L.push("");
+      L.push(`### Phase ${p} — ${name(p)}`);
+      for (const d of ds) {
+        const who = [d.proposedBy ? `proposed by ${d.proposedBy}` : "", d.approvedBy ? `approved by ${d.approvedBy}` : ""]
+          .filter(Boolean).join(" · ");
+        L.push("");
+        L.push(`- **[${d.category}]** ${d.timestamp}${who ? ` · ${who}` : ""}`);
+        L.push("");
+        for (const line of d.content.split("\n")) L.push(`  ${line}`);
+      }
+    }
+    const t = rec.lastTestOutcome;
+    if (t) {
+      L.push("");
+      L.push("## Last witnessed test run");
+      L.push("");
+      L.push(`- outcome: **${t.outcome}** (Phase ${t.phase}, ${t.at})`);
+      if (t.command) L.push(`- command: \`${t.command.replace(/\n/g, " ⏎ ").slice(0, 400)}\``);
+      if (typeof t.exitCode === "number") L.push(`- exit status: ${t.exitCode} (from ${t.exitSource ?? "?"})`);
+      if (t.runDir) L.push(`- ran in: ${t.runDir}${t.outsideWorkspace ? " — OUTSIDE the project" : ""}`);
+      if (t.outputSha256) L.push(`- output: ${t.outputBytes ?? "?"} B, sha256 ${t.outputSha256}`);
+    }
+    L.push("");
+    return L.join("\n");
+  }
+
+  /** Writes a cycle export to .versus/cycles/cycle-N.md; returns the workspace-relative path. */
+  private writeCycleExport(md: string, cycle: number, suffix = ""): string {
+    const rel = path.join(".versus", "cycles", `cycle-${cycle}${suffix}.md`);
+    const full = path.join(this.workspacePath, rel);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, md, "utf-8");
+    return rel.replace(/\\/g, "/");
+  }
+
+  /** export_cycle: an archived cycle by number, or the cycle in progress (default). */
+  exportCycle(cycle?: number): Result<{ path: string; bytes: number; cycle: number; inProgress: boolean }, string> {
+    if (!this.state) return { ok: false, error: "Project not initialized." };
+    const cur = this.currentCycle();
+    const target = cycle ?? cur;
+    let rec: CycleRecord | undefined;
+    if (target === cur) rec = this.liveCycleRecord();
+    else rec = this.state.cycles?.find((c) => c.cycle === target);
+    if (!rec) {
+      return {
+        ok: false,
+        error: target > cur || target < 1
+          ? `No cycle ${target}: the project is in cycle ${cur}.`
+          : `Cycle ${target} closed before Versus 0.18.0 archived cycles — its exit criteria were not kept. ` +
+            `Archived: ${(this.state.cycles ?? []).map((c) => c.cycle).join(", ") || "none"}.`,
+      };
+    }
+    const md = this.renderCycleMarkdown(rec);
+    const p = this.writeCycleExport(md, target, target === cur ? "-in-progress" : "");
+    return { ok: true, value: { path: p, bytes: Buffer.byteLength(md, "utf-8"), cycle: target, inProgress: target === cur } };
+  }
+
+  /**
+   * One-time update notice (0.18.0). When the project was last opened by another Versus
+   * version, returns what the running version requires from here on that the project
+   * lacks — and records the migration. Does NOT create content: an empty lessons.md would
+   * pass an existence gate while saying nothing, which is worse than the gate firing.
+   */
+  noteVersion(): { from: string | null; to: string; pending: string[] } | null {
+    if (!this.state) return null;
+    const from = this.state.versusVersion ?? null;
+    if (from === VERSUS_VERSION) return null;
+    const pending: string[] = [];
+    const cur = this.state.currentPhase;
+    for (let p = cur; p <= 7; p++) {
+      for (const def of getExitCriteriaForPhase(p)) {
+        if (def.required && def.artifact && !this.artifactPresent(def.artifact)) {
+          pending.push(`specs/${def.artifact} — required by ${def.criterion} (Phase ${p}); missing or empty`);
+        }
+      }
+    }
+    if (cur <= 6 && this.criticalCoverageErrors().length > 0 && !this.artifactPresent("validation/critical-coverage.md")) {
+      pending.push("specs/validation/critical-coverage.md — required at 6→7 (the matrix has 🔴 findings)");
+    }
+    if (from === null) {   // versusVersion is stamped from 0.18.0 on: null = an older Versus
+      pending.push(
+        "approval decisions — 3→4, 6→7 and the cycle close now require record_decision(..., approvedBy='<who>') in that phase"
+      );
+    }
+    this.state.versusVersion = VERSUS_VERSION;
+    if (!this.state.migrations) this.state.migrations = [];
+    const at = new Date().toISOString();
+    this.state.migrations.push({ from, to: VERSUS_VERSION, at, pending });
+    this.save();
+    return { from, to: VERSUS_VERSION, pending };
   }
 
   // --- Private helpers ---

@@ -9,9 +9,9 @@ import { ProjectSpec, Decision, specEntryValue } from "../../state/types";
 // anything. The chat host paginates a large tool result to disk, so if this spills, the
 // model operates WITHOUT seeing project state. Measured on Goitacaz/Tools it was 49 KB
 // (39 KB recentDecisions, 7 KB projectSpec, 2 KB from a heredoc test command) — well past
-// the host's ~5.7 KB inline threshold. These budgets keep the snapshot lean. The full
-// spec is injected into every message by inject-context, and full decisions are one
-// get_decisions() away, so trimming here loses the model nothing it cannot recover.
+// the ~5.7 KB inline threshold measured on the VS Code chat host (the LocalQwen build; Claude
+// Code itself inlines MCP results up to 50,000 chars). The budgets stay: a lean snapshot
+// costs nothing, and full decisions are one get_decisions() away.
 const SPEC_PER_LIST = 6;          // newest N kept per list; older discarded WHOLE and counted
 const DECISION_MAXLEN = 200;      // per-decision content cap before discarding any
 const DECISION_BUDGET = 2200;     // total chars for recentDecisions
@@ -132,7 +132,7 @@ export function handleGetPhaseState(engine: StateEngine): string {
     const phaseCriteria = engine.getExitCriteriaWithDefs(state.currentPhase);
     const allMet = phaseCriteria.length > 0 && phaseCriteria.every((c) => c.met);
     if (allMet) {
-      readyToAdvanceHint = `⚠️ READY TO ADVANCE — Phase ${state.currentPhase} exit criteria are ALL met but currentPhase is still ${state.currentPhase}. Your VERY NEXT tool call MUST be advance_phase(target_phase=${state.currentPhase + 1}). Do NOT write summary text. Do NOT wait for user input. Continue work into Phase ${state.currentPhase + 1} in the same turn.`;
+      readyToAdvanceHint = `⚠️ READY TO ADVANCE — Phase ${state.currentPhase} exit criteria are ALL met but currentPhase is still ${state.currentPhase}. Your VERY NEXT tool call MUST be advance_phase(target_phase=${state.currentPhase + 1}) followed by get_phase_guidance(). Do NOT write summary text. Do NOT wait for user input. Continue work into Phase ${state.currentPhase + 1} in the same turn.`;
     }
   }
 
@@ -142,6 +142,8 @@ export function handleGetPhaseState(engine: StateEngine): string {
     projectSpec: specBudgeted,
     currentPhase: state.currentPhase,
     currentIteration: state.currentIteration,
+    currentCycle: engine.currentCycle(),
+    archivedCycles: (state.cycles ?? []).map((c) => c.cycle),
     phase0Score: state.phase0Score,
     decisionsCount: state.decisions.length,
     recentDecisions,
@@ -157,7 +159,7 @@ export function handleGetPhaseState(engine: StateEngine): string {
   };
 
   if (specOmitted > 0) {
-    result._specNote = `projectSpec shows the newest ${SPEC_PER_LIST} per list; ${specOmitted} older entries omitted here. The FULL spec is injected into every message.`;
+    result._specNote = `projectSpec shows the newest ${SPEC_PER_LIST} per list; ${specOmitted} older entries omitted here. The per-message context also lists the spec (shortened past 600 chars per list).`;
   }
   if (state.decisions.length > shownCount || recentDecisions.some((d) => d.content.endsWith("…"))) {
     result._decisionsNote = `recentDecisions: newest ${shownCount} of ${state.decisions.length}, content trimmed. Call get_decisions(phase?) for the full text.`;
@@ -248,11 +250,27 @@ export function handleUpdateProjectSpec(
   engine: StateEngine,
   args: { stack?: string[]; outOfScope?: string[]; patterns?: string[]; constraints?: string[] }
 ): string {
+  const before = engine.getProjectSpec();
   engine.updateProjectSpec(args);
-  const spec = engine.getProjectSpec();
+  const after = engine.getProjectSpec();
+  // 0.18.0: return what CHANGED plus counts, not the whole spec. The spec only grows, and
+  // the delivery audit measured a 40,764-char result on QuantumCalc (MCP results persist to
+  // disk past 50,000). The caller already knows what it sent.
+  const keys = ["stack", "outOfScope", "patterns", "constraints"] as const;
+  const added: Record<string, string[]> = {};
+  const counts: Record<string, number> = {};
+  for (const k of keys) {
+    const had = new Set(before[k]);
+    const n = after[k].filter((v) => !had.has(v));
+    if (n.length) added[k] = n;
+    counts[k] = after[k].length;
+  }
   return JSON.stringify({
     success: true,
-    projectSpec: spec,
-    message: "Project spec updated. This context is returned in every call to get_phase_state.",
+    added,
+    counts,
+    message:
+      "Project spec updated. Values already present were kept, not duplicated. get_phase_state shows the newest " +
+      "entries per list, and the per-message context lists the spec.",
   });
 }

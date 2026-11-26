@@ -76,6 +76,7 @@ const AUTO_APPROVED_PERMISSIONS = [
   "mcp__versus-claude__get_phase_guidance",
   "mcp__versus-claude__update_project_spec",
   "mcp__versus-claude__start_new_cycle",
+  "mcp__versus-claude__export_cycle",
   // General development tools
   "Read",
   "Write",
@@ -91,7 +92,7 @@ const AUTO_APPROVED_PERMISSIONS = [
 /**
  * Generates hooks config using LOCAL project paths (.versus/).
  */
-function buildOrchestratorHooks(workspace: string): Record<string, any> {
+export function buildOrchestratorHooks(workspace: string): Record<string, any> {
   const orchDir = path.join(workspace, ".versus");
 
   return {
@@ -166,50 +167,25 @@ function buildOrchestratorHooks(workspace: string): Record<string, any> {
         ],
       },
     ],
+    // command hooks: `type: "prompt"` is not supported on PreCompact or SessionStart. Before
+    // 0.18.0 both were prompt hooks and never ran.
     PreCompact: [
       {
         hooks: [
           {
-            type: "prompt",
-            prompt:
-              "BEFORE compaction: call get_phase_state() and save the result in MEMORY.md (in your auto memory directory). Include: current phase, iteration, key decisions, next steps.",
+            type: "command",
+            command: `node "${path.join(orchDir, "pre-compact.js")}"`,
           },
         ],
       },
     ],
+    // One entry, no matcher: the script reads `source` (startup/resume/clear/compact).
     SessionStart: [
       {
-        matcher: "",
         hooks: [
           {
-            type: "prompt",
-            prompt:
-              "STOP. Before doing ANYTHING else — before reading any files, before exploring the codebase — you MUST execute these two MCP tool calls RIGHT NOW:\n" +
-              "1. Call mcp__versus-claude__get_phase_state() to load the current methodology phase\n" +
-              "2. Call mcp__versus-claude__get_phase_guidance() to get detailed instructions\n" +
-              "DO NOT read .versus/state.json or .versus/server.js directly. DO NOT skip these calls. " +
-              "The MCP server versus-claude manages the IACDM methodology state. All methodology interactions MUST go through MCP tools: " +
-              "record_decision() for decisions, update_score() for scoring, mark_exit_criterion() for criteria, advance_phase() for transitions. " +
-              "If get_phase_state returns an error (project not initialized), look at the init_project tool description: it has a BOOTSTRAP PROTOCOL for brownfield projects (workspace with existing code) that requires reading surface files, presenting a proposal, getting user confirmation, then calling init_project with bootstrap_data. For empty workspaces (greenfield), just ask the user for a project name and description, then call init_project directly. " +
-              "If in Phase 6: also call get_decisions(phase=6) to recover testing progress — manual testing spans sessions.\n" +
-              "VISIBILITY: after loading state, START your first response with a one-line banner so the user knows Versus is active, e.g.: '📍 Versus ativo — Fase X (name), iteração Y. Próximo passo: <one line>.' The user must SEE that methodology context was loaded; do not load silently.",
-          },
-        ],
-      },
-      {
-        matcher: "compact",
-        hooks: [
-          {
-            type: "prompt",
-            prompt:
-              "STOP. Context was compacted. Before doing ANYTHING else, you MUST recover methodology state:\n" +
-              "1. Call mcp__versus-claude__get_phase_state() to reload current phase\n" +
-              "2. Call mcp__versus-claude__get_phase_guidance() to reload instructions\n" +
-              "3. Call mcp__versus-claude__get_decisions() to reload previous decisions\n" +
-              "4. Read MEMORY.md (auto memory) for additional context\n" +
-              "DO NOT read .versus/state.json or .versus/server.js directly. DO NOT skip these calls. " +
-              "Continue where you left off only AFTER completing all 4 steps above.\n" +
-              "VISIBILITY: after recovering, START your first response with a one-line banner so the user knows Versus recovered, e.g.: '📍 Versus retomado — Fase X (name), iteração Y. Continuando: <one line>.'",
+            type: "command",
+            command: `node "${path.join(orchDir, "session-start.js")}"`,
           },
         ],
       },
