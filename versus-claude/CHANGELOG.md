@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.19.2] - 2026-11-27
+
+### Documentation (no code changes)
+README aligned with the IACDM paper ([arXiv:2604.16399](https://arxiv.org/abs/2604.16399)):
+- **Acronym:** IACDM is the *Interactive* Adversarial Convergence Development Methodology, not "Iterative". *Iterative Convergence* remains the operational name.
+- **GA/VA** (Generative Agent / Verification Agent) instead of AG/AV.
+- **Lenses:** up to 19: 7 universal and 12 conditional (8 situational, 4 domain transfer). The lens-orthogonality result is cited: in a pre-registered 12-project experiment, every lens found defects no other lens found.
+- Gates are described as enforced by the state machine. The agent may request advancement but cannot grant it.
+- Unsupported figures were removed ("10-100x"; context efficiency "near 1.0 / 0.3+"). `E = I₀/C` is now described as a conceptual definition.
+- Companion extensions: Cursor, Kimi, Qwen and Local Qwen. The repository README also has the 12 antipatterns, the operator-owned stopping criterion, and the measured 2–4 critique iterations, replacing the earlier "1-3" estimate.
+
 ## [0.19.1] - 2026-11-26
 
 ### Fixed: "Init Project" failed with "Cannot find module '../hooks/shell-parse'" (broken since 0.18.2)
